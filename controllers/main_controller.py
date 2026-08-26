@@ -101,13 +101,21 @@ class MainController:
             print(f"[sesion] sign_out falló, se ignora (ya se borró la sesión local): {e}")
         self.mostrar_login()
 
-    def cambiar_vista(self, vista: str):
+    def cambiar_vista(self, vista: str, abrir_dialogo_nuevo: bool = False):
+        """abrir_dialogo_nuevo: lo usa SOLO el atajo "Agregar un producto
+        nuevo" de home_view.py (Fase 2.7) para llegar a Menú con el diálogo
+        de alta ya abierto. Se pasa directo al constructor de MenuView en
+        vez de guardarse como estado del router, para que no quede una
+        bandera "pegada" que reabra el diálogo si después se entra a Menú
+        por otro lado (sidebar, el otro atajo) — esos siguen llamando
+        cambiar_vista("menu") sin el segundo argumento, que por default es
+        False, exactamente el comportamiento de antes."""
         self.vista_actual = vista
         
         if vista == "home":
             vista_actual_widget = HomeView(self)
         elif vista == "menu":
-            vista_actual_widget = MenuView(self)
+            vista_actual_widget = MenuView(self, abrir_dialogo_nuevo=abrir_dialogo_nuevo)
         elif vista == "agente_financiero":
             vista_actual_widget = AgenteIAView(self)
         elif vista == "contenido":

@@ -41,7 +41,7 @@ def _coincide(platillo: dict, query: str) -> bool:
 
 
 class MenuView(ft.Container):
-    def __init__(self, router):
+    def __init__(self, router, abrir_dialogo_nuevo: bool = False):
         super().__init__()
         self.router = router
         self.expand = True
@@ -184,6 +184,15 @@ class MenuView(ft.Container):
         # page.update(). Mismo patrón que _maximizar_ventana en
         # main_controller.py.
         self.router.page.run_task(self._cargar_platillos)
+
+        # Fase 2.7: si se llegó aquí desde el atajo "Agregar un producto
+        # nuevo" de home_view.py, abre el diálogo de alta apenas esta vista
+        # queda montada — mismo truco de run_task que la línea de arriba
+        # (no corre de verdad hasta que cambiar_vista() termine y llame a
+        # page.update()), así el diálogo se abre sobre la vista ya en
+        # pantalla, no sobre una todavía a medio construir.
+        if abrir_dialogo_nuevo:
+            self.router.page.run_task(self._abrir_dialogo_nuevo_al_montar)
 
     def _header(self, texto: str, expand: int):
         return ft.Text(
@@ -541,6 +550,12 @@ class MenuView(ft.Container):
     # ------------------------------------------------------------------
     def _on_agregar_click(self, e):
         DialogoPlatillo(self.router, on_guardado=self._on_guardado, platillo=None).abrir()
+
+    async def _abrir_dialogo_nuevo_al_montar(self):
+        """Ver el run_task en __init__: existe solo para diferir la apertura
+        del diálogo hasta que el event loop recupera el control, igual que
+        _cargar_platillos."""
+        self._on_agregar_click(None)
 
     def _on_editar_click(self, platillo: dict):
         DialogoPlatillo(self.router, on_guardado=self._on_guardado, platillo=platillo).abrir()

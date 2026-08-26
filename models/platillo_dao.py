@@ -44,6 +44,20 @@ class EscrituraSinEfecto(Exception):
 # que no hace falta traerla también en el select de obtener_todos().)
 _COLUMNAS = "id, nombre, descripcion, categoria, precio, visible, image_url"
 
+# Mismas 3 categorías del CHECK de la tabla y de _CATEGORIAS en
+# dialogo_platillo.py — fijas a propósito, no hay categoría libre. Las usa
+# obtener_estadisticas() (Fase 2.7) para saber en cuántas de las 3 hay al
+# menos un platillo, sin traer la columna completa para sacar un distinct.
+_CATEGORIAS_FIJAS = ("Platillos", "Bebidas", "Postres")
+
+# Solo lo que pinta la tarjeta "Lo último de tu menú" de home_view.py
+# (Fase 2.7) — igual que _COLUMNAS arriba, nunca select('*'). Trae
+# updated_at además de created_at porque el dueño decidió (2026-08-25)
+# agregar esa columna + un trigger (trg_platillos_updated_at, ver
+# CLAUDE.md/roadmap) para que la tarjeta detecte ediciones de verdad, no
+# solo altas.
+_COLUMNAS_RECIENTES = "id, nombre, created_at, updated_at"
+
 
 class PlatilloDAO:
     @staticmethod
@@ -176,3 +190,84 @@ class PlatilloDAO:
                 f"El cambio de visibilidad de platillos id={id_platillo} no afectó ninguna fila."
             )
         return respuesta.data[0]
+
+    @staticmethod
+    def obtener_recientes(limite: int = 3) -> list[dict]:
+        """Para la tarjeta "Lo último de tu menú" de home_view.py (Fase 2.7):
+        los últimos platillos que tuvieron un alta O una edición (incluye
+        ocultar/mostrar, que también es un UPDATE), más recientes primero.
+
+        Ordena por `updated_at` en vez de `created_at`: el trigger
+        trg_platillos_updated_at (agregado en Fase 2.7 vía la Management
+        API, ver CLAUDE.md) deja updated_at IGUAL a created_at en el
+        momento del INSERT y la mueve a now() en cada UPDATE posterior — un
+        solo ORDER BY ya intercala altas y ediciones sin necesitar un
+        GREATEST(created_at, updated_at) en SQL.
+
+        Este método NO decide si una fila es "Nuevo" o "Editado" — regresa
+        los dos timestamps tal cual y es home_view.py quien compara
+        created_at == updated_at para pintar la etiqueta y el tiempo
+        relativo, igual que _formatear_precio()/_texto_contador() en
+        menu_view.py hacen su formateo del lado de la vista, no del DAO.
+        """
+        respuesta = (
+            client.from_("platillos")
+            .select(_COLUMNAS_RECIENTES)
+            .order("updated_at", desc=True)
+            .limit(limite)
+            .execute()
+        )
+        return respuesta.data or []
+
+    @staticmethod
+    def obtener_estadisticas() -> dict:
+        """Para la tarjeta "PRODUCTOS EN VENTA" de home_view.py (Fase 2.7):
+        cuántos platillos están EN VENTA y en cuántas de las 3 categorías
+        fijas (_CATEGORIAS_FIJAS arriba, mismo CHECK de la tabla) hay al
+        menos uno en venta.
+
+        SOLO CUENTA visible = true, a propósito (decisión del dueño,
+        2026-08-25). La tarjeta se llama "PRODUCTOS EN VENTA": un platillo
+        oculto NO se está vendiendo — no sale en el menú público — así que
+        contarlo ahí sería otra forma de mentir. OJO, esto es distinto del
+        título de menu_view.py ("N platillos en la mesa"), que sí cuenta
+        todo porque esa pantalla es el inventario completo que administra
+        el dueño, ocultos incluidos. Son dos preguntas distintas: "qué
+        administro" vs "qué estoy vendiendo". No las unifiques.
+
+        El filtro va explícito (.eq("visible", True)) y NO se deja a que
+        RLS lo haga: con la sesión del ADMIN, la política
+        platillos_auth_select deja ver también los ocultos, así que sin el
+        .eq el número saldría inflado justo para quien usa el panel. Con
+        anon el resultado es el mismo por partida doble, y está bien.
+
+        Mismo patrón que cargarEstadisticas() de EJEMPLOS/lilshop.html:
+        select(..., count='exact', head=True) — PostgREST regresa el total
+        en el header Content-Range (queda en `.count`) y ninguna fila en el
+        cuerpo (`.data` sale vacío), así que nunca se bajan las filas
+        completas solo para contarlas. Son 4 requests HEAD en total (1
+        global + 1 por categoría) porque el set de categorías es fijo y
+        chico — más barato que traer la columna `categoria` completa nada
+        más para sacar un distinct en Python.
+        """
+        total = (
+            client.from_("platillos")
+            .select("id", count="exact", head=True)
+            .eq("visible", True)
+            .execute()
+        ).count or 0
+
+        categorias_en_uso = 0
+        for categoria in _CATEGORIAS_FIJAS:
+            respuesta = (
+                client.from_("platillos")
+                .select("id", count="exact", head=True)
+                .eq("categoria", categoria)
+                .eq("visible", True)
+                .execute()
+            )
+            if (respuesta.count or 0) > 0:
+                categorias_en_uso += 1
+
+        return {"total": total, "categorias_en_uso": categorias_en_uso}
+

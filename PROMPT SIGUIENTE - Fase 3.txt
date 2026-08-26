@@ -1,0 +1,131 @@
+Fase 3 del proyecto: las imágenes de los platillos. Que el panel deje de
+pintar el placeholder assets/taco.jpg en las 7 filas y muestre fotos reales,
+subidas desde el diálogo de alta/edición a Cloudflare R2 — y que cuando se
+borre un platillo, su foto se borre DE VERDAD del bucket, no se quede ahí
+ocupando espacio.
+
+Antes de escribir código lee "Hey Claude Code, read this file..txt" y CLAUDE.md
+— ahí está el plan completo, la paleta y las reglas. Toda la Fase 2 ya está
+cerrada y verificada: login (2.0), la tabla leyendo datos reales (2.1-2.5),
+alta/edición/borrado/ocultar desde el panel (2.6) y las tarjetas de home_view
+que dependen del menú (2.7). Ya lo probé logueado en la app real y funciona.
+Así que ya hay sesión de admin viva, permisos de lectura/escritura, un DAO
+completo (models/platillo_dao.py) y un diálogo de alta/edición
+(views/components/dialogo_platillo.py) donde colgar lo nuevo.
+
+Alcance de esta tarea: la Fase 3 completa. El menú público en HTML (Fase 4),
+el sistema de mesas (Fase 5) y el agente de IA (Fase 6) NO van aquí.
+
+Lo que quiero:
+
+- Que en el diálogo de "Nuevo platillo" / "Editar platillo" pueda escoger una
+  foto de mi compu, verla en una miniatura de preview ANTES de guardar, y que
+  al guardar se suba a Cloudflare y la fila de Supabase quede con su image_url.
+  Hoy image_url está en NULL en las 7 filas y menu_view.py cae al placeholder
+  assets/taco.jpg — eso debe seguir funcionando igual para las filas sin foto,
+  no lo quites.
+
+- Que al editar un platillo y cambiarle la foto, la foto VIEJA se borre del
+  bucket. Y que al eliminar un platillo, su foto también se borre del bucket.
+  ESTO ES LO MÁS IMPORTANTE DE LA FASE PARA MÍ, y te explico por qué abajo.
+
+- Que la imagen se comprima antes de subir, para no llenar el bucket de fotos
+  de 4 MB salidas del celular. En Anxie Store esto se hacía en el navegador
+  con <canvas>; aquí es Python, así que va con Pillow (ya está en
+  requirements.txt): WebP calidad 80, lado mayor máximo 1600px, mismo criterio
+  que EJEMPLOS/lilshop.html.
+
+LO DE BORRAR DE VERDAD — LÉEME, ES POR ALGO QUE YA ME PASÓ:
+
+En Anxie Store (mi proyecto anterior, el de EJEMPLOS/) el panel sí borraba los
+productos de la base, pero nunca tuve la certeza de que la imagen se borrara
+del bucket, y me daba miedo estar pagando almacenamiento por fotos huérfanas
+de productos que ya no existen. Ya verificamos (2026-08-25) que en ESTE
+proyecto el borrado en Supabase sí es físico de verdad — no hay soft-delete,
+no hay trigger que intercepte el DELETE, no hay caché en el panel, y las filas
+que borré ya no están en Postgres. Eso quedó documentado en CLAUDE.md.
+
+Pero eso fue del lado de la base. Cloudflare todavía no existe en este
+proyecto, así que quiero que nazca bien desde el primer día:
+
+  · Revisa EJEMPLOS/lilshop.html → borrarImagenDeR2(). Ahí está el hoyo que
+    me preocupa: esa función atrapa el error y solo lo manda a la consola
+    ("un fallo de limpieza en R2 no debe tumbar el flujo principal"). O sea
+    que si el borrado en R2 falla, el producto se borra igual y la imagen se
+    queda huérfana PARA SIEMPRE, sin que nadie se entere nunca. Eso es
+    exactamente lo que no quiero repetir. Dime cómo lo resolverías mejor y
+    hazlo — se me ocurre avisarme en pantalla cuando la limpieza falle, o
+    dejar registro de los huérfanos en algún lado para poder limpiarlos
+    después, pero tú dime qué es lo más limpio y decídelo tú, no me preguntes
+    por algo tan chico.
+  · Respeta el orden de reversa que ya usa lilshop.html, que está bien
+    pensado: si falla el insert en la base, borra la imagen que ya subiste
+    (para no dejar huérfano); al editar, borra la imagen vieja SOLO DESPUÉS de
+    que el update de la fila salió bien (para no dejar la fila apuntando a
+    nada).
+  · Quiero poder comprobar con mis propios ojos que el bucket queda limpio.
+    Cuando termines, enséñame cuántos objetos hay en el bucket antes y después
+    de una prueba de subir + borrar.
+
+Detalles que quiero que cuides:
+
+- El Worker de Cloudflare es quien tiene el permiso de escribir en R2, no el
+  panel — así ninguna credencial de R2 vive en mi compu. El patrón está en
+  EJEMPLOS/index.js y ya está resuelto cómo se autentica: el panel manda el
+  access_token de la sesión de Supabase Auth en el header Authorization y el
+  Worker lo valida contra ADMIN_EMAIL. No inventes otro mecanismo.
+- Diferencia con el ejemplo: allá el que sube es el navegador con fetch; aquí
+  es Python. Usa httpx (ya está en requirements.txt), no requests, para no
+  meter una dependencia nueva.
+- Todo lo que toque la red va con page.run_task + asyncio.to_thread, igual que
+  _cargar_platillos, el login y las tarjetas de home_view. Nada que congele la
+  ventana. Ojo que aquí hay dos cosas lentas seguidas (comprimir con Pillow y
+  subir), así que el diálogo necesita mostrar en qué paso va — el botón de
+  guardar ya tiene su ProgressRing, úsalo.
+- Los métodos nuevos que peguen a Supabase van en models/platillo_dao.py con
+  el mismo criterio que los que ya tiene: sin select('*'), sin atrapar
+  excepciones adentro, y con el chequeo de EscrituraSinEfecto si es
+  UPDATE/DELETE (RLS bloquea en silencio, ya está documentado ahí). Lo de
+  Cloudflare NO va en platillo_dao.py — ese archivo es de Supabase. Ponlo en
+  su propio módulo dentro de models/.
+- Estados de cargando y de error con el mismo lenguaje visual de siempre
+  (ProgressRing dorado #f4ca83, caja de error #f7e4e3/#d9534f/#a33c39). Los
+  errores en español y sin tecnicismos: "No se pudo subir la foto" y no un
+  código HTTP. El detalle técnico va a consola con print.
+- Valida el archivo antes de subirlo: que sea imagen de verdad y que no se
+  pase de tamaño, para que yo nunca vea un error crudo.
+- Cuida que las miniaturas de 38x38 de menu_view.py se sigan viendo bien con
+  las fotos reales y que la tarjeta "Lo último de tu menú" de Inicio no se
+  desacomode. Si algo se desacomoda, pregúntame antes de cambiar medidas.
+
+LO QUE NECESITAS DE MÍ — pregúntamelo al principio y espera mi respuesta,
+igual que hiciste con lo de updated_at en la Fase 2.7:
+
+- ¿Hago un Worker y un bucket NUEVOS para la taquería, o reusamos los de Anxie
+  Store? (Tú recomiéndame, yo creo que nuevos, pero dime por qué.)
+- La URL del Worker y la R2_PUBLIC_BASE del bucket, para meterlas al .env.
+- Si necesitas que yo entre a la consola de Cloudflare a crear el bucket o
+  pegar el Worker, dime los pasos exactos y clarito, que de Cloudflare no le
+  sé tanto como a Supabase.
+
+Ojo: mi .env y el .txt del roadmap están en .gitignore porque traen llaves
+reales, y este repo es PÚBLICO. Verifica eso antes de commitear y NO metas
+ninguna llave nueva (ni la de Cloudflare) en un archivo que sí se sube.
+
+Lo que NO entra en esta tarea — NO les inventes datos ni los toques:
+"347 visitas" / "+12% vs ayer", "Tacos al Pastor / 48 órdenes", "12 Posts",
+el saludo fijo "Buenos días, Ary" y toda la tarjeta negra de "SUGERENCIA DE
+HOY". Eso es Fase 7 y sigue siendo relleno a propósito.
+
+Tampoco toques el ícono de los 3 puntitos de menu_view.py: sigue apartado a
+propósito para mostrar cuántas veces se vendió cada platillo (Fases 5 y 6).
+
+Respeta el diseño al 100%: mismos colores, mismos radios, mismos espaciados,
+mismas tipografías. Lo nuevo (el selector de foto, el preview, el estado de
+"subiendo") tiene que verse como si siempre hubiera estado ahí. Si una
+decisión visual no está resuelta en alguna vista existente, PREGÚNTAME antes
+de inventar.
+
+Cuando termines, corre la app y verifica con screenshot que se ve bien de
+verdad, no solo que compila. Y actualiza el roadmap y CLAUDE.md antes de
+cerrar.
