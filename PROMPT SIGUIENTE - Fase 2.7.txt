@@ -1,0 +1,85 @@
+Fase 2.7 del proyecto: que las tarjetas de home_view.py que dependen del menú
+dejen de mentir — "PRODUCTOS EN VENTA", "Lo último de tu menú", y el atajo
+"Agregar un producto nuevo".
+
+Antes de escribir código lee "Hey Claude Code, read this file..txt" y CLAUDE.md
+— ahí está el plan completo, la paleta y las reglas. La Fase 2.0 (el login),
+los pasos 2.1-2.5 (la tabla lee datos reales de public.platillos) y la 2.6
+(buscador, alta/edición/borrado/ocultar desde el panel) ya están hechos y
+verificados — el menú quedó 100% funcional y ya lo probé logueado en la app
+real. Así que ya hay sesión, permisos de lectura/escritura, un DAO completo
+(models/platillo_dao.py) y un diálogo de alta/edición
+(views/components/dialogo_platillo.py) donde colgar lo nuevo.
+
+Alcance de esta tarea: el paso 2.7 del roadmap, completo. Cloudflare/imágenes
+(Fase 3) NO va aquí.
+
+Lo que quiero:
+
+- Tarjeta "PRODUCTOS EN VENTA" (home_view.py, línea ~84). Hoy dice
+  "10 Platillos" / "1 categoría" hardcodeado. Que cuente de verdad contra
+  public.platillos. Ojo que "1 categoría" ya es falso hoy mismo: los datos de
+  prueba tienen Platillos Y Bebidas. Para el conteo usa el patrón de
+  cargarEstadisticas() de EJEMPLOS/lilshop.html — select con count='exact' y
+  head=True, que trae solo el número sin descargar las filas. No me bajes las
+  10 filas completas nada más para contarlas.
+
+- Tarjeta "Lo último de tu menú" (home_view.py, línea ~176). Hoy dice fijo
+  "No hay cambios recientes registrados hoy.". Que liste de verdad los últimos
+  movimientos del menú, con su fecha en relativo ("hace 2 horas", "ayer").
+  OJO, ESTO NECESITA UNA DECISIÓN DE ESQUEMA Y QUIERO QUE ME PREGUNTES ANTES:
+  la tabla tiene created_at pero NO tiene updated_at, así que hoy solo se
+  pueden detectar ALTAS, no EDICIONES. Como el subtítulo de la tarjeta promete
+  "Cambios y publicaciones recientes", dime qué recomiendas y espera mi
+  respuesta antes de tocar el esquema. Tienes el PAT de la Management API en
+  el .env para hacer el DDL si decidimos que sí.
+
+- Atajo "Agregar un producto nuevo" (home_view.py, línea ~120). Hoy hace
+  cambiar_vista("menu") y ahí muere. Debe llevarme al menú CON la ventanita de
+  "Nuevo platillo" YA ABIERTA, sin que yo tenga que picarle otra vez al botón.
+
+Detalles que quiero que cuides:
+
+- cambiar_vista(vista) hoy solo recibe el nombre de la vista, no hay forma de
+  pasarle una intención. Extiéndelo con un parámetro opcional con default (para
+  no romper las 6 llamadas que ya existen) o usa una bandera en el router — tú
+  dime cuál es más limpio, pero que no rompa la navegación normal ni deje el
+  diálogo abriéndose solo cuando no debe (por ejemplo, si entro al menú desde
+  el sidebar NO debe abrirse nada).
+- home_view.py hoy construye todo síncrono en __init__, sin async y sin estado
+  de carga, a diferencia de menu_view.py. Todo lo que toque la red va con
+  page.run_task + asyncio.to_thread, igual que _cargar_platillos y el login.
+  Nada que congele la ventana.
+- Los conteos y la lista nueva necesitan sus estados de cargando y de error,
+  con el mismo lenguaje visual que ya definimos (ProgressRing dorado #f4ca83,
+  caja de error #f7e4e3/#d9534f/#a33c39). Si una tarjeta falla en cargar, que
+  falle sola y no tumbe toda la pantalla de Inicio.
+- Si una escritura o lectura falla, el error se muestra con el estilo de error
+  del proyecto y en español sin tecnicismos. El detalle técnico va a consola
+  con print, no a la pantalla.
+- La tarjeta "Lo último de tu menú" tiene height=185 fijo. Cuida cuántos
+  renglones caben ahí sin que se desborde ni se vea apretado; si no caben,
+  pregúntame antes de cambiarle el alto.
+- Los métodos nuevos van en models/platillo_dao.py con el mismo criterio que
+  los que ya tiene: sin select('*'), sin atrapar excepciones adentro, y si es
+  un UPDATE/DELETE con el chequeo de EscrituraSinEfecto que ya está
+  documentado ahí (RLS bloquea en silencio, no lanza error).
+- Cuando agregue un platillo desde el diálogo, al volver a Inicio los conteos
+  y la lista de "Lo último" deben reflejar el cambio. Dime si eso ya sale gratis
+  porque las vistas se reconstruyen en cada navegación, o si hay que hacer algo.
+
+Lo que NO entra en esta tarea (es Fase 7, stats reales) — NO les inventes datos
+ni les pongas números falsos nuevos, déjalos exactamente como están:
+"347 visitas" / "+12% vs ayer", "Tacos al Pastor / 48 órdenes", "12 Posts", el
+saludo fijo "Buenos días, Ary", y toda la tarjeta negra de "SUGERENCIA DE HOY".
+No hay tabla de visitas, ni de ventas, ni de contenido generado todavía.
+
+Tampoco toques el ícono de los 3 puntitos de menu_view.py: sigue apartado a
+propósito para mostrar cuántas veces se vendió cada platillo (Fases 5 y 6).
+
+Respeta el diseño al 100%: mismos colores, mismos radios, mismos espaciados,
+mismas tipografías. Solo cambia de dónde salen los datos. Si una decisión visual
+no está resuelta en alguna vista existente, PREGÚNTAME antes de inventar.
+
+Cuando termines, corre la app y verifica con screenshot que se ve bien de verdad,
+no solo que compila. Y actualiza el roadmap y CLAUDE.md antes de cerrar.

@@ -1,0 +1,5 @@
+flet
+supabase
+python-dotenv
+httpx
+pillow

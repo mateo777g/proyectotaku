@@ -1,0 +1,16 @@
+# Traen llaves reales dentro. No quitar de aquí.
+.env
+Hey Claude Code, read this file..txt
+
+# Referencias de "Anxie Store" (proyecto anterior del dueño). Se quedan solo
+# en local a propósito: traen la anon key, la URL del Worker y la R2_PUBLIC_BASE
+# de ESE proyecto, y este repo es PÚBLICO. Siguen estando en el disco para
+# consultarlas (CLAUDE.md las documenta), simplemente no se publican.
+EJEMPLOS/
+
+__pycache__/
+*.pyc
+
+# Por si la sesion del panel llegara a escribirse dentro del repo por error.
+# Su sitio correcto es %LOCALAPPDATA%\TakuMonky\sesion.json
+sesion.json

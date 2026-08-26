@@ -1,0 +1,91 @@
+Fase 2.6 del proyecto: que los botones de menu_view.py dejen de ser adorno y
+sirvan de verdad — buscador, "Agregar platillo", ojito de visibilidad y lápiz
+de edición.
+
+Antes de escribir código lee "Hey Claude Code, read this file..txt" y CLAUDE.md
+— ahí está el plan completo, la paleta y las reglas. La Fase 2.0 (el login) y
+los pasos 2.1-2.5 (la tabla ya pinta datos reales de public.platillos vía
+models/platillo_dao.py) ya están hechos y verificados, así que ya hay sesión
+real, permisos de lectura/escritura y un DAO donde colgar lo nuevo.
+
+Alcance de esta tarea: el paso 2.6 del roadmap, completo. Cloudflare/imágenes
+(Fase 3) NO va aquí.
+
+Lo que quiero:
+
+- models/platillo_dao.py: agregarle crear(datos), actualizar(id, datos),
+  eliminar(id) y cambiar_visibilidad(id, visible). Mismo criterio que ya tiene
+  obtener_todos(): sin select('*'), y sin atrapar excepciones adentro — que
+  suban y que la vista decida qué mensaje mostrar.
+
+- Buscador funcional. Que filtre por nombre, descripción y categoría. Filtra
+  en el cliente sobre las filas que ya se cargaron, NO le pegues a Supabase en
+  cada tecla — son 10 platillos, no tiene sentido. Cuando el filtro no
+  encuentra nada, el estado vacío debe decir algo distinto a cuando el menú
+  está realmente vacío ("no hay resultados para X" vs "todavía no hay
+  platillos"). El contador del título sigue al filtro, o sea si busco y quedan
+  3, dice "3 platillos en la mesa" — si crees que se ve raro, pregúntame antes.
+
+- Botón "Agregar platillo" → abre una ventana/diálogo de alta.
+
+- Lápiz → abre esa MISMA ventana pero en modo edición, con los datos del
+  platillo ya cargados.
+
+- Dentro de la ventana de edición van los dos botones: "Guardar cambios" y
+  "Eliminar platillo". Eliminar pide confirmación antes de borrar (es
+  destructivo y no se puede deshacer).
+
+- Ojito → cambia la visibilidad de esa fila (visible true/false) y el badge se
+  actualiza al momento, sin recargar toda la vista si se puede. Recuerda que
+  ocultar NO borra: la fila se queda en Supabase y en la tabla del panel, solo
+  deja de salir en el menú público.
+
+OJO CON ESTO — CAMBIO DE OPINIÓN RESPECTO AL ROADMAP:
+El roadmap dice que los tres puntitos ("...") son el botón de eliminar. Ya no.
+Eliminar se va DENTRO de la ventana de editar (arriba). Los tres puntitos se
+quedan tal cual están, inertes, porque los voy a ocupar después para ver
+cuántas veces se vendió ese platillo — y eso necesita una tabla de ventas y el
+sistema de mesas, que todavía no existen (Fases 5 y 6). No los borres, no les
+cambies el ícono, no los escondas. Solo déjalos como están y anota en el
+roadmap para qué quedaron apartados.
+
+Detalles que quiero que cuides:
+
+- El formulario de alta/edición es pantalla NUEVA, así que se diseña con la
+  paleta de CLAUDE.md, tipo el modal de EJEMPLOS/lilshop.html pero en Flet.
+  Reusa lo que ya existe: los campos como el buscador/los del login (height=52,
+  border_radius=16, #eadfca / #f4ca83), el botón oscuro tipo "Entrar" con
+  border_radius=30, y el estilo de error que ya está definido en sesion_view.py
+  y copiado en menu_view.py. Si una decisión visual no está resuelta en alguna
+  vista existente, PREGÚNTAME antes de inventar.
+- Léete el gotcha de Flet que quedó anotado en la Fase 2.0 del roadmap
+  (ft.Column necesita tight=True para no estirarse) antes de armar la tarjeta
+  del diálogo, es exactamente el mismo caso.
+- Campos del formulario: nombre, descripción, categoría y precio. La categoría
+  va como selector con las 3 opciones fijas (Platillos / Bebidas / Postres),
+  no como texto libre — hay un CHECK en la base que rechaza cualquier otra
+  cosa. El precio es numérico y no puede ser negativo (también hay CHECK).
+  Valida en el formulario antes de mandar, para que el error se vea bonito y
+  no como un error crudo de Postgres.
+- NADA de imágenes en este formulario. image_url se queda como está (hoy NULL,
+  cayendo a assets/taco.jpg); subir fotos es la Fase 3 con Cloudflare.
+- Los platillos nuevos deben quedar al FINAL de la lista, no al principio. La
+  columna `orden` tiene default 0, así que si no le pones nada todos los nuevos
+  se van hasta arriba. Calcula el siguiente orden.
+- Todo lo que toque la red va asíncrono con page.run_task + asyncio.to_thread,
+  igual que _cargar_platillos y el login. Nada que congele la ventana.
+- Mientras guarda/borra, el botón se deshabilita y muestra el ProgressRing
+  dorado, igual que hace el botón "Entrar" del login.
+- Si una escritura falla, el error se muestra con el estilo de error del
+  proyecto y en español sin tecnicismos. El detalle técnico va a consola con
+  print, no a la pantalla.
+- Después de cualquier escritura exitosa, la tabla se refresca para que refleje
+  el cambio. Anota (no lo implementes todavía) que cuando exista el menú
+  público de la Fase 4 habrá que invalidar su caché aquí mismo, como hace
+  invalidarCacheCatalogo() en EJEMPLOS/lilshop.html.
+
+Respeta el diseño al 100%: mismo header, mismo buscador, mismos colores, mismos
+íconos, mismos espaciados. Solo cambia de dónde salen los datos.
+
+Cuando termines, corre la app y verifica con screenshot que se ve bien de verdad,
+no solo que compila. Y actualiza el roadmap y CLAUDE.md antes de cerrar.
