@@ -111,10 +111,13 @@ class PlatilloDAO:
         respaldo final, pero validar antes en el formulario evita que el
         usuario vea un error crudo de Postgres).
 
-        No manda `image_url` — ese campo no existe en el formulario todavía
-        (Fase 3, Cloudflare); se queda NULL y la fila cae al placeholder
-        assets/taco.jpg, igual que las 10 filas de prueba. Sí manda `orden`,
-        calculado aquí, para que el platillo quede al final de la lista.
+        `image_url` (Fase 3, Cloudflare R2) es OPCIONAL en `datos`: si la
+        llave viene (el dueño eligió una foto en el diálogo y ya se subió a
+        R2 — ver views/components/dialogo_platillo.py), se manda tal cual;
+        si no viene, la columna se queda NULL y la fila cae al placeholder
+        assets/taco.jpg, exactamente igual que antes de la Fase 3. Sí manda
+        `orden`, calculado aquí, para que el platillo quede al final de la
+        lista.
         """
         fila = {
             "nombre": datos["nombre"],
@@ -123,6 +126,8 @@ class PlatilloDAO:
             "precio": datos["precio"],
             "orden": PlatilloDAO._siguiente_orden(),
         }
+        if "image_url" in datos:
+            fila["image_url"] = datos["image_url"]
         respuesta = client.from_("platillos").insert(fila).execute()
         if not respuesta.data:
             # No debería pasar (un INSERT bloqueado por RLS sí lanza error de
@@ -135,14 +140,22 @@ class PlatilloDAO:
     @staticmethod
     def actualizar(id_platillo: int, datos: dict) -> dict:
         """Actualiza nombre/descripcion/categoria/precio de un platillo
-        existente. No toca `visible`, `image_url` ni `orden` — eso lo maneja
-        cambiar_visibilidad() y la futura Fase 3 por separado."""
+        existente. No toca `visible` ni `orden` — eso lo maneja
+        cambiar_visibilidad() por separado.
+
+        `image_url` (Fase 3) es OPCIONAL igual que en crear(): solo se
+        incluye en el UPDATE si el dueño cambió la foto en el diálogo (ya
+        subida a R2 antes de llamar aquí — ver dialogo_platillo.py). Si la
+        llave no viene en `datos`, la columna no se toca y la fila conserva
+        la foto que ya tenía."""
         fila = {
             "nombre": datos["nombre"],
             "descripcion": datos.get("descripcion") or None,
             "categoria": datos["categoria"],
             "precio": datos["precio"],
         }
+        if "image_url" in datos:
+            fila["image_url"] = datos["image_url"]
         respuesta = (
             client.from_("platillos").update(fila).eq("id", id_platillo).execute()
         )

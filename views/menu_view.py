@@ -387,6 +387,17 @@ class MenuView(ft.Container):
                                 height=38,
                                 fit=ft.BoxFit.COVER,
                                 border_radius=8,
+                                # Fase 3: si la foto de R2 no carga (URL
+                                # rota, sin internet), cae al mismo
+                                # placeholder que ya usan las filas sin
+                                # foto en vez de mostrar un ícono roto.
+                                error_content=ft.Image(
+                                    src="assets/taco.jpg",
+                                    width=38,
+                                    height=38,
+                                    fit=ft.BoxFit.COVER,
+                                    border_radius=8,
+                                ),
                             ),
                             ft.Text(
                                 nombre,
@@ -560,14 +571,26 @@ class MenuView(ft.Container):
     def _on_editar_click(self, platillo: dict):
         DialogoPlatillo(self.router, on_guardado=self._on_guardado, platillo=platillo).abrir()
 
-    def _on_guardado(self):
+    def _on_guardado(self, aviso_limpieza: str | None = None):
         """Se llama tras crear/actualizar/eliminar con éxito desde el
         diálogo. A diferencia del ojito, aquí SÍ se recarga la tabla contra
         Supabase de verdad — un alta cambia el total y el orden, una edición
         puede cambiar cualquier columna visible, y un borrado quita la fila
         por completo; no alcanza con parchar una sola fila en memoria.
 
+        `aviso_limpieza` (Fase 3): el guardado/borrado en Supabase YA salió
+        bien cuando esto se llama, pero dialogo_platillo.py puede mandar un
+        mensaje si de pasada falló borrar una foto vieja/huérfana en
+        Cloudflare R2 (ver models/cloudflare_storage.py — ese fallo ya
+        quedó registrado en huerfanos_r2.json de todos modos, esto es solo
+        para que el dueño se entere en el momento). Se reusa el mismo
+        banner rojo temporal del ojito porque el proyecto no tiene un
+        segundo lenguaje visual de "aviso" — el texto ya aclara que la
+        acción principal sí se completó.
+
         NOTA para la Fase 4: cuando exista el menú público, aquí también
         habrá que invalidar su caché (igual que invalidarCacheCatalogo() en
         EJEMPLOS/lilshop.html) — todavía no aplica, ese menú no existe."""
+        if aviso_limpieza:
+            self._mostrar_error_temporal(aviso_limpieza)
         self.router.page.run_task(self._cargar_platillos)

@@ -12,8 +12,17 @@ El gotcha de Flet que quedó anotado en la Fase 2.0 aplica igual aquí: el
 Column de adentro de la tarjeta necesita tight=True, si no reclama todo el
 alto disponible del AlertDialog en vez de solo el que pide su contenido.
 
-NADA de imágenes aquí — image_url no se toca, sigue cayendo a
-assets/taco.jpg hasta la Fase 3 (Cloudflare).
+FASE 3 (Cloudflare R2): el diálogo ahora también deja elegir una foto local,
+la muestra en miniatura de preview ANTES de guardar, y al guardar la sube a
+R2 (comprimida a WebP con models/cloudflare_storage.py) antes de mandar el
+image_url a Supabase. El selector de archivo usa TKINTER, no el FilePicker
+de Flet — pedido explícito del dueño ("nunca he logrado hechar a andar el
+filepicker de flet"), ver _elegir_archivo_imagen() más abajo. Todo el
+orden de reversa (subir antes de guardar, borrar la foto vieja/huérfana
+solo después de que el guardado en Supabase ya salió bien) vive en
+_guardar()/_eliminar_async() de esta clase — el detalle completo está en el
+docstring de models/cloudflare_storage.py, que es quien de verdad sube/
+borra en R2.
 
 Dos decisiones visuales que no tenían precedente exacto en el proyecto y que
 se resolvieron reusando piezas ya existentes en vez de inventar:
@@ -25,13 +34,21 @@ se resolvieron reusando piezas ya existentes en vez de inventar:
     para su variante de contorno, y #d9534f sólido para el de confirmación
     ("Sí, eliminar") — es el color de "destructivo" que ya define la paleta,
     aplicado a un botón en vez de a un badge.
+  - (Fase 3) El botón "Agregar/Cambiar foto" reusa el par neutro ya
+    establecido para superficies de input (borde #eadfca / fondo #f8f1de)
+    en forma de píldora — es la misma combinación que ya usan todos los
+    campos de este mismo diálogo, aplicada a un botón en vez de a un
+    TextField.
 Si el dueño prefiere otra medida, es un cambio de una línea en este archivo.
 """
 import asyncio
+import tkinter as tk
+from tkinter import filedialog
 
 import flet as ft
 import httpx
 
+from models import cloudflare_storage
 from models.platillo_dao import PlatilloDAO
 
 _CATEGORIAS = ["Platillos", "Bebidas", "Postres"]
@@ -55,6 +72,34 @@ def _texto_precio(valor) -> str:
     return f"{numero:.2f}"
 
 
+def _elegir_archivo_imagen() -> str | None:
+    """Abre el selector de archivos NATIVO de Windows vía Tkinter — a
+    pedido explícito del dueño en vez del FilePicker de Flet. Se crea una
+    raíz de Tk oculta, se muestra el diálogo (bloqueante) y se destruye la
+    raíz enseguida; el resto de la app sigue siendo 100% Flet, esto no deja
+    ningún estado de Tkinter vivo. Devuelve la ruta elegida o None si el
+    dueño cerró/canceló el diálogo.
+
+    BLOQUEANTE de verdad (congela el hilo que la llama hasta que se cierra
+    el diálogo) — SIEMPRE se invoca vía asyncio.to_thread desde
+    _elegir_foto_async(), nunca directo desde un on_click, o congelaría
+    también la ventana de Flet mientras el selector está abierto."""
+    raiz = tk.Tk()
+    raiz.withdraw()
+    raiz.attributes("-topmost", True)  # que no se abra detrás de la ventana de Flet
+    try:
+        ruta = filedialog.askopenfilename(
+            title="Selecciona una foto del platillo",
+            filetypes=[
+                ("Imágenes", "*.jpg *.jpeg *.png *.webp *.bmp"),
+                ("Todos los archivos", "*.*"),
+            ],
+        )
+    finally:
+        raiz.destroy()
+    return ruta or None
+
+
 class DialogoPlatillo:
     """Construye y controla un ft.AlertDialog de alta/edición.
 
@@ -63,9 +108,12 @@ class DialogoPlatillo:
 
     `platillo=None` → modo alta ("Agregar platillo"). `platillo=<dict>` →
     modo edición, precargado con esa fila (agrega también el botón
-    "Eliminar platillo"). `on_guardado` se llama sin argumentos después de
+    "Eliminar platillo"). `on_guardado` se llama después de
     crear/actualizar/eliminar con éxito, para que menu_view.py refresque
-    la tabla.
+    la tabla — recibe UN argumento opcional (Fase 3): `None` en el caso
+    normal, o un texto de aviso si de pasada falló borrar una foto vieja/
+    huérfana en Cloudflare R2 (el guardado/borrado en Supabase YA salió
+    bien cuando eso pasa; ver models/cloudflare_storage.py).
     """
 
     def __init__(self, router, on_guardado, platillo: dict | None = None):
@@ -75,6 +123,77 @@ class DialogoPlatillo:
         self.editando = platillo is not None
         self.platillo = platillo or {}
         self._ocupado = False  # True mientras hay un guardado/borrado en curso
+        self._eligiendo_foto = False  # True mientras el selector nativo está abierto
+
+        # Fase 3 — estado de la foto. _ruta_imagen_nueva es un path LOCAL
+        # (todavía no subido) que se llena solo si el dueño elige un
+        # archivo nuevo en este diálogo; _imagen_url_actual es la image_url
+        # que YA tenía la fila en Supabase (None si es alta, o si edita un
+        # platillo que todavía cae al placeholder). Los dos nunca se pisan:
+        # _guardar() decide qué subir/borrar mirando cuál de los dos trae
+        # algo.
+        self._ruta_imagen_nueva: str | None = None
+        self._imagen_url_actual: str | None = (
+            self.platillo.get("image_url") if self.editando else None
+        )
+
+        # ---------------- foto (Fase 3) ----------------
+        self.imagen_preview = ft.Image(
+            src=self._imagen_url_actual or "assets/taco.jpg",
+            width=72,
+            height=72,
+            fit=ft.BoxFit.COVER,
+            border_radius=12,
+            # Si _imagen_url_actual ya no carga (borrada a mano, sin
+            # internet), cae al mismo placeholder que usan las filas sin
+            # foto en vez de un ícono roto.
+            error_content=ft.Image(
+                src="assets/taco.jpg", width=72, height=72, fit=ft.BoxFit.COVER, border_radius=12
+            ),
+        )
+        self._texto_boton_foto = ft.Text(
+            "Cambiar foto" if self._imagen_url_actual else "Agregar foto",
+            color="#5e5449",
+            weight="bold",
+            size=13,
+        )
+        self.boton_foto = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.ADD_A_PHOTO_OUTLINED, size=15, color="#5e5449"),
+                    self._texto_boton_foto,
+                ],
+                spacing=6,
+                tight=True,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor="#f8f1de",
+            border=ft.border.all(1, "#eadfca"),
+            border_radius=30,
+            padding=ft.padding.symmetric(horizontal=16, vertical=10),
+            ink=True,
+            on_click=self._on_elegir_foto_click,
+        )
+        self.fila_foto = ft.Row(
+            controls=[
+                self.imagen_preview,
+                ft.Container(width=14),
+                ft.Column(
+                    controls=[
+                        self.boton_foto,
+                        ft.Text(
+                            "JPG o PNG · se optimiza automáticamente",
+                            size=11,
+                            color="#8a7e72",
+                        ),
+                    ],
+                    spacing=6,
+                    tight=True,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
 
         # ---------------- campos ----------------
         self.campo_nombre = ft.TextField(
@@ -198,6 +317,8 @@ class DialogoPlatillo:
                 overflow=ft.TextOverflow.ELLIPSIS,
             ),
             ft.Container(height=24),
+            self.fila_foto,
+            ft.Container(height=14),
             self.campo_nombre,
             ft.Container(height=14),
             self.campo_descripcion,
@@ -323,7 +444,43 @@ class DialogoPlatillo:
         self.page.run_task(self._guardar, datos)
 
     async def _guardar(self, datos: dict):
-        self._set_cargando(True)
+        self._set_cargando(True, "Guardando...")
+        imagen_nueva_url = None  # URL en R2 de la foto recién subida, si hubo una
+
+        # Fase 3 — paso 1: si el dueño eligió una foto nueva en este
+        # diálogo, comprimirla y subirla ANTES de tocar Supabase (orden de
+        # reversa pedido: subir primero, insertar/actualizar después — ver
+        # models/cloudflare_storage.py).
+        if self._ruta_imagen_nueva:
+            self._set_cargando(True, "Optimizando imagen...")
+            try:
+                datos_webp = await asyncio.to_thread(
+                    cloudflare_storage.validar_y_comprimir, self._ruta_imagen_nueva
+                )
+            except cloudflare_storage.ArchivoInvalido as e:
+                self._mostrar_error(str(e))
+                self._set_cargando(False)
+                return
+            except Exception as e:
+                print(f"[dialogo_platillo] error inesperado al comprimir la imagen: {e}")
+                self._mostrar_error("No se pudo procesar la foto. Intenta con otra imagen.")
+                self._set_cargando(False)
+                return
+
+            self._set_cargando(True, "Subiendo foto...")
+            try:
+                imagen_nueva_url = await asyncio.to_thread(
+                    cloudflare_storage.subir_imagen, datos_webp
+                )
+            except cloudflare_storage.SubidaFallida as e:
+                print(f"[dialogo_platillo] {e}")
+                self._mostrar_error(str(e) or "No se pudo subir la foto.")
+                self._set_cargando(False)
+                return
+
+            datos["image_url"] = imagen_nueva_url
+            self._set_cargando(True, "Guardando...")
+
         try:
             if self.editando:
                 # actualizar()/crear() son bloqueantes (supabase-py es
@@ -336,18 +493,97 @@ class DialogoPlatillo:
                 await asyncio.to_thread(PlatilloDAO.crear, datos)
         except httpx.RequestError as e:
             print(f"[dialogo_platillo] error de red al guardar: {e}")
+            await self._revertir_imagen_si_hace_falta(imagen_nueva_url)
             self._mostrar_error("No hay conexión con el servidor. Revisa tu internet.")
             self._set_cargando(False)
             return
         except Exception as e:
             print(f"[dialogo_platillo] error al guardar: {e}")
+            await self._revertir_imagen_si_hace_falta(imagen_nueva_url)
             self._mostrar_error("No se pudo guardar el platillo. Intenta de nuevo.")
             self._set_cargando(False)
             return
 
+        # Fase 3 — paso 2: el guardado en Supabase YA salió bien. Si había
+        # una foto VIEJA distinta de la nueva, es SEGURO borrarla ahora (la
+        # fila ya quedó apuntando a la nueva) — orden de reversa igual que
+        # EJEMPLOS/lilshop.html. Si esto falla, el platillo de todos modos
+        # ya se guardó bien; solo se avisa que la limpieza no se pudo hacer
+        # (ya quedó registrada como huérfano, ver cloudflare_storage.py).
+        aviso_limpieza = None
+        imagen_vieja = self.platillo.get("image_url") if self.editando else None
+        if imagen_nueva_url and imagen_vieja and imagen_vieja != imagen_nueva_url:
+            try:
+                await asyncio.to_thread(cloudflare_storage.eliminar_imagen, imagen_vieja)
+            except cloudflare_storage.LimpiezaImagenFallida:
+                aviso_limpieza = (
+                    "El platillo se guardó, pero no se pudo borrar su foto "
+                    "anterior en Cloudflare. Quedó registrada para limpiarla después."
+                )
+
         self._set_cargando(False)  # si no, _cerrar() se niega a cerrar (_ocupado sigue True)
         self._cerrar()
-        self.on_guardado()
+        self.on_guardado(aviso_limpieza)
+
+    async def _revertir_imagen_si_hace_falta(self, imagen_nueva_url: str | None):
+        """Si ya se había subido una imagen nueva a R2 pero el guardado en
+        Supabase falló DESPUÉS, borra esa imagen para no dejar un huérfano
+        de un platillo que nunca se guardó (orden de reversa pedido para la
+        Fase 3). No se muestra un segundo error en pantalla si esta
+        limpieza también falla: el error principal (que no se pudo
+        guardar) es el que le importa ver al dueño, y el intento de borrado
+        ya quedó registrado como huérfano de todos modos — ver
+        models/cloudflare_storage.py."""
+        if not imagen_nueva_url:
+            return
+        try:
+            await asyncio.to_thread(cloudflare_storage.eliminar_imagen, imagen_nueva_url)
+        except cloudflare_storage.LimpiezaImagenFallida:
+            pass
+
+    # ------------------------------------------------------------------
+    # Foto (Fase 3): selector nativo de Tkinter + preview antes de guardar
+    # ------------------------------------------------------------------
+    def _on_elegir_foto_click(self, e):
+        if self._ocupado or self._eligiendo_foto:
+            return  # no abrir el selector a medio guardado/borrado, ni dos veces
+        self.page.run_task(self._elegir_foto_async)
+
+    async def _elegir_foto_async(self):
+        self._eligiendo_foto = True
+        self.boton_foto.disabled = True
+        self.boton_foto.update()
+        try:
+            # _elegir_archivo_imagen() es bloqueante de verdad (el diálogo
+            # nativo de Windows) — a un hilo aparte, o congelaría la
+            # ventana de Flet mientras el dueño elige el archivo.
+            ruta = await asyncio.to_thread(_elegir_archivo_imagen)
+        finally:
+            self._eligiendo_foto = False
+            self.boton_foto.disabled = False
+            self.boton_foto.update()
+
+        if not ruta:
+            return  # el dueño cerró/canceló el selector de archivos
+
+        try:
+            with open(ruta, "rb") as archivo:
+                vista_previa = archivo.read()
+        except OSError as e:
+            print(f"[dialogo_platillo] no se pudo leer el archivo elegido: {e}")
+            self._mostrar_error("No se pudo leer el archivo seleccionado.")
+            return
+
+        # La validación de verdad (¿es una imagen? ¿no pesa de más?) corre
+        # en _guardar() vía validar_y_comprimir() — aquí solo se muestra la
+        # miniatura tal cual para que el dueño la vea ANTES de guardar,
+        # como pidió. Si el archivo fuera basura, error_content de
+        # self.imagen_preview cae al placeholder en vez de un ícono roto.
+        self._ruta_imagen_nueva = ruta
+        self.imagen_preview.src = vista_previa
+        self._texto_boton_foto.value = "Cambiar foto"
+        self.imagen_preview.update()
+        self._texto_boton_foto.update()
 
     # ------------------------------------------------------------------
     def _on_eliminar_click(self, e):
@@ -362,7 +598,11 @@ class DialogoPlatillo:
         )
 
     async def _eliminar_async(self):
-        self._set_cargando(True)
+        self._set_cargando(True, "Eliminando...")
+        # Se guarda ANTES del delete porque después self.platillo ya no
+        # corresponde a ninguna fila real — PlatilloDAO.eliminar() no
+        # regresa la fila borrada.
+        imagen_a_borrar = self.platillo.get("image_url")
         try:
             await asyncio.to_thread(PlatilloDAO.eliminar, self.platillo["id"])
         except httpx.RequestError as e:
@@ -376,9 +616,25 @@ class DialogoPlatillo:
             self._set_cargando(False)
             return
 
+        # Fase 3 — la fila YA se borró de verdad (PlatilloDAO.eliminar() es
+        # un DELETE real, ver CLAUDE.md). Ahora se borra su foto en R2, si
+        # tenía una. Si esto falla, el platillo de todos modos ya se fue;
+        # solo se avisa que la foto pudo quedar huérfana (ya quedó
+        # registrada en huerfanos_r2.json de todos modos — ver
+        # models/cloudflare_storage.py).
+        aviso_limpieza = None
+        if imagen_a_borrar:
+            try:
+                await asyncio.to_thread(cloudflare_storage.eliminar_imagen, imagen_a_borrar)
+            except cloudflare_storage.LimpiezaImagenFallida:
+                aviso_limpieza = (
+                    "El platillo se eliminó, pero no se pudo borrar su foto "
+                    "en Cloudflare. Quedó registrada para limpiarla después."
+                )
+
         self._set_cargando(False)  # si no, _cerrar() se niega a cerrar (_ocupado sigue True)
         self._cerrar()
-        self.on_guardado()
+        self.on_guardado(aviso_limpieza)
 
     # ------------------------------------------------------------------
     def _mostrar_error(self, mensaje: str):
@@ -386,11 +642,23 @@ class DialogoPlatillo:
         self.zona_error.visible = True
         self.zona_error.update()
 
-    def _set_cargando(self, cargando: bool):
+    def _set_cargando(self, cargando: bool, texto: str = "Guardando..."):
+        """`texto` (Fase 3) es el paso actual mientras `cargando=True` —
+        _guardar() lo va cambiando ("Optimizando imagen..." → "Subiendo
+        foto..." → "Guardando...") porque ahora puede haber DOS operaciones
+        lentas seguidas (Pillow + la subida) antes de tocar Supabase, y el
+        dueño pidió ver en qué paso va. Se ignora cuando cargando=False."""
         self._ocupado = cargando
         self.boton_guardar.disabled = cargando
         self.boton_guardar.content = (
-            ft.ProgressRing(width=18, height=18, stroke_width=2, color="#f4ca83")
+            ft.Row(
+                controls=[
+                    ft.ProgressRing(width=18, height=18, stroke_width=2, color="#f4ca83"),
+                    ft.Text(texto, color="#ffffff", weight="bold", size=14),
+                ],
+                spacing=10,
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
             if cargando
             else self._texto_boton_guardar
         )
@@ -398,6 +666,10 @@ class DialogoPlatillo:
         if self.boton_eliminar is not None:
             self.boton_eliminar.disabled = cargando
             self.boton_eliminar.update()
+        # Fase 3: tampoco se debe poder abrir el selector de archivos a
+        # medio guardado/borrado.
+        self.boton_foto.disabled = cargando
+        self.boton_foto.update()
 
 
 def _confirmar(page: ft.Page, *, titulo: str, mensaje: str, on_confirmar):

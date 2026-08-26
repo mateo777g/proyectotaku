@@ -14,3 +14,6 @@ __pycache__/
 # Por si la sesion del panel llegara a escribirse dentro del repo por error.
 # Su sitio correcto es %LOCALAPPDATA%\TakuMonky\sesion.json
 sesion.json
+
+# Archivos temporales de Claude Code (traen permisos locales, no van al repo).
+.claude/settings.local.json*
