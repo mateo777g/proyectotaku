@@ -98,9 +98,13 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      5 paradas en vez de 3 (y padding-bottom más alto que antes, 110px)
      — pedido del dueño: con solo 0%/55%/100% se notaba un "codo" a
      medio camino y se sentía que la sombra se recortaba de golpe en
-     vez de irse apagando. Misma curva (mismas proporciones entre
-     paradas) que la de .tk-hero::after más abajo — si cambias una,
-     cambia la otra para que se sigan viendo parejas. */
+     vez de irse apagando. (Hasta el 28 ago 2026, .tk-hero::after más
+     abajo compartía esta misma curva reescalada a un pico distinto —
+     ya no: ese difuminado ahora necesita llegar a opacidad 1 para
+     emparejar el color sólido de la sección 2 de ahí abajo, algo que
+     este navbar no necesita — solo oscurecer lo justo para que su
+     texto blanco se lea. Tocar esta curva ya no obliga a tocar la
+     otra.) */
   background: linear-gradient(to bottom,
     rgba(13, 9, 5, .55) 0%,
     rgba(13, 9, 5, .28) 25%,
@@ -553,26 +557,47 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 .tk-icono-vacio { width: 32px; height: 32px; color: #c9bda3; }
 
 /* ================= Footer ================= */
-/* Claro (28 ago 2026, pedido del dueño) — antes era oscuro (--oscuro)
-   con texto claro, calcado del footer de EJEMPLOS. El dueño lo quiso
-   claro, del mismo tono de fondo que ya usa el resto del sitio para
-   secciones claras (--fondo), NO del ámbar del degradado del hero —
-   así que la paleta de textos se invirtió entera para leerse bien
-   sobre fondo claro (mismos tokens que ya usa .tk-eyebrow/.tk-seccion-
-   encabezado h2/.tk-fila-volver más arriba, ningún color nuevo).
-   `margin-top: 8px` también se quitó: con el footer oscuro esos 8px
-   dejaban asomarse el --fondo claro de body detrás como una rayita
-   blanca entre la sección 2 y el footer — el dueño la vio y la
-   reportó. Sin ese margen, el footer empieza pegado a lo que venga
-   arriba y no hay hueco que revele el fondo de body.
-   Tipografía Montserrat también a pedido del dueño (28 ago 2026) —
-   ya se importa en el <head> para .tk-nav-link, aquí se extiende a
+/* Negro total (28 ago 2026, pedido del dueño — tercer color de fondo
+   que prueba este footer). Pasó por: oscuro con --oscuro + texto
+   hueso #cabfae (original, calcada de EJEMPLOS — ver git 1627b06),
+   luego claro con --fondo (ver git 09e06ea, footer y sección 1 al
+   mismo tono claro). Esa versión clara fue la que el dueño reportó
+   rara: fondo "medio blanco", casi igual al de la sección 1 (mismo
+   --fondo) — pidió volver a oscuro, pero esta vez #000 literal, no
+   --oscuro. Es a propósito: --oscuro (#0d0905) y el #0c0a09 de
+   .tk-carrusel-seccion arriba son negros "tibios" con algo de
+   rojo/verde de fondo, y el dueño comparó el footer contra esa
+   sección 2 pidiendo explícitamente que NO fuera ese mismo tono —
+   así que el footer es hoy el único elemento del sitio en #000
+   exacto, distinto de esos otros dos "negros".
+   Con fondo negro puro, la paleta de texto de la versión clara
+   (--muted1/--muted2/--muted3/--texto-fuerte — grises cálidos
+   oscuros, pensados para leerse sobre --fondo) queda casi invisible,
+   así que se invirtió a blanco: --blanco para el texto/ícono base y
+   para la marca "Taku monky" (antes --texto-fuerte, casi negro — se
+   perdía del todo contra #000); dos niveles de blanco con alpha —no
+   un gris cálido nuevo, ver la nota del bloque de arriba de este
+   archivo sobre no inventar colores— para subtítulo y copyright,
+   mismo truco que ya usa el borde de .footer-social en
+   EJEMPLOS/style.css (rgba(255,255,255,.08)) en vez de un tono
+   sólido inventado. --eyebrow (títulos "MENÚ"/"CONTACTO") y
+   --naranja2 (hover de los enlaces) se dejaron igual: los dos ya dan
+   contraste de sobra sobre negro puro (~6.8:1 y ~5.5:1), así que no
+   hacía falta tocarlos solo porque el fondo cambió — ver también la
+   nota junto a :hover más abajo.
+   `margin-top: 8px` sigue sin existir (se quitó al pasar a la
+   versión clara, git 09e06ea, porque dejaba asomar el --fondo real
+   de <body> como rayita entre la sección 2 y el footer): sin margen
+   el footer sigue empezando pegado a lo que venga arriba pase lo que
+   pase con su propio color, así que ese hueco no puede volver.
+   Tipografía Montserrat sigue igual (pedido del dueño, 28 ago 2026)
+   — ya se importa en el <head> para .tk-nav-link, aquí se extiende a
    todo el footer EXCEPTO la marca "Taku monky", que se queda en
    Georgia italic como en el navbar/hero/sidebar (nunca se tocó ese
    tratamiento, es la fuente de la marca en todo el sitio). */
 .tk-footer {
-  background: var(--fondo);
-  color: var(--muted1);
+  background: #000000;
+  color: var(--blanco);
   font-family: "Montserrat", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   padding: 44px 20px 22px;
 }
@@ -584,8 +609,8 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 .tk-footer-marca { display: flex; align-items: center; gap: 10px; }
 .tk-footer-marca img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.tk-footer-marca span { font-family: Georgia, serif; font-style: italic; font-weight: bold; font-size: 18px; color: var(--texto-fuerte); }
-.tk-footer-tagline { font-size: 12px; color: var(--muted2); margin-top: 8px; max-width: 240px; line-height: 1.5; }
+.tk-footer-marca span { font-family: Georgia, serif; font-style: italic; font-weight: bold; font-size: 18px; color: var(--blanco); }
+.tk-footer-tagline { font-size: 12px; color: rgba(255, 255, 255, .68); margin-top: 8px; max-width: 240px; line-height: 1.5; }
 .tk-footer-columna h3 {
   font-size: 11px; font-weight: bold; letter-spacing: .04em;
   color: var(--eyebrow); text-transform: uppercase; margin-bottom: 12px;
@@ -600,17 +625,18 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 /* Mismo "pop" que .footer-social-link:hover en EJEMPLOS/style.css
    (ahí es un ícono suelto; aquí el ícono va pegado al texto del
-   enlace, así que solo el ícono escala). El color de hover ya no es
-   --dorado (#f4ca83, pensado para fondo oscuro — casi no se leería
-   aquí): se usa --naranja2, el mismo tono que .tk-fila-volver:hover
-   ya usa como acento de link sobre fondo claro. No se tocó el modelo
-   3D de Spline del footer de Anxie porque este footer nunca lo tuvo —
-   nunca hubo nada que quitar ahí. */
+   enlace, así que solo el ícono escala). --naranja2 se mantiene tal
+   cual con el fondo otra vez oscuro (ver nota grande de arriba) en
+   vez de volver a --dorado (el tono que sí usaba la versión oscura
+   original): --naranja2 ya se lee bien sobre negro puro y así no se
+   repite el mismo dorado que --eyebrow ya pone en los títulos de
+   columna. No se tocó el modelo 3D de Spline del footer de Anxie
+   porque este footer nunca lo tuvo — nunca hubo nada que quitar ahí. */
 .tk-footer-enlace:hover { color: var(--naranja2); }
 .tk-footer-enlace:hover svg { transform: scale(1.15); }
 .tk-footer-copy {
   max-width: 1100px; margin: 32px auto 0; padding-top: 18px;
-  border-top: 1px solid var(--borde); font-size: 11px; color: var(--muted3); text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, .14); font-size: 11px; color: rgba(255, 255, 255, .52); text-align: center;
 }
 
 @media (max-width: 640px) {
@@ -691,22 +717,61 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      especificidad. Va en su propio media query justo después de esa
      regla base para que sea la que se aplique última. */
 
-  /* Sombra al pie de la sección 1 (hero) — pareja a la del .tk-navbar
-     de arriba pero mirando hacia arriba, como efecto de separación
-     contra la sección 2. Solo aquí adentro (≥1024px) porque en
-     escritorio la sección 2 real es el carrusel oscuro (#0c0a09,
-     definido abajo); en móvil la sección 2 es #platillos con fondo
-     claro (--fondo) y esta sombra oscura no tendría con qué "pegar".
-     Alto = --navbar-alto (78px, la zona sólida) + 110px — el mismo
-     padding-bottom de fundido que usa .tk-navbar ahora, así que sigue
-     pesando igual que la de arriba en tamaño.
-     La intensidad NO es igual a propósito (pedido del dueño): pegada
-     tal cual contra el negro casi sólido de la sección 2 (#0c0a09), la
-     misma opacidad .55 del navbar se sentía como un corte duro justo
-     en la unión, así que aquí el pico baja a .35. Misma curva de 5
-     paradas que .tk-navbar (mismas proporciones, escaladas al pico
-     nuevo) para que las dos se sientan igual de difuminadas aunque
-     una pese menos que la otra — si tocas una curva, toca la otra. */
+  /* Difuminado entre sección 1 (hero) y sección 2 (carrusel) —
+     reescrito 28 ago 2026, pedido del dueño con una referencia tipo
+     "Riviera Living Style" (foto que se apaga hasta el blanco exacto
+     de la sección siguiente, sin línea de corte). Solo aquí adentro
+     (≥1024px) porque en escritorio la sección 2 real es el carrusel
+     oscuro (#0c0a09, ver .tk-carrusel-seccion abajo); en móvil la
+     sección 2 es #platillos con fondo claro (--fondo) y esta sombra
+     oscura no tendría con qué "pegar".
+
+     La versión anterior (pico .35, rgba(13,9,5,X) — mismo tono/misma
+     curva que .tk-navbar de arriba, solo con el pico más bajo porque
+     pegado tal cual contra el #0c0a09 casi sólido de la sección 2 se
+     sentía como un corte duro) nunca llegaba a ser opaca: justo en el
+     borde, el hero mostraba un tono claro-oscurecido junto al negro
+     sólido real de la sección 2 — ahí es donde se seguía viendo "la
+     línea, negra abajo y clara arriba" que reportó el dueño. La
+     sombra estaba, pero nunca terminaba de alcanzar el color de abajo.
+
+     El arreglo: el color de esta gradiente ahora es rgb(12,10,9) — el
+     #0c0a09 EXACTO de .tk-carrusel-seccion, no el rgb(13,9,5) del
+     navbar (un negro ligerísimamente distinto) — y la curva llega a
+     opacidad 1 en el 0% (pie de sección) en vez de topar en .35. Así
+     el último píxel del hero y el primero de la sección 2 son
+     literalmente el mismo color: no hay salto que ver sin importar
+     dónde caiga exactamente el corte entre ambas cajas. Mismo truco
+     que una foto que se apaga hasta el blanco exacto de la sección de
+     abajo — no importa cuánta foto alcances a ver, el borde inferior
+     siempre coincide.
+
+     Las proporciones entre paradas (25%→~51% del pico, 50%→~23%,
+     75%→~9%) son las mismas de la curva anterior de este mismo
+     elemento, solo reescaladas de un pico de .35 a un pico de 1 — ya
+     NO están atadas a la curva de .tk-navbar (ver la nota actualizada
+     junto a esa regla): el navbar solo necesita oscurecer lo
+     suficiente para que su texto blanco se lea, nunca tiene que
+     terminar en un color sólido que empate con algo debajo, así que
+     ligar su curva a esta ya no tiene sentido ahora que esta sí debe
+     llegar a opacidad 1.
+
+     Alto: subió de un valor fijo chico (calc(--navbar-alto + 110px),
+     ~188px, pensado como acento de esquina, no como transición real) a
+     un %vh con clamp — contra un salto de color tan grande (el "amber
+     glow" claro del hero contra el casi-negro de la sección 2), 188px
+     se sentía angosto y el difuminado se notaba abrupto de cualquier
+     forma. 36vh reparte ese mismo cambio de color sobre más espacio en
+     pantalla, con un min/max en px para no volverse absurdo en
+     monitores muy chicos o muy altos.
+
+     Se alcanza a ver incluso sin hacer scroll (con la sección 1
+     llenando la pantalla completa, su pie con el difuminado ya cae
+     dentro del viewport inicial) — eso es intencional, no el bug: es
+     exactamente cómo se ve también la referencia del dueño (el
+     difuminado de la foto ya se nota aunque no hayas scrolleado nada).
+     Lo que se veía mal antes no era que se viera sin scrollear, era
+     que nunca terminaba de emparejar el color de abajo. */
   .tk-hero { position: relative; }
   .tk-hero::after {
     content: '';
@@ -714,14 +779,14 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(var(--navbar-alto) + 110px);
+    height: clamp(220px, 36vh, 440px);
     pointer-events: none;
     background: linear-gradient(to top,
-      rgba(13, 9, 5, .35) 0%,
-      rgba(13, 9, 5, .18) 25%,
-      rgba(13, 9, 5, .08) 50%,
-      rgba(13, 9, 5, .03) 75%,
-      rgba(13, 9, 5, 0) 100%);
+      rgba(12, 10, 9, 1)   0%,
+      rgba(12, 10, 9, .51) 25%,
+      rgba(12, 10, 9, .23) 50%,
+      rgba(12, 10, 9, .09) 75%,
+      rgba(12, 10, 9, 0)   100%);
   }
 }
 
@@ -804,7 +869,27 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 .tk-cf-fondo-degradado {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(12, 10, 9, 0.3) 0%, rgba(12, 10, 9, 0.92) 100%);
+  /* Dos capas — la primera de la lista se pinta ENCIMA. La radial es
+     la de siempre (vigneta hacia las orillas). La lineal es nueva
+     (28 ago 2026, corrección con captura: la sección 2 ya no emparejaba
+     con el pie difuminado de .tk-hero — ver la nota grande de ese
+     ::after): lo que de verdad toca el borde superior de la sección NO
+     es el background-color plano de .tk-carrusel-seccion (#0c0a09) —
+     es ESTA foto difuminada (.tk-cf-fondo-img, la del platillo activo,
+     que además cambia con el carrusel) tras pasar por la radial de
+     abajo, y esa radial no llega a su tope (.92, y ni siquiera ese tope
+     es opaco del todo) tan cerca de su propio centro vertical. Se colaba
+     el tono café/ámbar tibio de la foto (solo atenuada, nunca tapada
+     del todo) justo debajo de donde .tk-hero::after ya había llegado a
+     negro sólido — una segunda "línea", esta vez entre dos negros que
+     no eran el mismo negro. La lineal de abajo fuerza el mismo
+     #0c0a09 opaco de .tk-hero::after en los primeros px de la sección,
+     sin importar qué platillo esté activo ni cuánto pese ahí la radial;
+     se apaga a transparente rápido para no comerse el efecto de
+     ambiente en el resto de la sección, que sigue intacto. */
+  background:
+    linear-gradient(to bottom, #0c0a09 0%, rgba(12, 10, 9, 0) clamp(160px, 26vh, 340px)),
+    radial-gradient(circle at center, rgba(12, 10, 9, 0.3) 0%, rgba(12, 10, 9, 0.92) 100%);
 }
 
 /* -------- Contenido -------- */
@@ -1118,16 +1203,11 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    (.tk-cf-fondo, z-index:0), para que se lean como una capa decorativa
    de primer plano y no se pierdan contra ese fondo.
 
-   AJUSTE 4 (animación — ver también index.html): el balanceo tipo
-   "viento" ya NO corre en loop infinito todo el tiempo. Ahora solo se
-   activa mientras hay scroll activo, vía la clase .is-swaying que
-   agrega/quita el JS de index.html (ver el <script> al final de ese
-   archivo) con un debounce de 250ms sin eventos de scroll. En reposo
-   (sin scroll) las hojas están completamente quietas — @keyframes y
-   duración se quedan igual que antes, solo que ahora dependen de esa
-   clase en vez de tenerla puesta siempre. La transition en .tk-hoja
-   es lo que hace que, al soltar la clase, la hoja se asiente suave en
-   vez de saltar de golpe a su posición de reposo.
+   AJUSTE 4 (animación — historial, ver AJUSTE 9 junto a @keyframes
+   tk-viento más abajo para el estado actual): por un tiempo, el
+   balanceo tipo "viento" dejó de correr en loop infinito y solo se
+   activaba mientras había scroll activo, vía una clase .is-swaying
+   que agregaba/quitaba JS en index.html. Revertido — ver AJUSTE 9.
    ================================================================ */
 .tk-hero-contenido { position: relative; z-index: 2; }
 
@@ -1141,12 +1221,12 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      sumarle el balanceo de viento nunca "resetea" la hoja a 0deg (ver
      la nota grande junto a @keyframes tk-viento). */
   transform: rotate(var(--hoja-rot, 0deg));
-  transition: transform .4s ease;
-  /* Perf (28 ago 2026, corrección "se traba al hacer scroll"): promueve
-     cada hoja a su propia capa de composición para que el navegador
-     anime transform sin recalcular layout/paint del resto de la
-     página en cada tick — ver también el throttle por
-     requestAnimationFrame del listener de scroll en index.html. */
+  /* Perf: promueve cada hoja a su propia capa de composición para que
+     el navegador anime `transform` (el loop infinito de @keyframes
+     tk-viento, ver más abajo) sin recalcular layout/paint del resto
+     de la página en cada frame. Ya no hay `transition` aquí — sin
+     ninguna clase que se agregue/quite en tiempo real (ver AJUSTE 9
+     más abajo), no hay ningún cambio de golpe que suavizar. */
   will-change: transform;
 }
 .tk-hoja-img { width: 100%; height: 100%; display: block; }
@@ -1334,10 +1414,22 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    original durante todo el scroll y regresando de golpe al soltar.
    Un solo @keyframes para las 4 — lo que evita que se vean
    sincronizadas es que cada una corre con su propia duración/delay.
-   Períodos cortos (2.6-3.3s en vez de los 7-9s de la versión en
-   loop-infinito): ahora solo se ven mientras dura el scroll activo,
-   así que un ciclo largo apenas se alcanzaría a notar en un scroll
-   corto. */
+
+   AJUSTE 9 (28 ago 2026, feedback en vivo — "quítale el bloqueo,
+   mejor pura animación fluida"): el balanceo había pasado a activarse
+   solo mientras había scroll activo (clase .is-swaying agregada/
+   quitada por un listener de "scroll" en index.html — ver el
+   historial en el AJUSTE 4 más arriba). Con scroll NO fluido (rueda
+   del mouse a saltos, trackpad entrecortado) los eventos de scroll
+   llegan en ráfagas separadas por pausas, así que la animación
+   arrancaba y se detenía una y otra vez en vez de correr seguida — se
+   leía como "trabada", justo lo contrario de lo buscado. Vuelta al
+   loop infinito de siempre: las 4 reglas de abajo ya no requieren
+   .is-swaying, y ese listener se quitó por completo de index.html.
+   Duraciones también de vuelta a 7-9s (en lugar de los 2.6-3.3s de la
+   versión reactiva a scroll, cortos a propósito porque antes solo se
+   veían durante una ráfaga breve) para que el vaivén se sienta como
+   una brisa lenta de fondo — no nervioso — ahora que corre siempre. */
 @keyframes tk-viento {
   0%   { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
   25%  { transform: rotate(calc(var(--hoja-rot) + 1.4deg))  translate(2px, -1px); }
@@ -1346,10 +1438,10 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   100% { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .tk-hoja--hero-izq.is-swaying { animation: tk-viento 2.6s ease-in-out infinite; }
-  .tk-hoja--hero-der.is-swaying { animation: tk-viento 3.1s ease-in-out infinite .3s; }
-  .tk-hoja--menu-izq.is-swaying { animation: tk-viento 2.8s ease-in-out infinite .15s; }
-  .tk-hoja--menu-der.is-swaying { animation: tk-viento 3.3s ease-in-out infinite .45s; }
+  .tk-hoja--hero-izq { animation: tk-viento 7s ease-in-out infinite; }
+  .tk-hoja--hero-der { animation: tk-viento 8s ease-in-out infinite .3s; }
+  .tk-hoja--menu-izq { animation: tk-viento 7.5s ease-in-out infinite .15s; }
+  .tk-hoja--menu-der { animation: tk-viento 9s ease-in-out infinite .45s; }
 }
 
 /* Las del hero se ocultan en móvil (mismo corte de 640px que ya usa el

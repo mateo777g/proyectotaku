@@ -210,52 +210,10 @@
   iniciarNavbar();
   iniciarIndex();
   iniciarCarrusel();
-
-  // Hojas decorativas de esquina (ver style.css → "Hojas decorativas"):
-  // el balanceo de viento solo debe correr MIENTRAS hay scroll activo,
-  // nunca en loop de fondo. Mientras el usuario scrollea se agrega
-  // .is-swaying a las 4 hojas (dispara la animación CSS); 250ms sin un
-  // nuevo evento de scroll, se quita y vuelven a su estado quieto.
-  //
-  // Perf (28 ago 2026, corrección "se traba/tartamudea al hacer
-  // scroll"): el listener de "scroll" puede disparar decenas de veces
-  // por frame (trackpad, mouse de alto polling). La versión anterior
-  // hacía classList.add/clearTimeout/setTimeout en CADA evento, sin
-  // throttle — de ahí el stutter. Ahora el propio evento de scroll
-  // solo agenda un tick vía requestAnimationFrame (como mucho uno por
-  // frame, `tickProgramado` descarta el resto) y, dentro de ese tick,
-  // classList.add solo se llama la PRIMERA vez que arranca el sway
-  // (`sacudiendo`), no en cada tick — evitar escrituras de clase
-  // redundantes es lo que evita recalculos de estilo de sobra en cada
-  // frame. Solo se toca `transform` (vía la clase, en CSS), nunca una
-  // propiedad que dispare reflow.
-  function iniciarHojas() {
-    const hojas = document.querySelectorAll(".tk-hoja");
-    if (!hojas.length) return;
-    let temporizador = null;
-    let tickProgramado = false;
-    let sacudiendo = false;
-    function activarSway() {
-      if (!sacudiendo) {
-        sacudiendo = true;
-        hojas.forEach(h => h.classList.add("is-swaying"));
-      }
-      clearTimeout(temporizador);
-      temporizador = setTimeout(() => {
-        sacudiendo = false;
-        hojas.forEach(h => h.classList.remove("is-swaying"));
-      }, 250);
-    }
-    window.addEventListener("scroll", () => {
-      if (tickProgramado) return;
-      tickProgramado = true;
-      requestAnimationFrame(() => {
-        tickProgramado = false;
-        activarSway();
-      });
-    }, { passive: true });
-  }
-  iniciarHojas();
+  // Las hojas decorativas (.tk-hoja) ya no necesitan JS: el balanceo es
+  // un loop CSS infinito y siempre activo — ver @keyframes tk-viento y
+  // el AJUSTE 9 junto a él en style.css para el porqué (antes dependían
+  // de un listener de "scroll" de aquí, quitado a propósito).
 </script>
 </body>
 </html>
