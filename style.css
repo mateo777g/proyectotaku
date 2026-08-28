@@ -316,32 +316,101 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      #f59e0b del prompt) en vez de un hex ajeno a la paleta. */
   background: radial-gradient(125% 125% at 50% 90%, #fffaf0 47%, var(--acento1) 100%);
 }
+/* De vuelta a 560px (el original) — el título ya no vive adentro de
+   este ancho: .tk-hero-titulo se sale de aquí con su propio truco de
+   "full-bleed" (ver más abajo), así que este contenedor solo necesita
+   ser angosto para el eyebrow/tagline/botones, igual que en la
+   maqueta del dueño. */
 .tk-hero-contenido { max-width: 560px; }
+
+/* Eyebrow "Taquería" con líneas a los lados — mismo lenguaje visual
+   que el eyebrow "Menú" de la sección 2 (.tk-cf-eyebrow-fila /
+   .tk-cf-linea), pedido explícito del dueño (28 ago 2026) para que
+   ambas secciones luzcan parejas. Usa el dorado propio de esta
+   sección (--eyebrow) en vez del #c5a880 suelto del carrusel: la
+   sección 1 no tiene la excepción de paleta que sí tiene el carrusel
+   (ver CLAUDE.md → Design rules → carrusel), así que se queda dentro
+   de la paleta establecida. */
+.tk-hero-eyebrow-fila {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.tk-hero-linea { width: 36px; height: 1px; }
+.tk-hero-linea--izq { background: linear-gradient(90deg, transparent, var(--eyebrow)); }
+.tk-hero-linea--der { background: linear-gradient(90deg, var(--eyebrow), transparent); }
 .tk-hero-eyebrow {
   font-size: 12px;
   font-weight: bold;
-  letter-spacing: .04em;
+  letter-spacing: .3em;
   color: var(--eyebrow);
   text-transform: uppercase;
 }
-.tk-hero-logo {
-  width: 80px;
-  height: 80px;
+
+/* Título gigante "Taku Monky" — corregido 28 ago 2026 contra la
+   maqueta original del dueño, que la primera pasada no igualaba en 3
+   cosas (feedback textual: "las letras... mas grandes y de lado a
+   lado", "el logo iba mas pegado a cada palabra", "no tan delgadas...
+   tiene negritas"):
+   1) Full-bleed de lado a lado: se sale del contenedor de 560px de
+      .tk-hero-contenido con el truco clásico width:100vw +
+      margin-left:calc(50% - 50vw). Funciona sin importar el ancho del
+      contenedor padre porque el término "50%" (que se resuelve contra
+      el ancho del padre) se cancela matemáticamente con el "-50vw" —
+      ver la nota grande junto a --hoja-sangrado-x si hace falta la
+      cuenta completa para un truco parecido. overflow-x:hidden ya
+      vive en <body> (línea ~60) así que no hace falta repetirlo aquí;
+      las hojas decorativas ya cuentan con eso para su propio sangrado.
+      padding (no un width menor) es lo que deja un respiro de la
+      orilla real del viewport, para no recortar la T/Y a medio glifo.
+      Medido con Playwright: el texto ocupa ~95% del viewport de 768px
+      a 1920px (19vw sin toparse con el techo del clamp hasta ~2630px,
+      ver el MAX de 500 abajo) — "de lado a lado" real, no solo la
+      sensación.
+   2) Gap logo↔palabra en "em" chico (0.02em) en vez de los ~20-28px
+      de antes — bien pegado a cada palabra como en la maqueta, y
+      sigue escalando junto con el font-size porque está en em.
+   3) font-weight: 300 (Light), no 700 — la maqueta usa la Oswald
+      delgada, no la bold. El Regular (400) probado primero seguía
+      leyéndose grueso a este tamaño (feedback del dueño 28 ago 2026),
+      de ahí el peso Light.
+   El logo sigue en "em" relativo al font-size del título (0.3em) para
+   escalar junto con el clamp() sin necesitar su propio breakpoint. */
+.tk-hero-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 0.02em;
+  margin-top: 14px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: 0 16px;
+  font-family: "Oswald", "Montserrat", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  text-transform: uppercase;
+  color: var(--texto-fuerte);
+  font-size: clamp(52px, 19vw, 500px);
+  line-height: 1;
+  /* Pedido del dueño (28 ago 2026): subir SOLO el título, sin mover el
+     eyebrow de arriba ni la tagline/botones de abajo. position:relative
+     + top (en vez de tocar margin-top/margin-bottom) es lo que logra
+     eso — un offset puramente visual que no cambia el alto real que
+     ocupa en el flujo, así que nadie más se recorre. En "em" para que
+     el nudge escale junto con el clamp() del font-size. */
+  position: relative;
+  top: -0.05em;
+}
+.tk-hero-titulo .tk-hero-logo {
+  width: 0.3em;
+  height: 0.3em;
   border-radius: 50%;
   object-fit: cover;
-  margin: 14px auto 0;
-}
-.tk-hero h1 {
-  font-family: Georgia, serif;
-  font-style: italic;
-  font-weight: bold;
-  color: var(--texto-fuerte);
-  font-size: clamp(32px, 9vw, 56px);
-  margin-top: 10px;
-  line-height: 1.05;
+  flex-shrink: 0;
 }
 .tk-tagline {
-  margin-top: 12px;
+  margin-top: 20px;
   font-size: 15px;
   color: var(--muted2);
   line-height: 1.5;
@@ -375,14 +444,19 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   box-shadow: var(--sombra-boton);
 }
 .tk-btn--primario:hover { background: #1c1610; }
-/* Fondo dorado reusado del chip de categoría de menu_view.py (#f7b84d),
-   pero el texto va en blanco (pedido explícito del owner, como en el
-   botón "atajo" de EJEMPLOS) en vez del café --chip-texto original. */
+/* Verde #589f26, pedido explícito del dueño (28 ago 2026) — primero
+   probamos el verde WhatsApp de marca (#25D366), pero lo cambió por
+   este tono para que el botón haga juego con el verde de las hojas
+   decorativas de la sección (.tk-hoja), no con la app. Reemplaza el
+   dorado del chip de categoría que tenía antes de eso. Es una
+   excepción de paleta deliberada, igual que el verde/dorado sueltos
+   del carrusel (ver CLAUDE.md → Design rules → carrusel): un hex ajeno
+   a la paleta, pero pedido a propósito por el dueño, no inventado. */
 .tk-btn--secundario {
-  background: var(--chip-bg);
+  background: #589f26;
   color: var(--blanco);
 }
-.tk-btn--secundario:hover { filter: brightness(0.96); }
+.tk-btn--secundario:hover { filter: brightness(0.94); }
 
 /* ================= Secciones de categoría ================= */
 .tk-seccion { padding: 56px 20px; }

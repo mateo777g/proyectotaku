@@ -22,6 +22,22 @@ def _texto_categorias(cantidad: int) -> str:
     return f"{cantidad} categorías"
 
 
+def _saludo_por_hora(hora: int) -> str:
+    """'Buenos días' / 'Buenas tardes' / 'Buenas noches' según la hora local
+    de la máquina. Antes el saludo era el texto fijo "Buenos días", así que
+    a las 8 de la noche el panel seguía dando los buenos días.
+
+    Cortes de uso común en México: mañana hasta las 12, tarde hasta las 19,
+    noche de ahí en adelante. Recibe la hora como parámetro (en vez de
+    llamar a datetime.now() aquí adentro) para que se pueda probar sin
+    depender del reloj real."""
+    if hora < 12:
+        return "Buenos días"
+    if hora < 19:
+        return "Buenas tardes"
+    return "Buenas noches"
+
+
 def _analizar_fecha(valor):
     """Parsea el timestamp ISO que regresa Supabase (con o sin sufijo 'Z')
     a un datetime con zona horaria. None si viene vacío o mal formado —
@@ -87,6 +103,7 @@ class HomeView(ft.Container):
         hoy = datetime.datetime.now()
         fecha_texto = f"{dias[hoy.weekday()]}, {hoy.day} DE {meses[hoy.month - 1]}"
         dia_actual = dias[hoy.weekday()].capitalize()
+        saludo = _saludo_por_hora(hoy.hour)
 
         # Fase 2.7: los "cuerpos" de las 2 tarjetas que sí dependen del menú
         # se crean ANTES de armar self.content (van referenciados adentro) y
@@ -113,7 +130,7 @@ class HomeView(ft.Container):
                                 ft.Text(fecha_texto, color="#b58a6d", size=18, weight="bold"),
                                 ft.Row(
                                     controls=[
-                                        ft.Text("Buenos días, ", size=48, font_family="Georgia", italic=True, color="#18120d"),
+                                        ft.Text(f"{saludo}, ", size=48, font_family="Georgia", italic=True, color="#18120d"),
                                         ft.Text("Ary", size=48, font_family="Georgia", italic=True, color="#bf571d"),
                                     ],
                                     spacing=0
@@ -121,7 +138,7 @@ class HomeView(ft.Container):
                                 ft.Row(
                                     controls=[
                                         ft.Text("Tu menú se vio ", size=20, color="#5e5449"),
-                                        ft.Text("347 veces", size=20, weight="bold", color="#1c1610"),
+                                        ft.Text("0 veces", size=20, weight="bold", color="#1c1610"),
                                         ft.Text(" ayer. Aquí está el resumen.", size=20, color="#5e5449"),
                                     ],
                                     spacing=0
@@ -161,9 +178,9 @@ class HomeView(ft.Container):
                 # --- FILA DE 4 TARJETAS DE ESTADÍSTICAS ---
                 ft.Row(
                     controls=[
-                        self._crear_tarjeta_stat("VISITAS AL MENÚ", "347", "+12% vs ayer", ft.Icons.SHOW_CHART),
-                        self._crear_tarjeta_stat("PRODUCTO MÁS VISTO", "Tacos al Pastor", "48 órdenes", ft.Icons.LOCAL_FIRE_DEPARTMENT_OUTLINED),
-                        self._crear_tarjeta_stat("CONTENIDO GENERADO", "12 Posts", "Este mes", ft.Icons.AUTO_AWESOME_OUTLINED),
+                        self._crear_tarjeta_stat("VISITAS AL MENÚ", "0", "+0% vs ayer", ft.Icons.SHOW_CHART),
+                        self._crear_tarjeta_stat("PRODUCTO MÁS VISTO", "Ninguno", "0 órdenes", ft.Icons.LOCAL_FIRE_DEPARTMENT_OUTLINED),
+                        self._crear_tarjeta_stat("CONTENIDO GENERADO", "0 Posts", "Este mes", ft.Icons.AUTO_AWESOME_OUTLINED),
                         self._crear_tarjeta_productos_en_venta(),
                     ],
                     spacing=24
@@ -225,8 +242,16 @@ class HomeView(ft.Container):
                             content=ft.Column(
                                 controls=[
                                     ft.Text("SUGERENCIA DE HOY", size=12, weight="bold", color="#8b7764"),
-                                    ft.Text(f"Es {dia_actual} en Mendoza. ¿Qué tal un post del Argile para la noche?", size=23, font_family="Georgia", weight="bold", italic=True, color="#ffffff"),
-                                    ft.Text("Llevas 3 semanas sin postear Argile y los viernes históricamente generan +40% de interés.", size=14, color="#b2a69a"),
+                                    # Esta tarjeta sigue siendo un ejemplo de lo que hará el
+                                    # Agente IA (Fase 7) — todavía no hay datos de ventas ni
+                                    # de publicaciones detrás. Pero el texto ya no inventa
+                                    # cifras: antes decía "Llevas 3 semanas sin postear" y
+                                    # "+X% de interés" (con la X literal, se veía como bug),
+                                    # y remataba con "los viernes" fijo aunque el día de
+                                    # arriba sí es dinámico — un martes se contradecía sola.
+                                    # Ahora las dos líneas usan el mismo dia_actual.
+                                    ft.Text(f"Es {dia_actual} en Rio Blanco. ¿Qué tal un post de Taco Arabe para la noche?", size=23, font_family="Georgia", weight="bold", italic=True, color="#ffffff"),
+                                    ft.Text(f"Las noches de {dia_actual.lower()} son buen momento para publicar. Genera el post en un clic.", size=14, color="#b2a69a"),
                                     ft.Container(height=14),
                                     ft.Container(
                                         content=ft.Row(

@@ -12,7 +12,14 @@
 <link rel="icon" type="image/png" href="assets/logomonky.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Rock+Salt&display=swap" rel="stylesheet">
+<!-- Oswald: la condensada que pidió el dueño para el título gigante del
+     hero (ver .tk-hero-titulo en style.css) — SOLO se usa ahí, por eso
+     este <link> se cargó únicamente en index.html, no en las 3 páginas
+     de categoría. Un solo peso (300/Light) porque es el único que se
+     usa — la maqueta del dueño es la Oswald delgada, no la bold; el
+     Regular (400) probado primero seguía leyéndose grueso a este
+     tamaño (feedback del dueño 28 ago 2026), de ahí bajar a Light. -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oswald:wght@300&family=Rock+Salt&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -52,9 +59,16 @@
   <div class="tk-hoja tk-hoja--hero-izq" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
   <div class="tk-hoja tk-hoja--hero-der" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
   <div class="tk-hero-contenido">
-    <p class="tk-hero-eyebrow">Taquería</p>
-    <img class="tk-hero-logo" src="assets/logomonky.png" alt="">
-    <h1>Taku monky</h1>
+    <div class="tk-hero-eyebrow-fila">
+      <span class="tk-hero-linea tk-hero-linea--izq"></span>
+      <p class="tk-hero-eyebrow">Taquería</p>
+      <span class="tk-hero-linea tk-hero-linea--der"></span>
+    </div>
+    <h1 class="tk-hero-titulo">
+      <span>Taku</span>
+      <img class="tk-hero-logo" src="assets/logomonky.png" alt="Taku Monky">
+      <span>Monky</span>
+    </h1>
     <p class="tk-tagline">Sabor casero, ambiente divertido — así comemos aquí.</p>
     <div class="tk-hero-botones">
       <a class="tk-btn tk-btn--primario" href="menu-platillos.html">Ver menú</a>
