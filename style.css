@@ -737,12 +737,38 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   min-height: 100svh;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  /* SIN overflow:hidden aquí a propósito (corregido 28 ago 2026) — antes
+     vivía en esta regla y recortaba en seco a .tk-hoja--menu-izq/der,
+     que a propósito bleedean por fuera del borde superior de la sección
+     (ver la nota grande de .tk-hoja más abajo). El recorte que sí hace
+     falta (el fondo difuminado + las tarjetas del coverflow, que no
+     deben desbordar la sección) se movió a .tk-carrusel-recorte, un
+     envoltorio interno que NO incluye a las hojas — así cada quien
+     recorta solo lo suyo. (El overflow-x:hidden global de <body> ya
+     cubre que una tarjeta en el extremo de su traslación ±510px no
+     provoque scroll horizontal de página, así que quitar esto de aquí
+     no reabre ese problema.) */
   padding: 48px 0;
   background-color: #0c0a09;
   color: #ffffff;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   user-select: none;
+}
+
+/* Envoltorio interno que sí recorta (fondo difuminado + coverflow) sin
+   tocar a las hojas, que quedan como hermanas fuera de este div — ver
+   la nota en .tk-carrusel-seccion de arriba. position:absolute sin
+   z-index propio: NO crea su propio stacking context (a diferencia de
+   darle z-index:0), así .tk-cf-fondo (z-index:0) y .tk-cf-envoltura
+   (z-index:10), sus hijos, se siguen intercalando con .tk-hoja
+   (z-index:1) exactamente igual que antes de que existiera este div. */
+.tk-carrusel-recorte {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (min-width: 1024px) {
@@ -1020,4 +1046,317 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   width: 28px;
   background-color: #c5a880;
   box-shadow: 0 0 10px rgba(197, 168, 128, 0.7);
+}
+
+/* ================================================================
+   Hojas decorativas de esquina — hero y carrusel (28 ago 2026,
+   ajustado el mismo día tras feedback del dueño — ver las 4 notas
+   "AJUSTE" abajo, una por cada problema que reportó)
+   ================================================================
+   4 hojas en total, ancladas a las esquinas de dos secciones:
+     - Sección 1 (.tk-hero): inferior-izquierda + inferior-derecha.
+     - Sección 2 (.tk-carrusel-seccion, el carrusel — SOLO existe en
+       escritorio, ≥1024px): superior-izquierda + superior-derecha.
+       No hace falta ocultarlas aparte en móvil para esta sección: la
+       sección entera ya es display:none ahí (ver el bloque del
+       carrusel más arriba), así que estas dos ni se llegan a pintar.
+
+   assets/hojas.png (el archivo original) trae bastante margen
+   transparente alrededor del dibujo real de la hoja — posicionado tal
+   cual pegado a 0,0 se vería separado/descuadrado de la esquina.
+   assets/hoja.png es un recorte a ras del contenido real (bbox del
+   canal alfa, +2px de margen de seguridad), hecho una sola vez para
+   este efecto; hojas.png se queda intacto por si hace falta para
+   otra cosa después.
+
+   AJUSTE 3 (orientación): en el dibujo original el tallo nace
+   abajo-izquierda y la hoja se abre hacia arriba-derecha. El espejeado
+   ahora SOLO pasa entre izquierda/derecha (scaleX), nunca entre
+   arriba/abajo (nada de scaleY) — el dueño reportó que voltear
+   verticalmente se veía mal (folíolos "luchando contra la gravedad")
+   y que quería que la hoja de arriba y la de abajo del mismo lado
+   apuntaran en la misma dirección:
+     - hero-izq:  imagen tal cual (tallo abajo-izquierda).
+     - hero-der:  scaleX(-1) → tallo abajo-derecha.
+     - menu-izq:  imagen tal cual, igual que hero-izq (antes llevaba
+       scaleY, ya no).
+     - menu-der:  scaleX(-1), igual que hero-der (antes era
+       scaleX+scaleY = 180°, ya no).
+   El espejeado vive en el <img> interno, con su origen por defecto
+   (centro) — así el volteo no mueve la caja, solo voltea el dibujo
+   adentro de ella.
+
+   AJUSTE 2 (bbox real + "mordiendo" la esquina): sin scaleY, las 4
+   hojas usan solo 2 de las 4 esquinas del archivo como zona "densa"
+   (la del tallo y la de la punta, diagonalmente opuestas) — las otras
+   2 esquinas del bbox están casi vacías. Medido con Pillow sobre
+   hoja.png (273×310, umbral alfo>150 = contenido sólido, no solo
+   antialiasing): la esquina del tallo (abajo-izquierda del archivo
+   original) tiene el primer píxel sólido a ~1% de distancia — pegada.
+   La esquina opuesta (arriba-izquierda del archivo original, que es
+   la que usan menu-izq sin espejear y, espejeada, menu-der) tiene el
+   primer píxel sólido a ~30% del ancho / ~32% del alto — un hueco
+   enorme si el contenedor se posicionara a ras (0,0).
+   --hoja-sangrado-x/--hoja-sangrado-y (30%/36% del tamaño de la
+   propia hoja, vía calc(var(--hoja-tam) * …) para que escale con el
+   tamaño responsivo) sacan las 4 hojas por igual más allá de su
+   esquina — no solo tapa ese hueco en las 2 que lo tienen, también le
+   da a las otras 2 el look de "muerde/se sale del borde" que pidió el
+   dueño en vez de quedar solo a ras (que ya se había probado y seguía
+   viéndose "flotando hacia adentro" comparado con la referencia).
+
+   AJUSTE 1 (tamaño): --hoja-tam bastante más grande que el primer
+   intento (antes clamp(56px,8vw,140px) hero / clamp(90px,8vw,160px)
+   menú) — el dueño pidió presencia visual real, no un detalle
+   chiquito.
+
+   pointer-events:none en el contenedor (nunca deben poder bloquear un
+   clic) y z-index:1 — por debajo del contenido real de cada sección
+   (.tk-hero-contenido sube a z-index:2 aquí abajo; en el carrusel
+   .tk-cf-envoltura ya vive en z-index:10 desde arriba en este mismo
+   archivo) pero por encima del fondo difuminado del carrusel
+   (.tk-cf-fondo, z-index:0), para que se lean como una capa decorativa
+   de primer plano y no se pierdan contra ese fondo.
+
+   AJUSTE 4 (animación — ver también index.html): el balanceo tipo
+   "viento" ya NO corre en loop infinito todo el tiempo. Ahora solo se
+   activa mientras hay scroll activo, vía la clase .is-swaying que
+   agrega/quita el JS de index.html (ver el <script> al final de ese
+   archivo) con un debounce de 250ms sin eventos de scroll. En reposo
+   (sin scroll) las hojas están completamente quietas — @keyframes y
+   duración se quedan igual que antes, solo que ahora dependen de esa
+   clase en vez de tenerla puesta siempre. La transition en .tk-hoja
+   es lo que hace que, al soltar la clase, la hoja se asiente suave en
+   vez de saltar de golpe a su posición de reposo.
+   ================================================================ */
+.tk-hero-contenido { position: relative; z-index: 2; }
+
+.tk-hoja {
+  position: absolute;
+  z-index: 1;
+  aspect-ratio: 273 / 310;
+  pointer-events: none;
+  /* Ángulo de reposo — cada variante fija --hoja-rot; el keyframe de
+     abajo lo lee vía calc() en vez de valores absolutos, así que
+     sumarle el balanceo de viento nunca "resetea" la hoja a 0deg (ver
+     la nota grande junto a @keyframes tk-viento). */
+  transform: rotate(var(--hoja-rot, 0deg));
+  transition: transform .4s ease;
+  /* Perf (28 ago 2026, corrección "se traba al hacer scroll"): promueve
+     cada hoja a su propia capa de composición para que el navegador
+     anime transform sin recalcular layout/paint del resto de la
+     página en cada tick — ver también el throttle por
+     requestAnimationFrame del listener de scroll en index.html. */
+  will-change: transform;
+}
+.tk-hoja-img { width: 100%; height: 100%; display: block; }
+
+/* AJUSTE 2 (28 ago 2026, misma tarde — corrección contra imagen de
+   referencia del dueño): el AJUSTE 1 de arriba seguía quedando chico.
+   El dueño adjuntó una captura mostrando el tamaño/posición exactos
+   que quiere y pidió, medido sobre esa referencia, que cada hoja
+   ocupe ~24% del ancho del viewport — hablando del footprint VISIBLE
+   ya rotado (getBoundingClientRect, no el --hoja-tam sin rotar), que
+   es lo que de verdad se "ve" ocupar en pantalla. Verificado con
+   Playwright a 1920px: antes hero=19.45vw / menu=23.13vw (ambas ya
+   topadas en su MAX del AJUSTE 1, ni siquiera llegaban a usar el
+   18vw/19vw fluido). Como la rotación agranda la caja (bbox/tam ≈
+   1.245 en hero por su rotate(14deg), ≈1.234 en menu por su
+   rotate(84deg) — ver el bloque ÁNGULOS más abajo), el --hoja-tam sin
+   rotar necesario para llegar a 24vw de bbox es ~19.3-19.5vw, no 24vw
+   directo. MAX subió a 460px (antes 300/360) para que ese 19.3-19.5vw
+   no se vuelva a topar en 1920px (necesita ~370-374px) ni en
+   monitores más anchos comunes. MIN sin tocar — solo importa por
+   debajo de 879-1024px donde esta corrección no aplicaba. Re-medido
+   tras el cambio: 23.98vw hero / 24.02vw menu — dentro de margen de
+   redondeo del 24% pedido. */
+.tk-hoja--hero-izq,
+.tk-hoja--hero-der {
+  --hoja-tam: clamp(170px, 19.3vw, 460px);
+  width: var(--hoja-tam);
+}
+/* Sección 2 (carrusel): mismo 24vw objetivo que el hero (ver AJUSTE 2
+   arriba) — coeficiente vw levísimamente distinto (19.5 vs 19.3) solo
+   porque compensa la relación bbox/tam ligeramente distinta de su
+   propio ángulo (84deg vs 14deg), no una diferencia de tamaño
+   intencional entre secciones. */
+.tk-hoja--menu-izq,
+.tk-hoja--menu-der {
+  --hoja-tam: clamp(210px, 19.5vw, 460px);
+  width: var(--hoja-tam);
+}
+
+/* ÁNGULOS (corregidos 28 ago 2026 — la primera versión dejaba las 4
+   hojas casi verticales, --hoja-rot: 0deg implícito, solo el ángulo
+   natural del recorte de assets/hoja.png, que mide ~49° sobre la
+   horizontal). El dueño pidió, literal:
+     - Hero (sección 1): diagonal ACOSTADA hacia arriba, ~30-40° sobre
+       la horizontal, no casi vertical.
+     - Menú (sección 2): diagonal ACOSTADA hacia abajo, ~30-40° bajo la
+       horizontal — su propia diagonal, distinta a la del hero, no un
+       simple espejo/ajuste menor.
+   Los dos pares (izq/der de cada sección) son espejo horizontal exacto
+   uno del otro: --hoja-rot con el mismo valor absoluto, signo
+   contrario — así, con el mismo scaleX(-1) que ya llevaba la imagen
+   de las variantes "der", el resultado es una reflexión real, no solo
+   una posición en espejo con el mismo ángulo (que se vería mal
+   espejado). Cuentas: rotate(14deg) sobre el ángulo natural de 49°
+   deja la hoja del hero en ~35° sobre la horizontal, apuntando hacia
+   arriba (sin tocar left/bottom — el pivote "left/right bottom" cae
+   casi exacto sobre el nacimiento del tallo en el recorte, así que
+   rotar no mueve ese punto y el posicionamiento de antes sigue
+   valiendo). rotate(84deg) sobre esos mismos 49° cruza la horizontal y
+   deja la hoja del menú en ~35° BAJO la horizontal, apuntando hacia
+   abajo — por eso el ancla se recalculó por completo, ver la nota de
+   .tk-hoja--menu-izq más abajo. */
+/* AJUSTE 5 (28 ago 2026, feedback en vivo — "súbelas un poco"): el
+   dueño las vio en su propia captura más abajo de lo que quiere,
+   cerca de los botones. Solo se toca el bleed VERTICAL (-0.36→-0.15,
+   menos negativo = el borde inferior de la hoja queda más arriba
+   respecto al borde de .tk-hero) — el horizontal (-0.30) y el ángulo
+   no cambiaron, así que sigue mordiendo la esquina igual, solo más
+   arriba.
+
+   AJUSTE 6 (mismo feedback, segunda vuelta — "un pedazo de la hoja
+   sigue en la sección 2, subelo un poquito más"): con -0.15 un trozo
+   real de la hoja (no la caja completa, el contenido sólido) seguía
+   cruzando el borde inferior de .tk-hero hacia la sección 2. Medido
+   con Pillow sobre el canal alfa de hoja.png (mismo umbral >150 que
+   el resto de este bloque) cuál es el píxel sólido que, tras aplicar
+   la rotación real de 14deg y quedarse DENTRO del viewport (excluye
+   los píxeles cerca del tallo/pivote que ya caen fuera por la
+   izquierda, ocultos por el overflow-x:hidden del body — esos no
+   cuentan porque no se ven): el más profundo queda a ~0.076×tam por
+   debajo del borde con -0.15. -0.07 lo deja al ras (con un pequeño
+   margen), sin tocar el bleed horizontal ni el ángulo — otra vez, la
+   hoja no se movió de la esquina, solo subió lo justo para dejar de
+   picar la sección 2. */
+.tk-hoja--hero-izq {
+  --hoja-rot: 14deg;
+  left: calc(var(--hoja-tam) * -0.30);
+  bottom: calc(var(--hoja-tam) * -0.07);
+  transform-origin: left bottom;
+}
+.tk-hoja--hero-der {
+  --hoja-rot: -14deg;
+  right: calc(var(--hoja-tam) * -0.30);
+  bottom: calc(var(--hoja-tam) * -0.07);
+  transform-origin: right bottom;
+}
+.tk-hoja--hero-der .tk-hoja-img { transform: scaleX(-1); }
+
+/* Ancla recalculada (28 ago 2026), no solo el ángulo — dos cosas
+   cambiaron a la vez y están relacionadas:
+   1) `top` pasó de -0.36*tam a un valor mucho más negativo
+      (-1.14*tam). Con rotate(84deg), el pivote "left bottom" (que cae
+      casi exacto sobre el nacimiento del tallo en el recorte) solo
+      termina a la altura del borde superior de la sección si la caja
+      SIN rotar arranca casi una altura completa por encima de ese
+      borde — es una consecuencia geométrica de la vuelta grande, no
+      un valor arbitrario. El resto de la hoja (la punta) sí queda
+      colgando bien adentro de la sección, ~1.1×tam a la derecha y
+      ~0.84×tam hacia abajo del nacimiento del tallo.
+   2) El bleed horizontal bajó de -0.30 a -0.08*tam. Con -0.36
+      original ya NO aplica en vertical: esta sección es
+      position:sticky con top:0 (ver .tk-carrusel-seccion), así que
+      durante prácticamente todo el tiempo que el usuario la ve, el
+      borde superior de la sección ES el borde superior del viewport
+      — no existe "más allá" para que la hoja sangre, cualquier
+      offset negativo en vertical simplemente se renderiza fuera de la
+      ventana y se ve cortado en seco (el bug reportado). Confirmado
+      con Playwright leyendo getBoundingClientRect() en varios scrollY:
+      el top de la sección vale 0 en prácticamente todo el rango
+      visible. `top` aquí por eso ya no es un "bleed" en el sentido de
+      la sección 1 — es el cálculo exacto para que el nacimiento del
+      tallo quede exactamente al ras (y=0) del borde/viewport, ni
+      cortado ni flotando separado de la esquina. */
+/* AJUSTE 7 (28 ago 2026, feedback en vivo — "rótalas, tipo '-',
+   acostadas, ahorita se ven paradas"): 84deg matemáticamente ya daba
+   ~35° bajo la horizontal (verificado con PCA + la matriz real de
+   Playwright: eje tallo→punta natural de hoja.png mide -49.06° en
+   coords de pantalla; -49.06+84=34.94°) — el mismo ángulo que el
+   hero, solo espejeado, y por diseño original debía ser igual de
+   "acostado". En vivo se ve más parado de lo que el dueño quiere
+   comparado con la maqueta, así que esta vez no es cuestión de que el
+   ángulo estuviera mal calculado, es que el dueño quiere ir más allá
+   del 30-40° original: bajó a 64deg → -49.06+64=14.94°, mucho más
+   cerca de la horizontal ("tipo -").
+   `top`/`left` NO se tocan y siguen siendo válidos sin recalcular:
+   ambos posicionan el PIVOTE (transform-origin left/right bottom, que
+   cae casi exacto sobre el nacimiento del tallo), y el pivote no se
+   mueve al rotar — la rotación solo cambia hacia dónde apunta la
+   punta desde ahí, nunca dónde queda el pivote. Por eso el tallo
+   sigue mordiendo la esquina exactamente igual que antes; lo único
+   que cambia es que la punta ahora llega más lejos a los lados
+   (~1.41×tam desde el pivote, antes ~1.20×tam) y cuelga menos hacia
+   abajo (~0.38×tam, antes ~0.84×tam) — justo el efecto de "acostarla"
+   que se pidió. */
+/* AJUSTE 8 (28 ago 2026, feedback en vivo — "se les ve el
+   tallo/palito, muévelas a los lados como las de la sección 1"): con
+   el AJUSTE 7 de arriba el pivote (≈ nacimiento del tallo) se queda
+   donde ya estaba (-0.08×tam, casi al ras) — pero al acostar el
+   ángulo, el tramo de tallo PELÓN (sin foliolos, solo la vara) que
+   antes quedaba escondido cerca del pivote ahora cae bien adentro del
+   viewport y se ve. En el hero esto no pasa porque su bleed horizontal
+   (-0.30) ya es bastante mayor y saca ese tramo pelón de pantalla.
+   Medido con Pillow: recorriendo el eje tallo→punta de hoja.png y
+   midiendo el ancho perpendicular en cada punto, la vara se queda
+   angosta (1-2.5px) hasta ~13% del largo y ahí empieza a abrirse en
+   foliolos de verdad (ancho 20px→50px→100px en un tramo corto). Tomé
+   el punto donde el ancho ya llega a 30px (t=0.135, claramente
+   abierto, no solo el arranque del abanico) y calculé qué tan a la
+   izquierda hay que mover el pivote para que ESE punto —ya con la
+   rotación de 64deg aplicada— caiga ~11px pasado el borde (más un
+   margen de seguridad de otros 11px): -0.08 → -0.22. El punto donde
+   empiezan los foliolos queda entonces asomando justo en la esquina
+   (X≈0, Y≈19px hacia abajo desde ahí), mordiendo el borde en vez de
+   flotar separado de él — mismo look que el hero, no una hoja más
+   chica ni movida al centro. */
+.tk-hoja--menu-izq {
+  --hoja-rot: 64deg;
+  left: calc(var(--hoja-tam) * -0.22);
+  top: calc(var(--hoja-tam) * -1.14);
+  transform-origin: left bottom;
+}
+.tk-hoja--menu-der {
+  --hoja-rot: -64deg;
+  right: calc(var(--hoja-tam) * -0.22);
+  top: calc(var(--hoja-tam) * -1.14);
+  transform-origin: right bottom;
+}
+.tk-hoja--menu-der .tk-hoja-img { transform: scaleX(-1); }
+
+/* Balanceo tipo "viento": rotación + traslación mínimas relativas al
+   --hoja-rot de reposo de cada hoja (calc(var(--hoja-rot) + Xdeg), NO
+   valores absolutos como antes) — con valores absolutos (rotate(0deg)
+   en el 0%/50%/100%), la animación pisaba por completo el ángulo de
+   reposo cada vez que corría, "enderezando" la hoja a la vertical
+   original durante todo el scroll y regresando de golpe al soltar.
+   Un solo @keyframes para las 4 — lo que evita que se vean
+   sincronizadas es que cada una corre con su propia duración/delay.
+   Períodos cortos (2.6-3.3s en vez de los 7-9s de la versión en
+   loop-infinito): ahora solo se ven mientras dura el scroll activo,
+   así que un ciclo largo apenas se alcanzaría a notar en un scroll
+   corto. */
+@keyframes tk-viento {
+  0%   { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
+  25%  { transform: rotate(calc(var(--hoja-rot) + 1.4deg))  translate(2px, -1px); }
+  50%  { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
+  75%  { transform: rotate(calc(var(--hoja-rot) - 1.6deg))  translate(-2px, 1px); }
+  100% { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tk-hoja--hero-izq.is-swaying { animation: tk-viento 2.6s ease-in-out infinite; }
+  .tk-hoja--hero-der.is-swaying { animation: tk-viento 3.1s ease-in-out infinite .3s; }
+  .tk-hoja--menu-izq.is-swaying { animation: tk-viento 2.8s ease-in-out infinite .15s; }
+  .tk-hoja--menu-der.is-swaying { animation: tk-viento 3.3s ease-in-out infinite .45s; }
+}
+
+/* Las del hero se ocultan en móvil (mismo corte de 640px que ya usa el
+   resto del sitio para el botón hamburguesa) — a ese ancho quedan
+   demasiado cerca del contenido centrado del hero. Las del carrusel no
+   necesitan esta regla: ver la nota grande de arriba. */
+@media (max-width: 640px) {
+  .tk-hoja--hero-izq,
+  .tk-hoja--hero-der { display: none; }
 }

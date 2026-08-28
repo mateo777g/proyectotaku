@@ -49,6 +49,8 @@
 </aside>
 
 <header class="tk-hero">
+  <div class="tk-hoja tk-hoja--hero-izq" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
+  <div class="tk-hoja tk-hoja--hero-der" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
   <div class="tk-hero-contenido">
     <p class="tk-hero-eyebrow">Taquería</p>
     <img class="tk-hero-logo" src="assets/logomonky.png" alt="">
@@ -84,30 +86,34 @@
      mientras se atraviesa. -->
 <div class="tk-carrusel-enganche">
 <section class="tk-carrusel-seccion" id="carrusel-menu" aria-label="Menú">
-  <div class="tk-cf-fondo">
-    <div class="tk-cf-fondo-img" id="carrusel-fondo"></div>
-    <div class="tk-cf-fondo-degradado"></div>
-  </div>
-
-  <div class="tk-cf-envoltura">
-    <div class="tk-cf-eyebrow-fila">
-      <span class="tk-cf-linea tk-cf-linea--izq"></span>
-      <h3 class="tk-cf-eyebrow">Menú</h3>
-      <span class="tk-cf-linea tk-cf-linea--der"></span>
+  <div class="tk-hoja tk-hoja--menu-izq" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
+  <div class="tk-hoja tk-hoja--menu-der" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
+  <div class="tk-carrusel-recorte">
+    <div class="tk-cf-fondo">
+      <div class="tk-cf-fondo-img" id="carrusel-fondo"></div>
+      <div class="tk-cf-fondo-degradado"></div>
     </div>
 
-    <div class="tk-cf-escenario" id="carrusel-escenario">
-      <div class="tk-cf-cargando"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
+    <div class="tk-cf-envoltura">
+      <div class="tk-cf-eyebrow-fila">
+        <span class="tk-cf-linea tk-cf-linea--izq"></span>
+        <h3 class="tk-cf-eyebrow">Menú</h3>
+        <span class="tk-cf-linea tk-cf-linea--der"></span>
+      </div>
+
+      <div class="tk-cf-escenario" id="carrusel-escenario">
+        <div class="tk-cf-cargando"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
+      </div>
+
+      <button class="tk-cf-flecha tk-cf-flecha--prev" id="carrusel-prev" aria-label="Platillo anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="tk-cf-flecha tk-cf-flecha--next" id="carrusel-next" aria-label="Siguiente platillo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <div class="tk-cf-dots" id="carrusel-dots"></div>
     </div>
-
-    <button class="tk-cf-flecha tk-cf-flecha--prev" id="carrusel-prev" aria-label="Platillo anterior">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
-    </button>
-    <button class="tk-cf-flecha tk-cf-flecha--next" id="carrusel-next" aria-label="Siguiente platillo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-    </button>
-
-    <div class="tk-cf-dots" id="carrusel-dots"></div>
   </div>
 </section>
 </div>
@@ -204,6 +210,52 @@
   iniciarNavbar();
   iniciarIndex();
   iniciarCarrusel();
+
+  // Hojas decorativas de esquina (ver style.css → "Hojas decorativas"):
+  // el balanceo de viento solo debe correr MIENTRAS hay scroll activo,
+  // nunca en loop de fondo. Mientras el usuario scrollea se agrega
+  // .is-swaying a las 4 hojas (dispara la animación CSS); 250ms sin un
+  // nuevo evento de scroll, se quita y vuelven a su estado quieto.
+  //
+  // Perf (28 ago 2026, corrección "se traba/tartamudea al hacer
+  // scroll"): el listener de "scroll" puede disparar decenas de veces
+  // por frame (trackpad, mouse de alto polling). La versión anterior
+  // hacía classList.add/clearTimeout/setTimeout en CADA evento, sin
+  // throttle — de ahí el stutter. Ahora el propio evento de scroll
+  // solo agenda un tick vía requestAnimationFrame (como mucho uno por
+  // frame, `tickProgramado` descarta el resto) y, dentro de ese tick,
+  // classList.add solo se llama la PRIMERA vez que arranca el sway
+  // (`sacudiendo`), no en cada tick — evitar escrituras de clase
+  // redundantes es lo que evita recalculos de estilo de sobra en cada
+  // frame. Solo se toca `transform` (vía la clase, en CSS), nunca una
+  // propiedad que dispare reflow.
+  function iniciarHojas() {
+    const hojas = document.querySelectorAll(".tk-hoja");
+    if (!hojas.length) return;
+    let temporizador = null;
+    let tickProgramado = false;
+    let sacudiendo = false;
+    function activarSway() {
+      if (!sacudiendo) {
+        sacudiendo = true;
+        hojas.forEach(h => h.classList.add("is-swaying"));
+      }
+      clearTimeout(temporizador);
+      temporizador = setTimeout(() => {
+        sacudiendo = false;
+        hojas.forEach(h => h.classList.remove("is-swaying"));
+      }, 250);
+    }
+    window.addEventListener("scroll", () => {
+      if (tickProgramado) return;
+      tickProgramado = true;
+      requestAnimationFrame(() => {
+        tickProgramado = false;
+        activarSway();
+      });
+    }, { passive: true });
+  }
+  iniciarHojas();
 </script>
 </body>
 </html>
