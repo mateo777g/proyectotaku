@@ -77,6 +77,12 @@
      "reusar la paleta del sitio". Los datos SÍ son reales (platillos
      de verdad vía carrusel.js), nunca las fotos de stock del original.
      ================================================================ -->
+<!-- Envoltura del "enganche" de scroll — SOLO da altura extra en escritorio
+     (ver .tk-carrusel-enganche en style.css). Puramente CSS (position:
+     sticky), sin JS ni animación: pedido explícito del dueño de que la
+     sección "atrape" el scroll un momento y nada más, cero efectos
+     mientras se atraviesa. -->
+<div class="tk-carrusel-enganche">
 <section class="tk-carrusel-seccion" id="carrusel-menu" aria-label="Menú">
   <div class="tk-cf-fondo">
     <div class="tk-cf-fondo-img" id="carrusel-fondo"></div>
@@ -104,6 +110,7 @@
     <div class="tk-cf-dots" id="carrusel-dots"></div>
   </div>
 </section>
+</div>
 
 <section id="platillos" class="tk-seccion">
   <div class="tk-seccion-encabezado">

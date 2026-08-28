@@ -90,12 +90,23 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   display: flex;
   align-items: flex-start;
   padding-top: 26px;
-  padding-bottom: 60px;
+  padding-bottom: 110px;
   pointer-events: none;
   /* Degradado más claro (calcado de EJEMPLOS/style.css .navbar: .5/.2/0
      en vez de nuestro .82/.42/0 anterior) — el nuestro se veía mucho
-     más oscuro que el de referencia. */
-  background: linear-gradient(to bottom, rgba(13, 9, 5, .55) 0%, rgba(13, 9, 5, .22) 55%, rgba(13, 9, 5, 0) 100%);
+     más oscuro que el de referencia.
+     5 paradas en vez de 3 (y padding-bottom más alto que antes, 110px)
+     — pedido del dueño: con solo 0%/55%/100% se notaba un "codo" a
+     medio camino y se sentía que la sombra se recortaba de golpe en
+     vez de irse apagando. Misma curva (mismas proporciones entre
+     paradas) que la de .tk-hero::after más abajo — si cambias una,
+     cambia la otra para que se sigan viendo parejas. */
+  background: linear-gradient(to bottom,
+    rgba(13, 9, 5, .55) 0%,
+    rgba(13, 9, 5, .28) 25%,
+    rgba(13, 9, 5, .12) 50%,
+    rgba(13, 9, 5, .05) 75%,
+    rgba(13, 9, 5, 0) 100%);
 }
 .tk-navbar .tk-envoltura {
   display: flex;
@@ -295,7 +306,11 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      su propio espacio en el flujo — este padding-top es lo que evita
      que el logo/marca de la barra tape el contenido del hero. */
   padding: calc(var(--navbar-alto) + 28px) 20px 28px;
-  background: radial-gradient(circle at 50% 0%, #fff9ee 0%, var(--fondo) 65%);
+  /* Fondo "amber glow" — fórmula literal del prompt de referencia
+     (radial-gradient(125% 125% at 50% 90%, #fff 40%, #f59e0b 100%)),
+     solo con --acento1 (#ffa200, prácticamente el mismo tono que el
+     #f59e0b del prompt) en vez de un hex ajeno a la paleta. */
+  background: radial-gradient(125% 125% at 50% 90%, #fffaf0 47%, var(--acento1) 100%);
 }
 .tk-hero-contenido { max-width: 560px; }
 .tk-hero-eyebrow {
@@ -538,11 +553,28 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 .tk-icono-vacio { width: 32px; height: 32px; color: #c9bda3; }
 
 /* ================= Footer ================= */
+/* Claro (28 ago 2026, pedido del dueño) — antes era oscuro (--oscuro)
+   con texto claro, calcado del footer de EJEMPLOS. El dueño lo quiso
+   claro, del mismo tono de fondo que ya usa el resto del sitio para
+   secciones claras (--fondo), NO del ámbar del degradado del hero —
+   así que la paleta de textos se invirtió entera para leerse bien
+   sobre fondo claro (mismos tokens que ya usa .tk-eyebrow/.tk-seccion-
+   encabezado h2/.tk-fila-volver más arriba, ningún color nuevo).
+   `margin-top: 8px` también se quitó: con el footer oscuro esos 8px
+   dejaban asomarse el --fondo claro de body detrás como una rayita
+   blanca entre la sección 2 y el footer — el dueño la vio y la
+   reportó. Sin ese margen, el footer empieza pegado a lo que venga
+   arriba y no hay hueco que revele el fondo de body.
+   Tipografía Montserrat también a pedido del dueño (28 ago 2026) —
+   ya se importa en el <head> para .tk-nav-link, aquí se extiende a
+   todo el footer EXCEPTO la marca "Taku monky", que se queda en
+   Georgia italic como en el navbar/hero/sidebar (nunca se tocó ese
+   tratamiento, es la fuente de la marca en todo el sitio). */
 .tk-footer {
-  background: var(--oscuro);
-  color: #cabfae;
+  background: var(--fondo);
+  color: var(--muted1);
+  font-family: "Montserrat", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   padding: 44px 20px 22px;
-  margin-top: 8px;
 }
 .tk-footer .tk-envoltura {
   display: flex;
@@ -552,11 +584,11 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 .tk-footer-marca { display: flex; align-items: center; gap: 10px; }
 .tk-footer-marca img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.tk-footer-marca span { font-family: Georgia, serif; font-style: italic; font-weight: bold; font-size: 18px; color: var(--blanco); }
-.tk-footer-tagline { font-size: 12px; color: #9a8f7d; margin-top: 8px; max-width: 240px; line-height: 1.5; }
+.tk-footer-marca span { font-family: Georgia, serif; font-style: italic; font-weight: bold; font-size: 18px; color: var(--texto-fuerte); }
+.tk-footer-tagline { font-size: 12px; color: var(--muted2); margin-top: 8px; max-width: 240px; line-height: 1.5; }
 .tk-footer-columna h3 {
   font-size: 11px; font-weight: bold; letter-spacing: .04em;
-  color: var(--dorado); text-transform: uppercase; margin-bottom: 12px;
+  color: var(--eyebrow); text-transform: uppercase; margin-bottom: 12px;
 }
 .tk-footer-columna ul { display: flex; flex-direction: column; gap: 9px; }
 .tk-footer-enlace { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
@@ -568,14 +600,17 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 /* Mismo "pop" que .footer-social-link:hover en EJEMPLOS/style.css
    (ahí es un ícono suelto; aquí el ícono va pegado al texto del
-   enlace, así que solo el ícono escala, el texto solo cambia a
-   dorado). No se tocó el modelo 3D de Spline del footer de Anxie
-   porque este footer nunca lo tuvo — nunca hubo nada que quitar ahí. */
-.tk-footer-enlace:hover { color: var(--dorado); }
+   enlace, así que solo el ícono escala). El color de hover ya no es
+   --dorado (#f4ca83, pensado para fondo oscuro — casi no se leería
+   aquí): se usa --naranja2, el mismo tono que .tk-fila-volver:hover
+   ya usa como acento de link sobre fondo claro. No se tocó el modelo
+   3D de Spline del footer de Anxie porque este footer nunca lo tuvo —
+   nunca hubo nada que quitar ahí. */
+.tk-footer-enlace:hover { color: var(--naranja2); }
 .tk-footer-enlace:hover svg { transform: scale(1.15); }
 .tk-footer-copy {
   max-width: 1100px; margin: 32px auto 0; padding-top: 18px;
-  border-top: 1px solid #241b12; font-size: 11px; color: #7e7568; text-align: center;
+  border-top: 1px solid var(--borde); font-size: 11px; color: var(--muted3); text-align: center;
 }
 
 @media (max-width: 640px) {
@@ -614,9 +649,80 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    ================================================================ */
 .tk-carrusel-seccion { display: none; }
 
+/* -------- "Enganche" de scroll (28 ago 2026) --------
+   Envoltura de index.html alrededor de .tk-carrusel-seccion. Pedido
+   explícito del dueño: que la sección 2 (el carrusel) "atrape" el
+   scroll un momento en vez de pasar de largo en un parpadeo, y que
+   siga bajando normal después hasta el footer — SIN ninguna animación
+   mientras tanto (a diferencia del scroll-jacking con progreso de
+   EJEMPLOS/index.html, aquí no hay ni un solo listener de scroll).
+
+   El truco es puro CSS, mismo patrón que .cases-scroll-wrapper/
+   .cases-sticky de EJEMPLOS/style.css pero sin la parte de JS:
+   la envoltura mide más que una pantalla completa y la sección de
+   adentro se vuelve position:sticky con top:0, así que se queda
+   pegada arriba mientras el navegador consume esa altura de sobra, y
+   se suelta sola en cuanto la envoltura se acaba — el resto del
+   scroll sigue normal hacia el footer.
+
+   Por defecto (móvil, sección oculta) esta envoltura no lleva altura
+   propia: como .tk-carrusel-seccion es display:none ahí abajo, la
+   envoltura colapsa a 0 y no deja hueco en blanco. Solo en escritorio
+   (≥1024px, donde el carrusel sí se muestra) se le da la altura extra
+   y el sticky — por eso vive dentro del MISMO media query que ya
+   prende el carrusel un poco más abajo. */
+.tk-carrusel-enganche { position: relative; }
+
 @media (min-width: 1024px) {
   .tk-carrusel-seccion { display: flex; }
   #platillos, #bebidas, #postres { display: none; }
+
+  /* Altura total = 1 pantalla (lo que mide la sección) + 80vh de
+     "gancho" -- ese 80vh extra es el scroll que el usuario recorre
+     con la sección quieta antes de que se suelte. Ajustar este único
+     número (y nada más) para hacer el enganche más largo/corto. */
+  .tk-carrusel-enganche {
+    height: 180vh;
+    height: 180svh;
+  }
+  /* El position:sticky en sí NO va aquí -- la regla base de
+     .tk-carrusel-seccion (position:relative, más abajo en este mismo
+     archivo) le gana por orden de cascada al tener la misma
+     especificidad. Va en su propio media query justo después de esa
+     regla base para que sea la que se aplique última. */
+
+  /* Sombra al pie de la sección 1 (hero) — pareja a la del .tk-navbar
+     de arriba pero mirando hacia arriba, como efecto de separación
+     contra la sección 2. Solo aquí adentro (≥1024px) porque en
+     escritorio la sección 2 real es el carrusel oscuro (#0c0a09,
+     definido abajo); en móvil la sección 2 es #platillos con fondo
+     claro (--fondo) y esta sombra oscura no tendría con qué "pegar".
+     Alto = --navbar-alto (78px, la zona sólida) + 110px — el mismo
+     padding-bottom de fundido que usa .tk-navbar ahora, así que sigue
+     pesando igual que la de arriba en tamaño.
+     La intensidad NO es igual a propósito (pedido del dueño): pegada
+     tal cual contra el negro casi sólido de la sección 2 (#0c0a09), la
+     misma opacidad .55 del navbar se sentía como un corte duro justo
+     en la unión, así que aquí el pico baja a .35. Misma curva de 5
+     paradas que .tk-navbar (mismas proporciones, escaladas al pico
+     nuevo) para que las dos se sientan igual de difuminadas aunque
+     una pese menos que la otra — si tocas una curva, toca la otra. */
+  .tk-hero { position: relative; }
+  .tk-hero::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--navbar-alto) + 110px);
+    pointer-events: none;
+    background: linear-gradient(to top,
+      rgba(13, 9, 5, .35) 0%,
+      rgba(13, 9, 5, .18) 25%,
+      rgba(13, 9, 5, .08) 50%,
+      rgba(13, 9, 5, .03) 75%,
+      rgba(13, 9, 5, 0) 100%);
+  }
 }
 
 .tk-carrusel-seccion {
@@ -637,6 +743,18 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   color: #ffffff;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   user-select: none;
+}
+
+@media (min-width: 1024px) {
+  /* El "enganche" en sí: ver el comentario grande junto a
+     .tk-carrusel-enganche más arriba. Tiene que declararse AQUÍ
+     (después de la regla base de arriba, no dentro de aquel primer
+     media query) para ganarle en la cascada a su position:relative --
+     misma especificidad, gana el que aparece después en el archivo. */
+  .tk-carrusel-seccion {
+    position: sticky;
+    top: 0;
+  }
 }
 
 /* -------- Fondo de ambiente: la foto del platillo activo, difuminada -------- */
