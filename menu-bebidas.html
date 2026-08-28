@@ -10,6 +10,9 @@
 <meta property="og:image" content="assets/logomonky.png">
 <meta property="og:type" content="website">
 <link rel="icon" type="image/png" href="assets/logomonky.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Rock+Salt&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,8 +28,25 @@
       <a class="tk-nav-link tk-nav-link--activo" href="menu-bebidas.html">Bebidas</a>
       <a class="tk-nav-link" href="menu-postres.html">Postres</a>
     </div>
+    <button class="tk-menu-boton" id="tk-menu-boton" aria-label="Abrir menú">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
+
+<div class="tk-sidebar-overlay" id="tk-sidebar-overlay"></div>
+<aside class="tk-sidebar" id="tk-sidebar">
+  <button class="tk-sidebar-cerrar" id="tk-sidebar-cerrar" aria-label="Cerrar menú">&times;</button>
+  <div class="tk-sidebar-encabezado">
+    <img src="assets/logomonky.png" alt="">
+    <span>Taku monky</span>
+  </div>
+  <ul class="tk-sidebar-links">
+    <li><a href="menu-platillos.html">Platillos</a></li>
+    <li><a class="tk-nav-link--activo" href="menu-bebidas.html">Bebidas</a></li>
+    <li><a href="menu-postres.html">Postres</a></li>
+  </ul>
+</aside>
 
 <a class="tk-fila-volver" href="index.html">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
@@ -92,6 +112,7 @@
 <script src="catalogo.js"></script>
 <script>
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
+  iniciarNavbar();
   iniciarCategoria("Bebidas");
 </script>
 </body>

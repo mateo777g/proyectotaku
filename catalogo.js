@@ -147,6 +147,40 @@ function iniciarAutoRefresco(callback) {
 }
 
 // ----------------------------------------------------------------
+// Navbar / sidebar móvil — mismo patrón que EJEMPLOS/style.css
+// (barra fija tipo "sombra" arriba + un sidebar deslizante en móvil
+// con overlay), solo que aquí los colores/tipografía son los de Taku
+// Monky. El HTML del botón hamburguesa + sidebar es idéntico en las
+// 4 páginas (mismos ids), solo cambian los enlaces adentro, así que
+// basta con una sola función enganchando los botones por id.
+// ----------------------------------------------------------------
+function iniciarNavbar() {
+  const boton = document.getElementById("tk-menu-boton");
+  const sidebar = document.getElementById("tk-sidebar");
+  const overlay = document.getElementById("tk-sidebar-overlay");
+  const cerrar = document.getElementById("tk-sidebar-cerrar");
+  if (!boton || !sidebar || !overlay) return;
+
+  function abrir() {
+    sidebar.classList.add("tk-activo");
+    overlay.classList.add("tk-activo");
+  }
+  function ocultar() {
+    sidebar.classList.remove("tk-activo");
+    overlay.classList.remove("tk-activo");
+  }
+
+  boton.addEventListener("click", abrir);
+  overlay.addEventListener("click", ocultar);
+  if (cerrar) cerrar.addEventListener("click", ocultar);
+  // Cerrar al navegar a un enlace del sidebar (ancla o página nueva).
+  sidebar.querySelectorAll("a").forEach((enlace) => enlace.addEventListener("click", ocultar));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") ocultar();
+  });
+}
+
+// ----------------------------------------------------------------
 // Categorías fijas — mismas 3 del CHECK de la tabla (ver CLAUDE.md):
 // Platillos, Bebidas, Postres, en ese orden.
 // ----------------------------------------------------------------

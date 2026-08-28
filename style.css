@@ -43,7 +43,7 @@
   --radio-badge: 12px;
   --sombra-boton: 0 4px 12px rgba(0, 0, 0, 0.28);
 
-  --navbar-alto: 64px;
+  --navbar-alto: 78px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -74,30 +74,51 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   padding: 0 20px;
 }
 
-/* ================= Navbar ================= */
+/* ================= Navbar =================
+   Flotante tipo "sombra" (degradado, no un bloque sólido) sobre el
+   contenido, igual patrón que EJEMPLOS/style.css (.navbar ahí):
+   position:fixed + pointer-events:none en el contenedor, pointer-events:
+   auto solo en marca/links/botón para que el degradado transparente no
+   bloquee clics debajo de él. Los colores/tipografía siguen siendo los
+   de Taku Monky, no los de Anxie Store. */
 .tk-navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 50;
-  height: var(--navbar-alto);
-  background: var(--oscuro);
+  left: 0;
+  width: 100%;
+  z-index: 500;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 26px;
+  padding-bottom: 60px;
+  pointer-events: none;
+  /* Degradado más claro (calcado de EJEMPLOS/style.css .navbar: .5/.2/0
+     en vez de nuestro .82/.42/0 anterior) — el nuestro se veía mucho
+     más oscuro que el de referencia. */
+  background: linear-gradient(to bottom, rgba(13, 9, 5, .55) 0%, rgba(13, 9, 5, .22) 55%, rgba(13, 9, 5, 0) 100%);
 }
 .tk-navbar .tk-envoltura {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  /* Sin max-width propio: la marca y los links se van derecho a las
+     esquinas del viewport (borde a borde, solo el padding de aquí como
+     margen), igual que EJEMPLOS/style.css .navbar (padding 3.5rem, sin
+     max-width) — con el max-width de 1400px que tenía antes seguían
+     quedando lejos de la esquina en pantallas anchas. */
+  max-width: none;
+  padding: 0 56px;
 }
 .tk-marca {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  pointer-events: auto;
 }
 .tk-marca img {
-  width: 34px;
-  height: 34px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -106,47 +127,174 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   font-family: Georgia, serif;
   font-style: italic;
   font-weight: bold;
-  font-size: 17px;
+  font-size: 22px;
   color: var(--blanco);
   white-space: nowrap;
 }
 .tk-nav-links {
   display: flex;
-  gap: 6px;
+  gap: 40px;
+  pointer-events: auto;
 }
+/* El "atajo" ya no saca una píldora de color al hover: saca una
+   barrita dorada animada creciendo debajo del texto (mismo mecanismo
+   que .nav-links li::after en EJEMPLOS, con el dorado de la marca en
+   vez del rojo de Anxie). Fuente Montserrat (Google Fonts, cargada en
+   el <head> de cada página) igual que EJEMPLOS/style.css .nav-links a —
+   pedido explícito del owner, y solo para estos links: la marca "Taku
+   monky" se queda en Georgia italic, no se toca. */
 .tk-nav-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 9px 16px;
-  border-radius: var(--radio-pill);
-  font-size: 13px;
-  font-weight: 600;
-  color: #cabfae;
-  transition: background-color .15s, color .15s;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 6px;
+  /* Peso 400 + opacidad .75, calcado literal de EJEMPLOS/style.css
+     .nav-links a — el font-weight:600 que tenía antes era lo que lo
+     hacía verse "gordo"/genérico en vez del look fino y premium del
+     ejemplo (ahí está todo el peso visual real, no solo la fuente). */
+  font-family: "Montserrat", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--blanco);
+  opacity: .75;
   white-space: nowrap;
+  transition: opacity .2s ease;
 }
-.tk-nav-link:hover { color: var(--dorado); background: #1c1610; }
-.tk-nav-link--activo,
-.tk-nav-link--activo:hover {
-  color: var(--oscuro);
-  background: var(--dorado);
+.tk-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: 0%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--acento2);
+  transition: width .35s cubic-bezier(.25, 1, .5, 1);
+}
+/* El texto NUNCA se pinta de dorado: se queda blanco y solo sube de
+   opacidad (.75 → 1), o sea se ve "más blanco/brilloso" al pasar el
+   cursor — calcado de EJEMPLOS/style.css (.nav-links a / a:hover, que
+   solo animan opacity). Todo el color vive en la barrita de abajo, igual
+   que ahí (rojo en Anxie, --acento2 #e8aa3a aquí). Pedido explícito del
+   owner: las palabras en amarillo no le gustaron. */
+.tk-nav-link:hover { opacity: 1; }
+.tk-nav-link:hover::after { width: 100%; }
+.tk-nav-link--activo { opacity: 1; }
+.tk-nav-link--activo::after { width: 100%; }
+
+/* Botón hamburguesa — oculto en escritorio, solo aparece en móvil. */
+.tk-menu-boton {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 34px;
+  height: 34px;
+  pointer-events: auto;
+}
+.tk-menu-boton span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  margin: 0 auto;
+  border-radius: 2px;
+  background: var(--blanco);
+  transition: background-color .2s ease;
+}
+.tk-menu-boton:hover span { background: var(--dorado); }
+
+/* ============ Sidebar móvil (mismo patrón que EJEMPLOS/style.css) ============ */
+.tk-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(13, 9, 5, .6);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .35s ease, visibility .35s ease;
+}
+.tk-sidebar-overlay.tk-activo { opacity: 1; visibility: visible; }
+
+.tk-sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 280px;
+  max-width: 80vw;
+  height: 100%;
+  z-index: 950;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  background: var(--oscuro);
+  box-shadow: -12px 0 30px rgba(0, 0, 0, .5);
+  transition: right .4s cubic-bezier(.25, 1, .5, 1);
+}
+.tk-sidebar.tk-activo { right: 0; }
+
+.tk-sidebar-cerrar {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  font-size: 26px;
+  line-height: 1;
+  color: #cabfae;
+  transition: color .2s ease;
+}
+.tk-sidebar-cerrar:hover { color: var(--dorado); }
+
+.tk-sidebar-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+.tk-sidebar-encabezado img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.tk-sidebar-encabezado span {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-weight: bold;
+  font-size: 16px;
+  color: var(--blanco);
 }
 
-@media (max-width: 560px) {
-  .tk-marca span { display: none; }
-  .tk-nav-link { padding: 8px 10px; font-size: 12px; }
-  .tk-nav-links { gap: 4px; }
+.tk-sidebar-links { display: flex; flex-direction: column; gap: 22px; }
+.tk-sidebar-links a {
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: #cabfae;
+  transition: color .2s ease, padding-left .2s ease;
+}
+.tk-sidebar-links a:hover,
+.tk-sidebar-links a.tk-nav-link--activo {
+  color: var(--dorado);
+  padding-left: 6px;
+}
+
+@media (max-width: 640px) {
+  .tk-nav-links { display: none; }
+  .tk-menu-boton { display: flex; }
 }
 
 /* ================= Hero (Sección 1) ================= */
 .tk-hero {
-  min-height: calc(100vh - var(--navbar-alto));
-  min-height: calc(100svh - var(--navbar-alto));
+  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 28px 20px;
+  /* El navbar ahora es fixed (flota como sombra encima), ya no reserva
+     su propio espacio en el flujo — este padding-top es lo que evita
+     que el logo/marca de la barra tape el contenido del hero. */
+  padding: calc(var(--navbar-alto) + 28px) 20px 28px;
   background: radial-gradient(circle at 50% 0%, #fff9ee 0%, var(--fondo) 65%);
 }
 .tk-hero-contenido { max-width: 560px; }
@@ -208,12 +356,12 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   box-shadow: var(--sombra-boton);
 }
 .tk-btn--primario:hover { background: #1c1610; }
-/* Reusa el par gold/texto-café ya establecido para el chip de categoría
-   de menu_view.py (#f7b84d / #684c16) — no se inventó un color nuevo
-   para el botón secundario. */
+/* Fondo dorado reusado del chip de categoría de menu_view.py (#f7b84d),
+   pero el texto va en blanco (pedido explícito del owner, como en el
+   botón "atajo" de EJEMPLOS) en vez del café --chip-texto original. */
 .tk-btn--secundario {
   background: var(--chip-bg);
-  color: var(--chip-texto);
+  color: var(--blanco);
 }
 .tk-btn--secundario:hover { filter: brightness(0.96); }
 
@@ -251,7 +399,9 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 18px 20px 0;
+  /* Mismo motivo que el padding-top de .tk-hero: el navbar es fixed y
+     ya no empuja el contenido hacia abajo por sí solo. */
+  padding: calc(var(--navbar-alto) + 18px) 20px 0;
   max-width: 1100px;
   margin: 0 auto;
   font-size: 13px;
@@ -410,8 +560,19 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 .tk-footer-columna ul { display: flex; flex-direction: column; gap: 9px; }
 .tk-footer-enlace { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
-.tk-footer-enlace svg { width: 16px; height: 16px; flex-shrink: 0; }
+.tk-footer-enlace svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform .2s ease;
+}
+/* Mismo "pop" que .footer-social-link:hover en EJEMPLOS/style.css
+   (ahí es un ícono suelto; aquí el ícono va pegado al texto del
+   enlace, así que solo el ícono escala, el texto solo cambia a
+   dorado). No se tocó el modelo 3D de Spline del footer de Anxie
+   porque este footer nunca lo tuvo — nunca hubo nada que quitar ahí. */
 .tk-footer-enlace:hover { color: var(--dorado); }
+.tk-footer-enlace:hover svg { transform: scale(1.15); }
 .tk-footer-copy {
   max-width: 1100px; margin: 32px auto 0; padding-top: 18px;
   border-top: 1px solid #241b12; font-size: 11px; color: #7e7568; text-align: center;
@@ -419,4 +580,326 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 
 @media (max-width: 640px) {
   .tk-footer .tk-envoltura { gap: 28px; }
+}
+
+/* ================================================================
+   Carrusel 3D del menú (index.html, SOLO escritorio) — ver carrusel.js
+   ================================================================
+   Reemplaza las 3 secciones de categoría (#platillos/#bebidas/
+   #postres) ÚNICAMENTE en pantallas anchas; en móvil esas 3 secciones
+   se quedan exactamente como estaban, sin ningún cambio. Pedido
+   explícito del dueño (27 ago 2026) — ver CLAUDE.md → Design rules →
+   Public menu site.
+
+   A PROPÓSITO esta isla NO usa la paleta de variables de arriba
+   (--fondo, --dorado, etc.): el dueño pidió textualmente "hazlo tal
+   cual como en el prompt, no lo adaptes a los colores del proyecto".
+   Todos los colores de aquí para abajo son hex sueltos calcados del
+   componente de referencia — no es un olvido, es la excepción
+   documentada en CLAUDE.md.
+
+   Corte de 1024px A PROPÓSITO, no los 640px que usa el resto del
+   sitio (el botón hamburguesa, etc.): este carrusel mueve tarjetas
+   hasta ±510px del centro, y por debajo de ~1024px se ve exagerada-
+   mente recortado. "La versión de PC" que pidió el dueño se lee aquí
+   como escritorio/laptop real, no simplemente "no es un teléfono".
+
+   ⚠️ Este mismo número (1024px) también vive en el matchMedia() de
+   carrusel.js — están duplicados a propósito (uno es CSS, el otro JS,
+   no hay forma limpia de compartirlos sin meter build step) pero
+   DEBEN quedar iguales, o carrusel.js arma tarjetas que esta hoja de
+   estilos nunca muestra (o al revés, deja de armarlas cuando sí
+   deberían verse). Mismo tipo de bug ya documentado con
+   CACHE_DURACION_MS en catalogo.js — si tocas uno, toca el otro.
+   ================================================================ */
+.tk-carrusel-seccion { display: none; }
+
+@media (min-width: 1024px) {
+  .tk-carrusel-seccion { display: flex; }
+  #platillos, #bebidas, #postres { display: none; }
+}
+
+.tk-carrusel-seccion {
+  position: relative;
+  width: 100%;
+  /* Mismo patrón que .tk-hero (sección 1): ocupa la pantalla completa,
+     no una altura fija — el original traía un min-h-[760px] fijo, pero
+     eso se quedaba corto contra el hero en cualquier monitor de más de
+     760px de alto. Pedido explícito del dueño (27 ago 2026): que la
+     sección 2 "pese" lo mismo que la sección 1. */
+  min-height: 100vh;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 48px 0;
+  background-color: #0c0a09;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  user-select: none;
+}
+
+/* -------- Fondo de ambiente: la foto del platillo activo, difuminada -------- */
+.tk-cf-fondo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.tk-cf-fondo-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.22) blur(32px);
+  transform: scale(1.15);
+}
+.tk-cf-fondo-degradado {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(12, 10, 9, 0.3) 0%, rgba(12, 10, 9, 0.92) 100%);
+}
+
+/* -------- Contenido -------- */
+.tk-cf-envoltura {
+  position: relative;
+  width: 100%;
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tk-cf-eyebrow-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.tk-cf-linea { width: 36px; height: 1px; }
+.tk-cf-linea--izq { background: linear-gradient(90deg, transparent, #c5a880); }
+.tk-cf-linea--der { background: linear-gradient(90deg, #c5a880, transparent); }
+.tk-cf-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #c5a880;
+}
+
+.tk-cf-escenario {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 32px;
+  perspective: 1400px;
+}
+
+/* Estados de carga/error propios (NO se reusa .tk-estado/.tk-estado--error
+   de arriba: esos asumen fondo claro y aquí el fondo es negro). */
+.tk-cf-cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.tk-cf-cargando p { font-size: 13px; color: rgba(255, 255, 255, 0.7); }
+
+.tk-cf-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  text-align: center;
+}
+.tk-cf-error svg { width: 30px; height: 30px; color: #c5a880; }
+.tk-cf-error p { font-size: 13px; color: rgba(255, 255, 255, 0.75); }
+
+/* -------- Tarjetas -------- */
+.tk-cf-tarjeta {
+  position: absolute;
+  width: 330px;
+  height: 500px;
+  border-radius: 18px;
+  overflow: hidden;
+  background-color: #171311;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transform-origin: center center;
+  transition: transform 800ms cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 800ms cubic-bezier(0.25, 1, 0.5, 1),
+              filter 800ms cubic-bezier(0.25, 1, 0.5, 1),
+              box-shadow 800ms cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.tk-cf-tarjeta.tk-cf-centro {
+  cursor: default;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(197, 168, 128, 0.25);
+}
+
+.tk-cf-foto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tk-cf-vineta {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.68) 60%, rgba(0,0,0,0.96) 100%);
+}
+
+.tk-cf-contenido {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 20px 18px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
+  z-index: 20;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 500ms ease, transform 500ms ease;
+  pointer-events: none;
+}
+.tk-cf-tarjeta.tk-cf-centro .tk-cf-contenido {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.tk-cf-tag {
+  text-align: right;
+  width: 100%;
+  padding-right: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  min-height: 1.1em;
+}
+
+.tk-cf-cuerpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: auto;
+  padding-bottom: 4px;
+}
+
+.tk-cf-titulo {
+  font-size: 1.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  line-height: 1.1;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.95);
+}
+
+.tk-cf-divisor {
+  width: 34px;
+  height: 2px;
+  background-color: #c5a880;
+  border-radius: 2px;
+  margin: 5px auto 4px;
+  box-shadow: 0 0 8px rgba(197, 168, 128, 0.7);
+}
+
+.tk-cf-desc {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 280px;
+  margin: 0 0 10px;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.tk-cf-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 18px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #c5a880 0%, #a48256 100%);
+  color: #110d0c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 15px rgba(197, 168, 128, 0.3);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.tk-cf-cta svg { width: 13px; height: 13px; flex-shrink: 0; }
+/* El original (inline styles de React) declaraba esta transition pero
+   nunca pudo tener un :hover real — aquí sí se puede, así que se
+   completa con algo sutil en el mismo lenguaje visual, no se inventa
+   nada nuevo. */
+.tk-cf-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), 0 0 20px rgba(197, 168, 128, 0.45);
+}
+
+/* -------- Flechas prev/next -------- */
+.tk-cf-flecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 40;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+.tk-cf-flecha svg { width: 20px; height: 20px; }
+.tk-cf-flecha:hover { background-color: rgba(0, 0, 0, 0.75); border-color: rgba(255, 255, 255, 0.35); }
+.tk-cf-flecha--prev { left: 24px; }
+.tk-cf-flecha--next { right: 24px; }
+
+/* -------- Puntos de paginación -------- */
+.tk-cf-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 30;
+}
+.tk-cf-dot {
+  height: 8px;
+  width: 8px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.25);
+  transition: all 300ms ease;
+}
+.tk-cf-dot.tk-cf-dot-activo {
+  width: 28px;
+  background-color: #c5a880;
+  box-shadow: 0 0 10px rgba(197, 168, 128, 0.7);
 }

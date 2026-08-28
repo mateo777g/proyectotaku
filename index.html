@@ -10,6 +10,9 @@
 <meta property="og:image" content="assets/logomonky.png">
 <meta property="og:type" content="website">
 <link rel="icon" type="image/png" href="assets/logomonky.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Rock+Salt&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,8 +28,25 @@
       <a class="tk-nav-link" href="#bebidas">Bebidas</a>
       <a class="tk-nav-link" href="#postres">Postres</a>
     </div>
+    <button class="tk-menu-boton" id="tk-menu-boton" aria-label="Abrir menú">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
+
+<div class="tk-sidebar-overlay" id="tk-sidebar-overlay"></div>
+<aside class="tk-sidebar" id="tk-sidebar">
+  <button class="tk-sidebar-cerrar" id="tk-sidebar-cerrar" aria-label="Cerrar menú">&times;</button>
+  <div class="tk-sidebar-encabezado">
+    <img src="assets/logomonky.png" alt="">
+    <span>Taku monky</span>
+  </div>
+  <ul class="tk-sidebar-links">
+    <li><a href="#platillos">Platillos</a></li>
+    <li><a href="#bebidas">Bebidas</a></li>
+    <li><a href="#postres">Postres</a></li>
+  </ul>
+</aside>
 
 <header class="tk-hero">
   <div class="tk-hero-contenido">
@@ -43,6 +63,47 @@
     </div>
   </div>
 </header>
+
+<!-- ================================================================
+     Carrusel 3D del menú — SOLO escritorio (≥1024px, ver style.css y
+     carrusel.js). En pantallas más angostas esta sección se queda en
+     display:none y de ahí para abajo siguen las 3 secciones de
+     categoría de toda la vida (Platillos/Bebidas/Postres), intactas.
+
+     Pedido explícito del dueño (27 ago 2026): puerto lo más fiel
+     posible de un componente de referencia (carrusel 3D "coverflow"),
+     colores y tipografía propios incluidos a propósito — ver
+     CLAUDE.md → Design rules → Public menu site para la excepción a
+     "reusar la paleta del sitio". Los datos SÍ son reales (platillos
+     de verdad vía carrusel.js), nunca las fotos de stock del original.
+     ================================================================ -->
+<section class="tk-carrusel-seccion" id="carrusel-menu" aria-label="Menú">
+  <div class="tk-cf-fondo">
+    <div class="tk-cf-fondo-img" id="carrusel-fondo"></div>
+    <div class="tk-cf-fondo-degradado"></div>
+  </div>
+
+  <div class="tk-cf-envoltura">
+    <div class="tk-cf-eyebrow-fila">
+      <span class="tk-cf-linea tk-cf-linea--izq"></span>
+      <h3 class="tk-cf-eyebrow">Menú</h3>
+      <span class="tk-cf-linea tk-cf-linea--der"></span>
+    </div>
+
+    <div class="tk-cf-escenario" id="carrusel-escenario">
+      <div class="tk-cf-cargando"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
+    </div>
+
+    <button class="tk-cf-flecha tk-cf-flecha--prev" id="carrusel-prev" aria-label="Platillo anterior">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <button class="tk-cf-flecha tk-cf-flecha--next" id="carrusel-next" aria-label="Siguiente platillo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+
+    <div class="tk-cf-dots" id="carrusel-dots"></div>
+  </div>
+</section>
 
 <section id="platillos" class="tk-seccion">
   <div class="tk-seccion-encabezado">
@@ -129,10 +190,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="catalogo.js"></script>
+<script src="carrusel.js"></script>
 <script>
   document.getElementById("enlace-whatsapp-hero").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
+  iniciarNavbar();
   iniciarIndex();
+  iniciarCarrusel();
 </script>
 </body>
 </html>
