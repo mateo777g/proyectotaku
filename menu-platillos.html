@@ -13,27 +13,71 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Rock+Salt&display=swap" rel="stylesheet">
+<!-- style.css = base compartida por las 4 páginas; catalogo.css = todo lo
+     que solo existe en las páginas de categoría (header sticky, cuadrícula,
+     búsqueda, filtro, visor de foto). Mismo par que style.css + catalogo.css
+     en EJEMPLOS/catalogo.html — el orden importa: catalogo.css va después. -->
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="catalogo.css">
 </head>
 <body>
 
-<nav class="tk-navbar">
-  <div class="tk-envoltura">
-    <a class="tk-marca" href="index.html">
+<!-- ============ HEADER STICKY (reemplaza a .tk-navbar del index) ============
+     Fila 1: [hamburguesa + lupa] · [marca] · [filtro]
+     Fila 2: barra de navegación (Inicio · Platillos · Bebidas · Postres)
+     Este bloque es idéntico en las 3 páginas de categoría; lo único que
+     cambia es cuál enlace lleva .tk-cat-nav--activo. -->
+<header class="tk-cat-header">
+  <div class="tk-cat-fila-top">
+
+    <div class="tk-cat-grupo-izq">
+      <!-- id="tk-menu-boton" y los ids del sidebar de abajo son los que
+           engancha iniciarNavbar() de catalogo.js — no cambiarlos. -->
+      <button class="tk-cat-hamburguesa" id="tk-menu-boton" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+      <button class="tk-cat-icono-btn" id="tk-cat-abrir-busqueda" aria-label="Buscar en el menú" title="Buscar en el menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7.5"/><line x1="20.5" y1="20.5" x2="16.5" y2="16.5"/>
+        </svg>
+      </button>
+    </div>
+
+    <a class="tk-cat-marca" href="index.html">
       <img src="assets/logomonky.png" alt="">
       <span>Taku monky</span>
     </a>
-    <div class="tk-nav-links">
-      <a class="tk-nav-link tk-nav-link--activo" href="menu-platillos.html">Platillos</a>
-      <a class="tk-nav-link" href="menu-bebidas.html">Bebidas</a>
-      <a class="tk-nav-link" href="menu-postres.html">Postres</a>
-    </div>
-    <button class="tk-menu-boton" id="tk-menu-boton" aria-label="Abrir menú">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-</nav>
 
+    <div class="tk-cat-grupo-der tk-cat-filtro-caja" id="tk-cat-filtro-caja">
+      <button class="tk-cat-icono-btn" id="tk-cat-filtro-boton" aria-label="Ordenar el menú" title="Ordenar el menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/>
+        </svg>
+        <span class="tk-cat-filtro-punto"></span>
+      </button>
+      <div class="tk-cat-filtro-menu" id="tk-cat-filtro-menu">
+        <span class="tk-cat-filtro-titulo">Ordenar por</span>
+        <button class="tk-cat-filtro-opt tk-activo" data-orden="recomendado">Recomendado</button>
+        <button class="tk-cat-filtro-opt" data-orden="precio-asc">Precio: menor a mayor</button>
+        <button class="tk-cat-filtro-opt" data-orden="precio-desc">Precio: mayor a menor</button>
+        <button class="tk-cat-filtro-opt" data-orden="nombre">Nombre: A – Z</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tk-cat-nav-caja">
+    <nav class="tk-cat-nav">
+      <a href="index.html">Inicio</a>
+      <a class="tk-cat-nav--activo" href="menu-platillos.html">Platillos</a>
+      <a href="menu-bebidas.html">Bebidas</a>
+      <a href="menu-postres.html">Postres</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Sidebar móvil: se reusa tal cual el de style.css (mismas clases y los
+     mismos ids que iniciarNavbar() espera). Solo se le agregó "Inicio". -->
 <div class="tk-sidebar-overlay" id="tk-sidebar-overlay"></div>
 <aside class="tk-sidebar" id="tk-sidebar">
   <button class="tk-sidebar-cerrar" id="tk-sidebar-cerrar" aria-label="Cerrar menú">&times;</button>
@@ -42,27 +86,28 @@
     <span>Taku monky</span>
   </div>
   <ul class="tk-sidebar-links">
+    <li><a href="index.html">Inicio</a></li>
     <li><a class="tk-nav-link--activo" href="menu-platillos.html">Platillos</a></li>
     <li><a href="menu-bebidas.html">Bebidas</a></li>
     <li><a href="menu-postres.html">Postres</a></li>
   </ul>
 </aside>
 
-<a class="tk-fila-volver" href="index.html">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
-  Volver al inicio
-</a>
-
-<section class="tk-seccion">
-  <div class="tk-seccion-encabezado">
-    <p class="tk-eyebrow">Del menú</p>
-    <h2>Platillos</h2>
-    <p class="tk-seccion-subtitulo" id="subtitulo-categoria"></p>
+<main class="tk-cat-main">
+  <div class="tk-cat-encabezado">
+    <div>
+      <p class="tk-cat-eyebrow">Del menú</p>
+      <h1 class="tk-cat-titulo">Platillos</h1>
+    </div>
+    <p class="tk-cat-conteo" id="subtitulo-categoria"></p>
   </div>
+
+  <!-- menu.js pinta aquí adentro: la cuadrícula (le pone la clase
+       .tk-cat-grid) o un estado de vacío/error (sin clase). -->
   <div id="contenedor-grid">
     <div class="tk-estado"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
   </div>
-</section>
+</main>
 
 <footer class="tk-footer">
   <div class="tk-envoltura">
@@ -109,11 +154,16 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- catalogo.js SIEMPRE antes que menu.js: menu.js usa sus globals
+     (obtenerCatalogo, agruparPorCategoria, escapeHtml, formatearPrecio,
+     iniciarAutoRefresco, urlWhatsAppPlatillo...). Mismo orden y misma
+     razón que catalogo.js → carrusel.js en index.html. -->
 <script src="catalogo.js"></script>
+<script src="menu.js"></script>
 <script>
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
   iniciarNavbar();
-  iniciarCategoria("Platillos");
+  iniciarCatalogo("Platillos");
 </script>
 </body>
 </html>

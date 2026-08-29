@@ -54,6 +54,17 @@ const URL_WHATSAPP = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent
   MENSAJE_WHATSAPP
 )}`;
 
+/** El mismo número, pero con el platillo ya escrito en el mensaje — lo
+ * usa el botón "Pedir por WhatsApp" de cada tarjeta en las páginas de
+ * categoría (ver menu.js). Vive AQUÍ y no en menu.js justamente para
+ * que NUMERO_WHATSAPP siga teniendo un solo lugar de verdad: el día
+ * que llegue el número real del negocio se cambia una vez, arriba, y
+ * queda bien el hero, el footer y los botones de todas las tarjetas. */
+function urlWhatsAppPlatillo(nombre) {
+  const texto = nombre ? `Hola, quiero pedir: ${nombre}` : MENSAJE_WHATSAPP;
+  return `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(texto)}`;
+}
+
 // ----------------------------------------------------------------
 // Caché — mismo mecanismo que EJEMPLOS/catalog-cache.js
 // (sessionStorage), con dos diferencias a propósito, ver CLAUDE.md:
@@ -333,34 +344,18 @@ async function iniciarIndex() {
 }
 
 // ----------------------------------------------------------------
-// Páginas de categoría completa (menu-platillos/bebidas/postres.html):
-// TODOS los platillos visibles de esa categoría, respetando "orden".
+// Páginas de categoría completa (menu-platillos/bebidas/postres.html)
+//
+// Ya NO viven aquí: desde el rediseño del 28 ago 2026 esas 3 páginas
+// las arma iniciarCatalogo(categoria) en menu.js, que además del
+// listado trae el orden/filtro, la búsqueda y el visor de foto grande.
+// La función iniciarCategoria() que estaba en este lugar se eliminó al
+// quedarse sin quien la llamara — no se dejó "por si acaso" para no
+// terminar con dos caminos distintos pintando lo mismo.
+//
+// Lo que este archivo SÍ le sigue prestando a esas páginas (y por eso
+// catalogo.js se carga antes que menu.js): el cliente de Supabase, la
+// caché + auto-refresco, iniciarNavbar(), agruparPorCategoria(),
+// textoContador(), escapeHtml(), formatearPrecio(), los estados
+// htmlEstadoError()/htmlEstadoVacio() y urlWhatsAppPlatillo().
 // ----------------------------------------------------------------
-async function iniciarCategoria(categoria) {
-  const contenedor = document.getElementById("contenedor-grid");
-  const subtitulo = document.getElementById("subtitulo-categoria");
-  if (!contenedor) return;
-
-  async function cargar(forzar = false) {
-    try {
-      const lista = await obtenerCatalogo({ forzar });
-      const items = agruparPorCategoria(lista)[categoria] || [];
-      if (subtitulo) subtitulo.textContent = textoContador(categoria, items.length);
-      if (items.length) {
-        contenedor.className = "tk-tarjetas--grid";
-        contenedor.innerHTML = items.map(tarjetaPlatilloHTML).join("");
-      } else {
-        contenedor.className = "";
-        contenedor.innerHTML = htmlEstadoVacio(categoria);
-      }
-    } catch (e) {
-      console.error("[catalogo] error cargando categoría", categoria, e);
-      if (subtitulo) subtitulo.textContent = "";
-      contenedor.className = "";
-      contenedor.innerHTML = htmlEstadoError();
-    }
-  }
-
-  await cargar();
-  iniciarAutoRefresco(cargar);
-}
