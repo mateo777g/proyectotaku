@@ -89,7 +89,11 @@ function urlWhatsAppPlatillo(nombre) {
 const CACHE_KEY = "taku_monky_catalogo_v1";
 const CACHE_DURACION_MS = 30 * 1000;
 
-const _COLUMNAS = "id, nombre, descripcion, categoria, precio, image_url, orden";
+// image_url_recortada (Fase 4.3) — la versión sin fondo de un platillo,
+// generada en el panel (rembg) SOLO para categoría Platillos. La usa
+// carta.js (la sección de celular del index); las demás páginas la reciben
+// igual (una sola consulta para todas) pero simplemente no la pintan.
+const _COLUMNAS = "id, nombre, descripcion, categoria, precio, image_url, image_url_recortada, orden";
 
 async function obtenerCatalogo({ forzar = false } = {}) {
   // `forzar` lo manda SOLO iniciarAutoRefresco() (ver abajo) — nunca la
@@ -245,16 +249,16 @@ function tarjetaPlatilloHTML(platillo) {
   const descripcion = escapeHtml(platillo.descripcion || "");
   const categoria = escapeHtml(platillo.categoria || "");
   const precio = formatearPrecio(platillo.precio);
-  // Igual que platillo.get("image_url") or "assets/taco.jpg" en
+  // Igual que platillo.get("image_url") or "assets/sin-foto.png" en
   // menu_view.py: sin foto todavía (el caso normal hoy) cae al mismo
   // placeholder que ya usa el panel, no a un ícono roto.
-  const imagen = escapeHtml(platillo.image_url || "assets/taco.jpg");
+  const imagen = escapeHtml(platillo.image_url || "assets/sin-foto.png");
 
   return `
     <article class="tk-tarjeta">
       <div class="tk-tarjeta-foto">
         <img src="${imagen}" alt="${nombre}" loading="lazy"
-             onerror="this.onerror=null; this.src='assets/taco.jpg';">
+             onerror="this.onerror=null; this.src='assets/sin-foto.png';">
       </div>
       <div class="tk-tarjeta-cuerpo">
         <div class="tk-tarjeta-encabezado">

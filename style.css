@@ -740,14 +740,50 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    como escritorio/laptop real, no simplemente "no es un teléfono".
 
    ⚠️ Este mismo número (1024px) también vive en el matchMedia() de
-   carrusel.js — están duplicados a propósito (uno es CSS, el otro JS,
-   no hay forma limpia de compartirlos sin meter build step) pero
-   DEBEN quedar iguales, o carrusel.js arma tarjetas que esta hoja de
-   estilos nunca muestra (o al revés, deja de armarlas cuando sí
-   deberían verse). Mismo tipo de bug ya documentado con
-   CACHE_DURACION_MS en catalogo.js — si tocas uno, toca el otro.
+   carrusel.js Y (desde la Fase 4.3) en el de carta.js — están duplicados a
+   propósito en LOS TRES lugares (dos JS, uno CSS; no hay forma limpia de
+   compartirlos sin meter build step) pero DEBEN quedar iguales, o un
+   archivo arma/oculta cosas que los otros dos no esperan (por ejemplo,
+   carrusel.js armando tarjetas que esta hoja de estilos nunca muestra, o
+   carta.js construyendo la carta en un ancho donde debería quedarse
+   escondida). Mismo tipo de bug ya documentado con CACHE_DURACION_MS en
+   catalogo.js — si tocas uno de los tres, toca los otros dos.
    ================================================================ */
 .tk-carrusel-seccion { display: none; }
+
+/* La carta de celular (Fase 4.3, ver carta.js) es el reemplazo de las 3
+   secciones de categoría EN TODOS LOS ANCHOS por debajo de 1024px — visible
+   por defecto aquí (con todo su estilo base), se esconde más abajo dentro
+   del mismo media query que ya prende el carrusel de escritorio.
+
+   ⚠️ Esta regla base DEBE quedar declarada ANTES de ese media query, no
+   después: display:flex y display:none tienen la misma especificidad, así
+   que entre dos reglas que aplican a la vez gana la que aparece MÁS TARDE
+   en el archivo, sin importar si una está dentro de un @media y la otra
+   no. Si esta regla se moviera después del media query (como pasó una vez
+   al escribir esta sección — ver el historial), su display:flex le
+   ganaría en cascada al display:none de escritorio y la carta se quedaría
+   visible también en PC. El resto de las propiedades de esta sección
+   (fotos/título/lista/renglones, más abajo en el archivo junto a
+   .tk-cf-dot) no tiene este problema porque ninguna redeclara `display`
+   para .tk-carta-seccion. */
+.tk-carta-seccion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background-color: #0c0a09;
+  color: #ffffff;
+  padding: 56px 20px 64px;
+}
+
+/* #platillos/#bebidas/#postres (Fase 4.1: ocultas SOLO en escritorio,
+   reemplazadas por el carrusel) pasan aquí a ocultarse en TODOS los anchos
+   desde la Fase 4.3: en escritorio las reemplaza el carrusel de siempre, y
+   en celular las reemplaza la carta nueva. El marcado de las 3 secciones
+   se queda intacto en index.html (a propósito, ver CLAUDE.md/roadmap Fase
+   4.3) — esto solo las esconde, no las borra. */
+#platillos, #bebidas, #postres { display: none; }
 
 /* -------- "Enganche" de scroll (28 ago 2026) --------
    Envoltura de index.html alrededor de .tk-carrusel-seccion. Pedido
@@ -775,7 +811,10 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 
 @media (min-width: 1024px) {
   .tk-carrusel-seccion { display: flex; }
-  #platillos, #bebidas, #postres { display: none; }
+  /* #platillos/#bebidas/#postres ya se ocultan en TODOS los anchos (ver la
+     regla incondicional de arriba, Fase 4.3) — aquí solo falta esconder la
+     carta de celular, que es exclusiva de <1024px. */
+  .tk-carta-seccion { display: none; }
 
   /* Altura total = 1 pantalla (lo que mide la sección) + 80vh de
      "gancho" -- ese 80vh extra es el scroll que el usuario recorre
@@ -1205,6 +1244,130 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   width: 28px;
   background-color: #c5a880;
   box-shadow: 0 0 10px rgba(197, 168, 128, 0.7);
+}
+
+/* ================================================================
+   "Carta" de celular del index (Fase 4.3) — ver carta.js.
+   ================================================================
+   Reemplaza las 3 secciones de categoría por debajo de 1024px (ver el
+   bloque de arriba y el @media min-width:1024px de la sección del
+   carrusel) — es el equivalente móvil de esa sección de escritorio, así
+   que reusa a propósito la MISMA paleta suelta (#0c0a09/#c5a880/#171311)
+   en vez de las variables del sitio: mismo "hazlo tal cual" que ya pidió
+   el dueño para el carrusel, para que celular y PC se sientan el mismo
+   sitio. Varias piezas de aquí abajo son literalmente las clases del
+   carrusel de escritorio reusadas sin cambio (eyebrow-fila, linea,
+   eyebrow, divisor, dots, dot, dot-activo, cta, cargando, error, todas
+   con el prefijo tk-cf-) — solo se definen aquí las piezas que sí son
+   nuevas de esta sección. La regla base de .tk-carta-seccion (display,
+   fondo, color, padding) vive arriba, justo antes del @media que oculta
+   las 3 secciones viejas — ver la nota grande junto a esa regla sobre
+   por qué el orden importa aquí. */
+
+.tk-carta-envoltura {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Pequeños ajustes de espaciado ADITIVOS sobre las clases reusadas del
+   carrusel — nunca se redefine una propiedad que .tk-cf-dots/.tk-cf-cta ya
+   traían, solo se agrega lo que a esas clases (pensadas para el carrusel)
+   les falta aquí. */
+.tk-carta-dots { margin-bottom: 26px; }
+.tk-carta-cta { margin-top: 2px; }
+
+/* -------- Fotos: autoplay + swipe con scroll-snap nativo -------- */
+.tk-carta-fotos {
+  width: 100%;
+  height: clamp(240px, 62vw, 320px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 22px;
+  /* Sin scrollbar visible: el swipe nativo ya se siente bien sin ella y
+     una barra ahí desentonaría con una "carta" de restaurante. */
+  scrollbar-width: none;
+}
+.tk-carta-fotos::-webkit-scrollbar { display: none; }
+
+.tk-carta-foto-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+}
+.tk-carta-foto-slide img {
+  max-width: 100%;
+  max-height: 100%;
+  /* contain, NUNCA cover: el recorte ya viene sin fondo y de forma
+     irregular (bounding box del canal alfa) — "cover" lo recortaría de
+     más y rompería el efecto de "producto flotando" que pidió el dueño. */
+  object-fit: contain;
+  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.6));
+}
+
+.tk-carta-titulo {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 1.5rem;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.15;
+  margin: 2px 0 22px;
+  /* Reserva espacio aunque esté vacío (antes de que cargue JS) para que no
+     haya un salto de layout cuando el nombre real aparece. */
+  min-height: 1.3em;
+}
+
+/* -------- Lista de renglones: el "menú" de verdad -------- */
+.tk-carta-lista {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.tk-carta-renglon {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+.tk-carta-renglon-nombre {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  /* Nombres largos ("Taco Arabe con Queso" ya mide bastante) truncan con
+     "…" en vez de partirse a una segunda línea, que rompería el punteado. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tk-carta-renglon-puntos {
+  flex: 1;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.3);
+  margin-bottom: 4px;
+}
+.tk-carta-renglon-precio {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+.tk-carta-renglon.tk-carta-renglon-activo {
+  color: #c5a880;
+}
+.tk-carta-renglon.tk-carta-renglon-activo .tk-carta-renglon-puntos {
+  border-bottom-color: rgba(197, 168, 128, 0.55);
 }
 
 /* ================================================================

@@ -68,7 +68,7 @@ function _catImagen(platillo) {
   // Mismo fallback que menu_view.py y que tarjetaPlatilloHTML() de
   // catalogo.js: sin foto se ve el placeholder del proyecto, no un
   // ícono roto.
-  return escapeHtml(platillo.image_url || "assets/taco.jpg");
+  return escapeHtml(platillo.image_url || "assets/sin-foto.png");
 }
 
 // ----------------------------------------------------------------
@@ -93,7 +93,7 @@ function tarjetaCatalogoHTML(platillo) {
       <span class="tk-cat-etiqueta">${categoria}</span>
       <div class="tk-cat-foto">
         <img src="${_catImagen(platillo)}" alt="${nombre}" loading="lazy"
-             onerror="this.onerror=null; this.src='assets/taco.jpg';">
+             onerror="this.onerror=null; this.src='assets/sin-foto.png';">
       </div>
       <div class="tk-cat-info">
         <h3 class="tk-cat-nombre">${nombre}</h3>
@@ -118,7 +118,7 @@ function _catResultadoHTML(platillo) {
   return `
     <a class="tk-cat-resultado" href="#" data-id="${platillo.id}" data-categoria="${categoria}">
       <img class="tk-cat-resultado-foto" src="${_catImagen(platillo)}" alt="${nombre}"
-           loading="lazy" onerror="this.onerror=null; this.src='assets/taco.jpg';">
+           loading="lazy" onerror="this.onerror=null; this.src='assets/sin-foto.png';">
       <span class="tk-cat-resultado-nombre">${nombre}</span>
       <span class="tk-cat-resultado-pie">
         <span class="tk-cat-resultado-precio">${formatearPrecio(platillo.precio)}</span>

@@ -369,7 +369,7 @@ class MenuView(ft.Container):
         categoria = platillo.get("categoria") or ""
         precio = _formatear_precio(platillo.get("precio"))
         visible = bool(platillo.get("visible", True))
-        imagen = platillo.get("image_url") or "assets/taco.jpg"
+        imagen = platillo.get("image_url") or "assets/sin-foto.png"
 
         return ft.Container(
             bgcolor="#f8f1de",
@@ -392,7 +392,7 @@ class MenuView(ft.Container):
                                 # placeholder que ya usan las filas sin
                                 # foto en vez de mostrar un ícono roto.
                                 error_content=ft.Image(
-                                    src="assets/taco.jpg",
+                                    src="assets/sin-foto.png",
                                     width=38,
                                     height=38,
                                     fit=ft.BoxFit.COVER,

@@ -132,6 +132,51 @@
 </section>
 </div>
 
+<!-- ================================================================
+     "Carta" del menú — SOLO celular/tablet chico (<1024px, ver style.css
+     y carta.js). En escritorio esta sección se queda en display:none y
+     arriba sigue el carrusel 3D de siempre; aquí abajo es al revés: de
+     1024px para abajo esta es la que reemplaza a las 3 secciones de
+     categoría (Platillos/Bebidas/Postres, ver más abajo, que se quedan
+     como marcado muerto en TODOS los anchos desde la Fase 4.3).
+
+     Pedido explícito del dueño (2026-09-03, con una maqueta en imagen):
+     fondo negro, foto del platillo YA RECORTADA sin fondo (con todo y
+     tabla/plato), autoplay + swipe, puntitos, lista de renglones con
+     línea punteada + precio, el activo resaltado en dorado. SIN FLECHAS
+     a los lados — lo remarcó varias veces. Solo categoría Platillos, tope
+     de 5 (aplicado de verdad por el panel al generar cada recorte).
+
+     Título/lista/puntitos empiezan vacíos a propósito: carta.js los
+     llena en cuanto carga el catálogo (igual que #carrusel-dots arriba).
+     El botón "Ver platillos" SÍ es estático — no depende de qué platillo
+     esté activo, así que no hace falta generarlo por JS. -->
+<section class="tk-carta-seccion" id="carta-menu">
+  <div class="tk-carta-envoltura">
+    <div class="tk-cf-eyebrow-fila">
+      <span class="tk-cf-linea tk-cf-linea--izq"></span>
+      <h3 class="tk-cf-eyebrow">Menú</h3>
+      <span class="tk-cf-linea tk-cf-linea--der"></span>
+    </div>
+
+    <div class="tk-carta-fotos" id="carta-fotos">
+      <div class="tk-cf-cargando"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
+    </div>
+
+    <div class="tk-cf-divisor"></div>
+    <h2 class="tk-carta-titulo" id="carta-titulo"></h2>
+
+    <div class="tk-carta-lista" id="carta-lista"></div>
+
+    <div class="tk-cf-dots tk-carta-dots" id="carta-dots"></div>
+
+    <a class="tk-cf-cta tk-carta-cta" href="menu-platillos.html">
+      <span>Ver platillos</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+    </a>
+  </div>
+</section>
+
 <section id="platillos" class="tk-seccion">
   <div class="tk-seccion-encabezado">
     <p class="tk-eyebrow">Del menú</p>
@@ -218,12 +263,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="catalogo.js"></script>
 <script src="carrusel.js"></script>
+<script src="carta.js"></script>
 <script>
   document.getElementById("enlace-whatsapp-hero").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
   iniciarNavbar();
   iniciarIndex();
   iniciarCarrusel();
+  iniciarCarta();
   // Las hojas decorativas (.tk-hoja) ya no necesitan JS: el balanceo es
   // un loop CSS infinito y siempre activo — ver @keyframes tk-viento y
   // el AJUSTE 9 junto a él en style.css para el porqué (antes dependían

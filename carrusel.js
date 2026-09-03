@@ -23,8 +23,10 @@
 // ================================================================
 
 // ⚠️ Debe ser EXACTAMENTE el mismo corte que el "@media (min-width:
-// 1024px)" en style.css (sección "Carrusel 3D del menú"). Si cambias
-// uno, cambia el otro — ver el comentario grande de ese bloque en
+// 1024px)" en style.css (sección "Carrusel 3D del menú") Y que
+// _CARTA_BREAKPOINT_DESKTOP en carta.js (Fase 4.3, el equivalente de
+// celular de esta misma sección) — son 3 lugares, no 2. Si cambias uno,
+// cambia los otros dos — ver el comentario grande de ese bloque en
 // style.css para el porqué de los 1024px y del riesgo de dejarlos
 // desincronizados.
 const _CARRUSEL_BREAKPOINT = "(min-width: 1024px)";
@@ -83,13 +85,13 @@ function _tarjetaCarruselHTML(platillo, idx) {
   // Mismo fallback que tarjetaPlatilloHTML() en catalogo.js — hoy es
   // el caso normal (casi ningún platillo tiene foto todavía, ver
   // CLAUDE.md Fase 4), no una rareza.
-  const imagen = escapeHtml(platillo.image_url || "assets/taco.jpg");
+  const imagen = escapeHtml(platillo.image_url || "assets/sin-foto.png");
   const cta = _CTA_POR_CATEGORIA[platillo.categoria] || { texto: "Ver menú", url: "index.html" };
 
   return `
     <div class="tk-cf-tarjeta" data-indice="${idx}">
       <img class="tk-cf-foto" src="${imagen}" alt="${nombre}" loading="lazy"
-           onerror="this.onerror=null; this.src='assets/taco.jpg';">
+           onerror="this.onerror=null; this.src='assets/sin-foto.png';">
       <div class="tk-cf-vineta"></div>
       <div class="tk-cf-contenido">
         <div class="tk-cf-tag">${categoria ? "#" + categoria : ""}</div>
@@ -160,7 +162,7 @@ async function iniciarCarrusel() {
   // (mismos translateX/scale/rotateY/opacity/filter por offset).
   function pintar() {
     const total = items.length;
-    fondo.style.backgroundImage = `url("${items[indiceActual].image_url || "assets/taco.jpg"}")`;
+    fondo.style.backgroundImage = `url("${items[indiceActual].image_url || "assets/sin-foto.png"}")`;
 
     escenario.querySelectorAll(".tk-cf-tarjeta").forEach((tarjeta) => {
       const idx = Number(tarjeta.dataset.indice);
