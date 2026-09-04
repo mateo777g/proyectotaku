@@ -118,16 +118,48 @@ async function iniciarCarta() {
     });
   }
 
+  // Posición de scroll exacta que deja alineado al slide `idx`. Se lee de
+  // la geometría REAL del slide (su offsetLeft dentro del carril) y NO de
+  // `idx * clientWidth`: hoy dan lo mismo (slides de flex:0 0 100%, sin
+  // gap ni padding en el carril), pero si algún día se le agrega un gap o
+  // un padding, la fórmula aritmética se desincroniza en silencio y la
+  // geometría real no.
+  //
+  // ⚠️ offsetLeft se mide contra el offsetParent, así que .tk-carta-fotos
+  // TIENE que ser position:relative en style.css (ahí está la nota larga).
+  // Sin eso se medía contra <body> y le metía el desplazamiento
+  // horizontal de toda la sección a un número que scrollTo() interpreta
+  // como coordenada del carril.
+  function _posicionDe(idx) {
+    const slide = fotos.children[idx];
+    return slide ? slide.offsetLeft : 0;
+  }
+
+  // Inversa de _posicionDe(): qué slide quedó alineado después de que el
+  // usuario deslizó a mano. Busca el más cercano por su posición real, en
+  // vez de dividir entre clientWidth, para que las dos direcciones
+  // (pintar → scroll y scroll → pintar) usen SIEMPRE la misma fuente de
+  // verdad y no puedan desincronizarse entre ellas.
+  function _indiceMasCercano() {
+    let mejor = 0;
+    let mejorDistancia = Infinity;
+    for (let i = 0; i < fotos.children.length; i++) {
+      const distancia = Math.abs(fotos.children[i].offsetLeft - fotos.scrollLeft);
+      if (distancia < mejorDistancia) {
+        mejorDistancia = distancia;
+        mejor = i;
+      }
+    }
+    return mejor;
+  }
+
   function irA(idx) {
     if (items.length === 0) return;
     indiceActual = ((idx % items.length) + items.length) % items.length;
-    const slide = fotos.children[indiceActual];
-    if (slide) {
-      fotos.scrollTo({
-        left: slide.offsetLeft,
-        behavior: _cartaPrefiereMovimientoReducido() ? "auto" : "smooth",
-      });
-    }
+    fotos.scrollTo({
+      left: _posicionDe(indiceActual),
+      behavior: _cartaPrefiereMovimientoReducido() ? "auto" : "smooth",
+    });
     pintar();
   }
 
@@ -139,9 +171,9 @@ async function iniciarCarta() {
     () => {
       clearTimeout(sincronizando);
       sincronizando = setTimeout(() => {
-        if (items.length === 0 || fotos.clientWidth === 0) return;
-        const idx = Math.round(fotos.scrollLeft / fotos.clientWidth);
-        if (idx !== indiceActual && idx >= 0 && idx < items.length) {
+        if (items.length === 0) return;
+        const idx = _indiceMasCercano();
+        if (idx !== indiceActual) {
           indiceActual = idx;
           pintar();
         }

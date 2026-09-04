@@ -42,14 +42,29 @@ const _CTA_POR_CATEGORIA = {
   Postres: { texto: "Ver postres", url: "menu-postres.html" },
 };
 
+/** Tope POR CATEGORÍA del carrusel de escritorio: 2 platillos, 2 bebidas
+ * y 2 postres, o sea 6 tarjetas como máximo.
+ *
+ * ⚠️ Esto CAMBIÓ el 3 sep 2026 y es lo contrario de lo que decía antes
+ * este archivo. La versión original no tenía tope ("usa TODO lo visible
+ * de verdad"), con el argumento de que capear tiraría platillos reales
+ * nada más porque Bebidas/Postres tienen menos filas. El dueño lo revirtió
+ * de forma explícita al ver el carrusel con 9 tarjetas: el carrusel de PC
+ * es un ESCAPARATE, no el catálogo — para ver todo están las páginas de
+ * categoría, a las que lleva el botón de cada tarjeta. Si algún día
+ * vuelve a discutirse, la decisión vigente es esta, no el comentario
+ * viejo. */
+const _CARRUSEL_MAX_POR_CATEGORIA = 2;
+
 /** 1 platillo, 1 bebida, 1 postre, y se repite el ciclo — tal como lo
- * pidió el dueño. Si una categoría se acaba antes que las demás,
- * simplemente se salta y se sigue con las que aún tengan. Sin tope
- * artificial por categoría: usa TODO lo visible de verdad (a
- * diferencia del preview del index, que sí capea a 3 — aquí capear
- * igual habría tirado platillos reales nada más porque Bebidas/
- * Postres tienen menos filas hoy, y eso no es "manejar datos reales",
- * es desperdiciarlos). */
+ * pidió el dueño. Si una categoría se acaba antes que las demás (o llega
+ * a su tope), simplemente se salta y se sigue con las que aún tengan, así
+ * que una categoría con 1 sola fila no deja hueco ni desalinea el ciclo.
+ *
+ * El tope se aplica aquí y no en la consulta a propósito: obtenerCatalogo()
+ * es la MISMA consulta compartida por la carta de celular, las 3 páginas de
+ * categoría y su buscador (ver catalogo.js) — recortarla ahí les quitaría
+ * filas a todos. Aquí solo se recorta lo que este carrusel pinta. */
 function _intercalarPorCategoria(grupos) {
   const resultado = [];
   const indices = { Platillos: 0, Bebidas: 0, Postres: 0 };
@@ -59,7 +74,7 @@ function _intercalarPorCategoria(grupos) {
     for (const categoria of CATEGORIAS) {
       const lista = grupos[categoria] || [];
       const i = indices[categoria];
-      if (i < lista.length) {
+      if (i < lista.length && i < _CARRUSEL_MAX_POR_CATEGORIA) {
         resultado.push(lista[i]);
         indices[categoria] = i + 1;
         quedan = true;

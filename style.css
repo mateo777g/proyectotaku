@@ -1301,7 +1301,19 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   height: clamp(240px, 62vw, 320px);
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* ⚠️ NUNCA volver a poner `justify-content: center` aquí (3 sep 2026:
+     era el bug que reportó el dueño, "no llego al 4o platillo"). Este
+     carril SIEMPRE desborda a lo ancho (N slides de 100% cada uno), y
+     centrar un contenedor con scroll reparte ese desbordamiento a los DOS
+     lados — pero `scrollLeft` nunca puede ser negativo, así que todo lo
+     que queda del lado izquierdo se vuelve FÍSICAMENTE inalcanzable.
+     Medido con 5 platillos a 393px de ancho: los slides 0 y 1 quedaban en
+     offsetLeft -686 y -333, el scrollWidth se quedaba en 1059px en vez de
+     1765, y solo se podía llegar a los slides 2, 3 y 4. Con 2 platillos
+     era el otro síntoma que reportó: uno se veía a medias a la izquierda
+     y el otro a medias a la derecha, en vez de uno centrado.
+     El estado de carga/error sí necesita centrarse, pero eso se resuelve
+     abajo con `margin: auto` (un solo hijo que NO desborda), no aquí. */
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
@@ -1309,8 +1321,25 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   /* Sin scrollbar visible: el swipe nativo ya se siente bien sin ella y
      una barra ahí desentonaría con una "carta" de restaurante. */
   scrollbar-width: none;
+  /* Necesario para que el `offsetLeft` de cada slide se mida contra ESTE
+     carril y no contra <body>: carta.js se lo pasa tal cual a
+     scrollTo({left}), que espera coordenadas del propio contenedor. Sin
+     esto, offsetLeft traía encima el desplazamiento horizontal de toda la
+     sección (el padding de 20px + el centrado de .tk-carta-envoltura) y
+     el índice pintado no coincidía con la foto visible — el "presiono el
+     puntito, llego, y me regresa" del reporte. */
+  position: relative;
 }
 .tk-carta-fotos::-webkit-scrollbar { display: none; }
+
+/* Los dos estados que NO son slides (un solo hijo, más angosto que el
+   carril, sin desbordar) se centran con márgenes automáticos. Es lo que
+   antes hacía el `justify-content: center` de arriba sin romper nada,
+   porque aquí no hay desbordamiento que repartir. Va acotado a
+   .tk-carta-fotos a propósito: .tk-cf-cargando/.tk-cf-error son clases
+   compartidas con el carrusel de escritorio, que se centra solo. */
+.tk-carta-fotos > .tk-cf-cargando,
+.tk-carta-fotos > .tk-cf-error { margin: auto; }
 
 .tk-carta-foto-slide {
   flex: 0 0 100%;
