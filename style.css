@@ -296,6 +296,15 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 @media (max-width: 640px) {
   .tk-nav-links { display: none; }
   .tk-menu-boton { display: flex; }
+  /* El padding de 56px de .tk-navbar .tk-envoltura (arriba) es a
+     propósito en escritorio, pero en celular ese mismo inset se comía
+     demasiado ancho y dejaba el logo y la hamburguesa apretados hacia
+     el centro en vez de pegados a las esquinas — pedido del dueño
+     (3 sep 2026), comparando contra una navbar de referencia donde sí
+     llegan hasta el borde. Se baja al mismo padding que ya usa el
+     resto del contenido en móvil (.tk-envoltura genérico, el hero, las
+     secciones, el footer), no un número inventado. */
+  .tk-navbar .tk-envoltura { padding: 0 20px; }
   /* Solo en móvil se quita el texto de la marca (queda nada más el
      logo) y la navbar se puede esconder al hacer scroll — en
      escritorio se queda como siempre. Ver el listener de scroll en
