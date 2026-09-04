@@ -193,6 +193,35 @@ function iniciarNavbar() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") ocultar();
   });
+
+  // Esconder/mostrar la navbar según la dirección del scroll — solo en
+  // móvil (≤640px, mismo corte que el resto del nav móvil; en
+  // escritorio la navbar se queda fija como siempre, ver el
+  // @media (max-width: 640px) en style.css que gatea el transform) y
+  // solo donde existe `.tk-navbar` (index.html; las páginas de
+  // categoría usan `.tk-cat-header`, que es sticky y no se toca aquí).
+  // Bajando se esconde, subiendo vuelve, y cerca del tope siempre se
+  // ve (para no desaparecer justo al salir del hero).
+  const navbar = document.querySelector(".tk-navbar");
+  if (navbar) {
+    const esMovil = () => window.matchMedia("(max-width: 640px)").matches;
+    let ultimoScrollY = window.scrollY;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const actual = window.scrollY;
+        if (!esMovil() || actual <= 80 || actual < ultimoScrollY) {
+          navbar.classList.remove("tk-navbar--oculta");
+        } else {
+          navbar.classList.add("tk-navbar--oculta");
+        }
+        ultimoScrollY = actual;
+        ticking = false;
+      });
+    }, { passive: true });
+  }
 }
 
 // ----------------------------------------------------------------

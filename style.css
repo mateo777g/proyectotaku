@@ -296,6 +296,13 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 @media (max-width: 640px) {
   .tk-nav-links { display: none; }
   .tk-menu-boton { display: flex; }
+  /* Solo en móvil se quita el texto de la marca (queda nada más el
+     logo) y la navbar se puede esconder al hacer scroll — en
+     escritorio se queda como siempre. Ver el listener de scroll en
+     iniciarNavbar() (catalogo.js), que agrega/quita esta clase. */
+  .tk-marca span { display: none; }
+  .tk-navbar { transition: transform .35s ease; }
+  .tk-navbar--oculta { transform: translateY(-100%); }
 }
 
 /* ================= Hero (Sección 1) ================= */
