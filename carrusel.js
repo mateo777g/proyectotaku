@@ -143,8 +143,16 @@ async function iniciarCarrusel() {
   // "Postres") ya no tienen a dónde apuntar — esas secciones están
   // escondidas (ver style.css). Los mandamos todos al carrusel, que es
   // ahora "el menú" en esta versión de la página. OJO: solo el navbar
-  // de arriba (.tk-nav-links) — el sidebar móvil (.tk-sidebar-links)
-  // NO se toca, porque en móvil las 3 secciones reales siguen ahí.
+  // de arriba (.tk-nav-links) — el sidebar móvil (.tk-sidebar-links) NO
+  // se toca aquí, ya apunta a las páginas reales (menu-platillos.html
+  // etc, mismo destino que el footer y el CTA de la carta) directo
+  // desde el HTML, sin necesidad de reescritura por JS. ⚠️ Esto se
+  // rompió un rato en la Fase 4.3 con este mismo comentario diciendo lo
+  // contrario ("las 3 secciones reales siguen ahí" en móvil) — ya no,
+  // desde esa misma fase #platillos/#bebidas/#postres se ocultan en
+  // TODOS los anchos (ver style.css), así que un link a "#platillos" no
+  // lleva a ningún lado ni en escritorio ni en celular. Corregido el
+  // 4 sep 2026 (reportado por el dueño: "la navbar dejó de funcionar").
   document.querySelectorAll(".tk-nav-links .tk-nav-link").forEach((enlace) => {
     enlace.setAttribute("href", "#carrusel-menu");
   });

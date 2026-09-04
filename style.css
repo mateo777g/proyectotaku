@@ -279,11 +279,19 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 
 .tk-sidebar-links { display: flex; flex-direction: column; gap: 22px; }
+/* Más "diseñado" que el bold-genérico de antes (pedido del dueño, 4 sep
+   2026: "está muy simple") — Montserrat (la misma que ya usa el navbar
+   de escritorio, .tk-nav-link, cargada arriba en el <head>) en vez del
+   sans del sistema, más grande, peso 800 y mayúsculas con tracking, mismo
+   lenguaje "display" que ya trae el resto de las secciones oscuras del
+   sitio (.tk-cf-titulo/.tk-cf-eyebrow). */
 .tk-sidebar-links a {
   display: inline-block;
-  font-size: 15px;
+  font-family: "Montserrat", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 19px;
   font-weight: 700;
-  letter-spacing: .02em;
+  text-transform: uppercase;
+  letter-spacing: .03em;
   color: #cabfae;
   transition: color .2s ease, padding-left .2s ease;
 }
@@ -316,6 +324,11 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 
 /* ================= Hero (Sección 1) ================= */
 .tk-hero {
+  /* Ancla del difuminado del pie (.tk-hero::after, justo abajo) y de las
+     hojas decorativas .tk-hoja--hero-izq/der, todas position:absolute.
+     Vivía dentro del @media (min-width:1024px) junto con el difuminado;
+     salió de ahí el 3 sep 2026 al volverse el difuminado incondicional. */
+  position: relative;
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
@@ -331,7 +344,143 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      solo con --acento1 (#ffa200, prácticamente el mismo tono que el
      #f59e0b del prompt) en vez de un hex ajeno a la paleta. */
   background: radial-gradient(125% 125% at 50% 90%, #fffaf0 47%, var(--acento1) 100%);
+  /* Recorta SOLO a lo ancho, para que las hojas (que se salen a propósito por
+     el borde derecho con right: calc(--hoja-tam * -0.30)) no agranden el
+     documento. Sin esto, en celular el ancho scrolleable pasaba de 393 a 467px
+     — 74px de sobra, justo el bleed de la hoja — y el dueño lo vio el 3 sep
+     2026 como "valió v el ícono de hamburguesa": el contenido corrido a la
+     izquierda, una franja crema a la derecha y la hamburguesa suelta en ella.
+     Se explica solo: .tk-navbar es position:fixed, así que se queda pegada al
+     viewport mientras el resto de la página se recorre.
+
+     >>> Es `clip`, NO `hidden`, y la diferencia es la que hace que esto
+     funcione: con `overflow-x: hidden` el otro eje deja de poder ser `visible`
+     (se vuelve `auto`), o sea que la hoja también quedaría recortada por
+     ABAJO... y ese bleed vertical es justo lo que la hace cruzar a la sección
+     2, que era el punto de ponerla ahí. `clip` sí permite la pareja
+     clip/visible, así que corta a lo ancho y deja pasar a lo alto. <<<
+
+     Actualización (3 sep 2026, mismo día): en celular ya NO hay hojas
+     (ver el bloque "Las hojas en celular" al final del archivo), así que
+     ese síntoma exacto ya no puede pasar a ese ancho. La regla se queda
+     igual porque de 641px para arriba las dos hojas del hero siguen
+     sangrando por el borde derecho — es ahí donde hace el trabajo ahora.
+
+     Nota: el <body> ya trae overflow-x:hidden y en Chromium y WebKit sí
+     alcanza a tapar el síntoma (se midió: la página no se deja scrollear en
+     ninguno de los dos). Pero el documento seguía MIDIENDO de más, y cualquier
+     visor que renderice el tamaño del documento en vez del del viewport lo
+     saca a relucir. Esto lo arregla en el origen, en vez de taparlo. */
+  overflow-x: clip;
 }
+
+/* -------- Difuminado entre sección 1 (hero) y sección 2 --------
+   Escrito el 28 ago 2026 SOLO para escritorio, y sacado del
+   @media (min-width:1024px) el 3 sep 2026 para que aplique en TODOS
+   los anchos — pedido del dueño trabajando la versión de celular del
+   index: "no me gusta la separación que hay entre la primera sección
+   y la segunda, métele el difuminado que tiene la versión para PC,
+   para que no se vea así de seco".
+
+   Ahora es incondicional porque la premisa que lo tenía encerrado en
+   escritorio ya no es cierta. Cuando se escribió, la sección 2 de
+   celular eran #platillos/#bebidas/#postres con fondo CLARO (--fondo),
+   así que esta sombra oscura no tenía con qué "pegar" abajo. Desde la
+   Fase 4.3 esas 3 secciones están ocultas en todos los anchos y la
+   sección 2 de celular es .tk-carta-seccion, cuyo background-color es
+   #0c0a09 — el MISMO negro exacto que .tk-carrusel-seccion usa en
+   escritorio. Con el mismo color abajo en los dos casos, el mismo
+   difuminado sirve para los dos sin cambiarle un solo valor.
+
+   Cómo funciona (pedido original del dueño, con una referencia tipo
+   "Riviera Living Style": una foto que se apaga hasta el color exacto
+   de la sección siguiente, sin línea de corte):
+
+   El color de la gradiente es rgb(12,10,9) — el #0c0a09 EXACTO de la
+   sección de abajo, no el rgb(13,9,5) del navbar (un negro
+   ligerísimamente distinto) — y la curva llega a opacidad 1 en el 0%
+   (pie de sección) en vez de topar en .35 como la primera versión.
+   Así el último píxel del hero y el primero de la sección 2 son
+   literalmente el mismo color: no hay salto que ver sin importar
+   dónde caiga exactamente el corte entre ambas cajas. Aquella primera
+   versión nunca llegaba a ser opaca, y justo en el borde el hero
+   mostraba un tono claro-oscurecido junto al negro sólido real de la
+   sección 2 — ahí es donde se seguía viendo "la línea, negra abajo y
+   clara arriba" que reportó el dueño.
+
+   Las proporciones entre paradas (25%→~51% del pico, 50%→~23%,
+   75%→~9%) son las de esa curva anterior, solo reescaladas de un pico
+   de .35 a un pico de 1 — ya NO están atadas a la curva de .tk-navbar
+   (ver la nota junto a esa regla): el navbar solo necesita oscurecer
+   lo suficiente para que su texto blanco se lea, nunca tiene que
+   terminar en un color sólido que empate con algo debajo.
+
+   Alto: subió de un valor fijo chico (calc(--navbar-alto + 110px),
+   ~188px, pensado como acento de esquina, no como transición real) a
+   un %vh con clamp — contra un salto de color tan grande (el "amber
+   glow" claro del hero contra el casi-negro de la sección 2), 188px
+   se sentía angosto y el difuminado se notaba abrupto de cualquier
+   forma. 36vh reparte ese mismo cambio de color sobre más espacio en
+   pantalla, con un min/max en px para no volverse absurdo en
+   pantallas muy chicas o muy altas. El mismo 36vh funciona en celular
+   sin retocarlo: el hero centra su contenido (align-items:center) y
+   deja de sobra ese espacio libre al pie, así que el difuminado
+   arranca por debajo de los botones, no encima de ellos.
+
+   Se alcanza a ver incluso sin hacer scroll (con la sección 1
+   llenando la pantalla completa, su pie con el difuminado ya cae
+   dentro del viewport inicial) — eso es intencional, no un bug: es
+   exactamente cómo se ve también la referencia del dueño (el
+   difuminado de la foto ya se nota aunque no hayas scrolleado nada).
+
+   pointer-events:none para que nunca bloquee los botones del hero, y
+   sin z-index propio: .tk-hero-contenido (z-index:2) y las hojas
+   decorativas (.tk-hoja, z-index:1) se siguen pintando encima. */
+.tk-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* -1px (y el +1px del height, que solo compensa para que el difuminado
+     siga empezando en el mismo punto de arriba) = el difuminado se pasa
+     1px HACIA ABAJO, dentro de la sección 2. No es un ajuste estético:
+     tapa una costura de subpíxel.
+
+     El dueño la reportó el 3 sep 2026: "una línea blanca súper delgada
+     entre la sección 2 y el difuminado". No era un hueco de layout — se
+     midió y el borde es exacto (el hero termina en y=845 y la carta
+     empieza en y=845, 0px de separación). Era rasterización: cuando el
+     borde entre las dos cajas cae en un píxel de PANTALLA fraccionario,
+     el navegador reparte esa fila entre las dos cajas y la mezcla con lo
+     que haya detrás, que es el fondo del <body> (--fondo, crema
+     #fbf5e9). Esa mezcla es la línea clara.
+
+     Solo se ve con device pixel ratios fraccionarios — que son justo los
+     de los celulares reales y los Windows al 150%/175%. Medido: a dpr
+     2.625 el borde cae en y=643.125 y esa fila salía en rgb(61,58,55)
+     entre dos vecinas en rgb(12,10,9); a dpr 1, 2 o 3 (borde entero) no
+     aparecía nada, por eso las primeras capturas salieron limpias.
+
+     El traslape lo arregla porque el pie del difuminado ya es el
+     rgb(12,10,9) EXACTO de .tk-carta-seccion / .tk-carrusel-seccion: ese
+     1px de más cae sobre negro del mismo color, invisible, y de paso no
+     deja que el crema del body se asome por la costura. Es pintado, no
+     layout — ninguna caja se mueve, así que la medición de la Fase 4.4
+     (D) (la sección 2 mide exactamente el viewport) sigue igual.
+
+     1px basta a cualquier zoom: es 1px CSS, o sea que crece con el zoom,
+     y la costura nunca pasa de 1px de PANTALLA. */
+  bottom: -1px;
+  height: calc(clamp(220px, 36vh, 440px) + 1px);
+  pointer-events: none;
+  background: linear-gradient(to top,
+    rgba(12, 10, 9, 1)   0%,
+    rgba(12, 10, 9, .51) 25%,
+    rgba(12, 10, 9, .23) 50%,
+    rgba(12, 10, 9, .09) 75%,
+    rgba(12, 10, 9, 0)   100%);
+}
+
 /* De vuelta a 560px (el original) — el título ya no vive adentro de
    este ancho: .tk-hero-titulo se sale de aquí con su propio truco de
    "full-bleed" (ver más abajo), así que este contenedor solo necesita
@@ -473,6 +622,27 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   color: var(--blanco);
 }
 .tk-btn--secundario:hover { filter: brightness(0.94); }
+
+/* "Ver menú" y "Pedir por WhatsApp" en la misma fila también en celular
+   angosto (pedido del dueño, 4 sep 2026, con captura). Acotado a ≤479px a
+   propósito: de 480px para arriba (tablet Y escritorio) ya venían en fila
+   desde antes (ver el @media (min-width:480px) de arriba) — ese diseño NO
+   se toca. Scoped a ".tk-hero-botones .tk-btn" (no ".tk-btn" a secas) para
+   no afectar ningún otro botón que use estas clases fuera del hero. flex:1
+   reparte el ancho igual entre los dos (mismo "se estiran a lo ancho" que
+   ya tenían apilados, solo que ahora en dos columnas); padding/font/ícono
+   se reducen un poco porque "Pedir por WhatsApp" ya no tiene una fila
+   completa para él solo. */
+@media (max-width: 479px) {
+  .tk-hero-botones { flex-direction: row; gap: 10px; }
+  .tk-hero-botones .tk-btn {
+    flex: 1;
+    padding: 13px 10px;
+    font-size: 13px;
+    gap: 6px;
+  }
+  .tk-hero-botones .tk-btn svg { width: 16px; height: 16px; }
+}
 
 /* ================= Secciones de categoría ================= */
 .tk-seccion { padding: 56px 20px; }
@@ -788,6 +958,27 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   flex-direction: column;
   align-items: center;
   width: 100%;
+  /* Mismo patrón que .tk-hero (sección 1) y que .tk-carrusel-seccion (la
+     sección 2 de escritorio): la sección ocupa la pantalla COMPLETA, no
+     solo lo que midan sus hijos. Sin esto medía 758px contra los 845px
+     del viewport (medido, no supuesto), así que al llegar a ella siempre
+     se colaba en pantalla un pedazo de la sección de al lado — el pie
+     claro del hero arriba, o el footer abajo. El dueño lo reportó
+     exactamente así (3 sep 2026): "la sección 2 está como que corta",
+     comparándola con la 1, donde no se alcanza a ver nada de la
+     siguiente.
+
+     justify-content va de la mano: sin él la columna se pega arriba y
+     los píxeles de sobra quedan como un hueco negro al final. Centrado
+     reparte ese sobrante arriba/abajo, igual que el hero.
+
+     Es min-height, no height: en un celular chico donde el contenido
+     mida más que la pantalla la sección crece normal y NO se recorta
+     (con height fijo + justify-content:center el contenido se desborda
+     por los dos lados y la foto se montaría encima del hero). */
+  min-height: 100vh;
+  min-height: 100svh;
+  justify-content: center;
   background-color: #0c0a09;
   color: #ffffff;
   padding: 56px 20px 64px;
@@ -845,78 +1036,6 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      archivo) le gana por orden de cascada al tener la misma
      especificidad. Va en su propio media query justo después de esa
      regla base para que sea la que se aplique última. */
-
-  /* Difuminado entre sección 1 (hero) y sección 2 (carrusel) —
-     reescrito 28 ago 2026, pedido del dueño con una referencia tipo
-     "Riviera Living Style" (foto que se apaga hasta el blanco exacto
-     de la sección siguiente, sin línea de corte). Solo aquí adentro
-     (≥1024px) porque en escritorio la sección 2 real es el carrusel
-     oscuro (#0c0a09, ver .tk-carrusel-seccion abajo); en móvil la
-     sección 2 es #platillos con fondo claro (--fondo) y esta sombra
-     oscura no tendría con qué "pegar".
-
-     La versión anterior (pico .35, rgba(13,9,5,X) — mismo tono/misma
-     curva que .tk-navbar de arriba, solo con el pico más bajo porque
-     pegado tal cual contra el #0c0a09 casi sólido de la sección 2 se
-     sentía como un corte duro) nunca llegaba a ser opaca: justo en el
-     borde, el hero mostraba un tono claro-oscurecido junto al negro
-     sólido real de la sección 2 — ahí es donde se seguía viendo "la
-     línea, negra abajo y clara arriba" que reportó el dueño. La
-     sombra estaba, pero nunca terminaba de alcanzar el color de abajo.
-
-     El arreglo: el color de esta gradiente ahora es rgb(12,10,9) — el
-     #0c0a09 EXACTO de .tk-carrusel-seccion, no el rgb(13,9,5) del
-     navbar (un negro ligerísimamente distinto) — y la curva llega a
-     opacidad 1 en el 0% (pie de sección) en vez de topar en .35. Así
-     el último píxel del hero y el primero de la sección 2 son
-     literalmente el mismo color: no hay salto que ver sin importar
-     dónde caiga exactamente el corte entre ambas cajas. Mismo truco
-     que una foto que se apaga hasta el blanco exacto de la sección de
-     abajo — no importa cuánta foto alcances a ver, el borde inferior
-     siempre coincide.
-
-     Las proporciones entre paradas (25%→~51% del pico, 50%→~23%,
-     75%→~9%) son las mismas de la curva anterior de este mismo
-     elemento, solo reescaladas de un pico de .35 a un pico de 1 — ya
-     NO están atadas a la curva de .tk-navbar (ver la nota actualizada
-     junto a esa regla): el navbar solo necesita oscurecer lo
-     suficiente para que su texto blanco se lea, nunca tiene que
-     terminar en un color sólido que empate con algo debajo, así que
-     ligar su curva a esta ya no tiene sentido ahora que esta sí debe
-     llegar a opacidad 1.
-
-     Alto: subió de un valor fijo chico (calc(--navbar-alto + 110px),
-     ~188px, pensado como acento de esquina, no como transición real) a
-     un %vh con clamp — contra un salto de color tan grande (el "amber
-     glow" claro del hero contra el casi-negro de la sección 2), 188px
-     se sentía angosto y el difuminado se notaba abrupto de cualquier
-     forma. 36vh reparte ese mismo cambio de color sobre más espacio en
-     pantalla, con un min/max en px para no volverse absurdo en
-     monitores muy chicos o muy altos.
-
-     Se alcanza a ver incluso sin hacer scroll (con la sección 1
-     llenando la pantalla completa, su pie con el difuminado ya cae
-     dentro del viewport inicial) — eso es intencional, no el bug: es
-     exactamente cómo se ve también la referencia del dueño (el
-     difuminado de la foto ya se nota aunque no hayas scrolleado nada).
-     Lo que se veía mal antes no era que se viera sin scrollear, era
-     que nunca terminaba de emparejar el color de abajo. */
-  .tk-hero { position: relative; }
-  .tk-hero::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: clamp(220px, 36vh, 440px);
-    pointer-events: none;
-    background: linear-gradient(to top,
-      rgba(12, 10, 9, 1)   0%,
-      rgba(12, 10, 9, .51) 25%,
-      rgba(12, 10, 9, .23) 50%,
-      rgba(12, 10, 9, .09) 75%,
-      rgba(12, 10, 9, 0)   100%);
-  }
 }
 
 .tk-carrusel-seccion {
@@ -1174,12 +1293,18 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 
 .tk-cf-divisor {
-  width: 34px;
+  width: 260px;
   height: 2px;
   background-color: #c5a880;
   border-radius: 2px;
   margin: 5px auto 4px;
   box-shadow: 0 0 8px rgba(197, 168, 128, 0.7);
+  /* Un poco más arriba (pedido del dueño, 4 sep 2026) — position:relative +
+     top en vez de tocar el margin, para que el título de abajo (.tk-carta-titulo)
+     no se mueva con ella: solo esta línea se pinta más arriba, su espacio
+     en el flujo (y por lo tanto la posición de lo que sigue) no cambia. */
+  position: relative;
+  top: -40px;
 }
 
 .tk-cf-desc {
@@ -1292,8 +1417,46 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    carrusel — nunca se redefine una propiedad que .tk-cf-dots/.tk-cf-cta ya
    traían, solo se agrega lo que a esas clases (pensadas para el carrusel)
    les falta aquí. */
-.tk-carta-dots { margin-bottom: 26px; }
-.tk-carta-cta { margin-top: 2px; }
+/* Puntitos centrados dentro del hueco línea-dorada → título (pedido del
+   dueño, 4 sep 2026, con captura). La línea (.tk-cf-divisor) se pinta 40px
+   más arriba de su lugar en el flujo (ver su top:-40px) pero los puntitos
+   NO están desplazados, así que quedaban con 44px de aire arriba (línea
+   pintada → puntitos) y solo 28px abajo (puntitos → título): 72px de hueco
+   repartidos 44/28, no al centro. Subir los puntitos 8px (mismo truco de
+   position:relative + top que ya usan línea/fotos/eyebrow: solo se pinta
+   distinto, el título de abajo no se mueve porque su posición en el flujo
+   se calcula contra la caja SIN desplazar de los puntitos) empareja el
+   reparto a 36/36. Si cambias el top de .tk-cf-divisor o los márgenes de
+   aquí abajo, este -8px hay que recalcularlo. */
+.tk-carta-dots { margin-bottom: 26px; position: relative; top: -8px; }
+/* Más grande que el CTA del carrusel de escritorio (pedido del dueño, 4 sep
+   2026) — acotado a .tk-carta-cta (además de tk-cf-cta) para no tocar el
+   botón del carrusel de PC, que se queda con su tamaño de siempre. */
+.tk-carta-cta {
+  margin-top: 2px;
+  padding: 13px 30px;
+  font-size: 0.85rem;
+  gap: 8px;
+}
+.tk-carta-cta svg { width: 16px; height: 16px; }
+
+/* Eyebrow "Platillos" un poco más arriba (pedido del dueño, 4 sep 2026) —
+   position:relative + top en vez de tocar el margin: así se mueve nada más
+   este renglón y no el resto de la columna, que ya está afinada a base de
+   mediciones (ver la nota grande de .tk-carta-seccion sobre bottom-align en
+   ≤640px). Acotado a .tk-carta-envoltura porque .tk-cf-eyebrow-fila también
+   la usa el carrusel de escritorio (#carrusel-menu), que sigue diciendo
+   "Menú" y no se toca aquí. */
+.tk-carta-envoltura .tk-cf-eyebrow-fila { position: relative; top: -48px; }
+
+/* Carrusel de 5 fotos también un poco más arriba (mismo pedido, 4 sep
+   2026) — nada más `top`, position:relative ya vive en la regla base de
+   .tk-carta-fotos (ahí es para que carta.js mida offsetLeft de cada slide
+   contra este contenedor, no para moverlo; un top aquí no afecta esa
+   cuenta porque offsetLeft de los hijos se mide contra la caja de este
+   contenedor, no contra el viewport). No es .tk-cf-* compartida con el
+   carrusel de escritorio, así que no hace falta acotar el selector. */
+.tk-carta-fotos { top: -42px; }
 
 /* -------- Fotos: autoplay + swipe con scroll-snap nativo -------- */
 .tk-carta-fotos {
@@ -1384,9 +1547,17 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 
 .tk-carta-titulo {
-  font-family: Georgia, serif;
-  font-style: italic;
+  /* Antes Georgia italic (la tipografía de "identidad" del resto del sitio
+     claro) — desentonaba contra el fondo negro/dorado moderno de esta
+     sección (pedido del dueño, 4 sep 2026: "no le queda"). Ahora copia el
+     tratamiento del nombre de platillo del carrusel de escritorio
+     (.tk-cf-titulo, misma sección hermana): sin font-family propia (hereda
+     el sans-serif del body en vez de Georgia), mayúsculas + peso 900 en vez
+     de itálicas, mismo espíritu "display" moderno en las dos versiones. */
   font-size: 1.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: #ffffff;
   text-align: center;
   line-height: 1.15;
@@ -1750,11 +1921,122 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   .tk-hoja--menu-der { animation: tk-viento 9s ease-in-out infinite .45s; }
 }
 
-/* Las del hero se ocultan en móvil (mismo corte de 640px que ya usa el
-   resto del sitio para el botón hamburguesa) — a ese ancho quedan
-   demasiado cerca del contenido centrado del hero. Las del carrusel no
-   necesitan esta regla: ver la nota grande de arriba. */
+/* -------- Las hojas en celular (≤640px) --------
+   Las DOS del hero, chiquitas y metidas en las esquinas de abajo. Nada
+   en la sección 2. Cómo se llegó aquí (3 sep 2026, cuatro intentos en
+   el mismo día, todos con el dueño viendo la página):
+
+   1. Las dos del hero con los valores de escritorio tal cual → muy
+      encima del contenido centrado del hero. Se apagaron las dos.
+   2. Una sola, la derecha, cruzando el borde entre secciones ("solo
+      será una hoja debido al tamaño, y estará del lado derecho, y su
+      tamaño adaptado al tamaño de celular"): clamp(180px, 62vw, 360px)
+      y --hoja-rot -34deg (14.3° sobre la horizontal, "más recta, tipo
+      _", porque sin pareja abajo no tenía a qué apuntar).
+   3. Pareja en diagonal: esa hoja más chica (54vw) y más levantada
+      (-21deg → 29.0°), más una hoja NUEVA (.tk-hoja--carta-izq) en la
+      esquina superior izquierda de .tk-carta-seccion apuntando hacia
+      abajo con la misma inclinación (75deg → 29.5°). Medida y
+      verificada en 360/393/430/640px, y aun así: "quita las dos hojas
+      porque definitivamente se ve fatal".
+   4. Lo que quedó. Y salió de un accidente que vale la pena contar,
+      porque si no, alguien lo "arregla" de vuelta: al borrar el
+      intento 3 quedó una llave de más justo antes de este bloque, lo
+      que anulaba TODO este @media. O sea que en celular se colaron las
+      dos hojas del hero con las reglas de escritorio — chiquitas
+      (clamp topa en su mínimo de 170px a este ancho) y simétricas en
+      las dos esquinas de abajo. El dueño lo vio así, roto, y dijo
+      "uy bro, así se ve chido". Así que la llave se arregló y ese
+      render se volvió intencional.
+
+   Único cambio contra lo que él vio: --hoja-tam propio en vez de heredar
+   el de escritorio. El de escritorio, clamp(170px, 19.3vw, 460px), topa
+   siempre en su MÍNIMO a anchos de celular (a 393px, 19.3vw son 76px),
+   así que se quedaba FIJO en 170px: idéntico en un teléfono de 320px que
+   en uno de 430px. Este clamp deja mandar al vw en todo el rango y pasa
+   justo por los 170px a 393px, que es el ancho donde lo aprobó — o sea
+   se ve igual que en su captura, pero escala.
+
+   Los ángulos (±14deg) y los sangrados (-0.30 a lo ancho, -0.07 a lo
+   alto) NO se tocan: son los de escritorio, que es exactamente lo que
+   aprobó. Ojo con el sangrado vertical, es el que hace que las dos
+   muerdan un poco la sección 2 en vez de quedar cortadas en seco.
+
+   5. (4 sep 2026) Volvió a pedir hojas en la sección 2, esta vez DOS,
+      en las esquinas de arriba, "imitando la versión de PC". Se armaron
+      completas y verificadas (marcado nuevo .tk-hoja--carta-izq/der
+      dentro de .tk-carta-seccion, geometría de .tk-hoja--menu-izq/der
+      copiada tal cual, dos tamaños para que no le pegaran al "MENÚ" en
+      pantallas cortas) y, viéndolas en pantalla, pidió quitarlas:
+      "quita esas hojas de la sección 2". Se borraron por completo —
+      marcado, reglas, animación y el overflow-x:clip que hacía falta
+      solo por su sangrado. La sección 2 de celular vuelve a quedar sin
+      ninguna hoja, igual que después del intento 3.
+
+   >>> SI VUELVE A PEDIRLO (sería la tercera vez), lo que YA se sabe y no
+   hace falta redescubrir: (a) .tk-hoja--menu-izq/der no se pueden
+   reciclar, viven en el carrusel 3D que en celular está en display:none
+   — hay que agregar marcado nuevo dentro de .tk-carta-seccion; (b) el
+   pivote va en la esquina de ABAJO (left/right bottom), ahí cae el
+   nacimiento del tallo; con el pivote arriba, rotar 64deg barre la hoja
+   casi un alto completo hacia el lado y se sale de pantalla; (c) el top
+   sale de que el recorte mide 1.135×--hoja-tam de alto, así que -1.14
+   deja el pivote al ras del borde; (d) toda .tk-hoja nueva necesita
+   `width: var(--hoja-tam)` explícito o el div se encoge a los 273px del
+   PNG; (e) .tk-carta-seccion necesita position:relative para anclarlas y
+   .tk-carta-envoltura position:relative + z-index:2 para que no tapen la
+   foto; (f) el sangrado lateral obliga a overflow-x:clip (clip, NO
+   hidden) o crece el ancho del documento; (g) el estorbo con el "MENÚ"
+   depende del ALTO de la pantalla, no del ancho — a 360x640 la tinta de
+   la hoja se encimaba con el eyebrow (dx=-41, dy=-9) y hubo que achicarla
+   con un @media (max-height: 780px). Las dos veces que se han probado,
+   el dueño las ha mandado quitar; no las agregues por iniciativa
+   propia. <<< */
 @media (max-width: 640px) {
   .tk-hoja--hero-izq,
-  .tk-hoja--hero-der { display: none; }
+  .tk-hoja--hero-der { --hoja-tam: clamp(140px, 43vw, 210px); }
+}
+
+/* -------- El contenido de la sección 2 se recorre HACIA ABAJO (≤640px) --------
+   4 sep 2026. Pedido del dueño: "abajo del botón 'Ver platillos' sobra
+   muchísimo espacio vacío hasta que empieza el footer... que todo ese
+   bloque se recorra hacia abajo, para que quede espacio libre ARRIBA
+   (entre el borde con la sección 1 y el 'MENÚ')".
+
+   Va dentro de ≤640px a propósito, aunque .tk-carta-seccion se ve hasta
+   los 1023px: el dueño estaba viendo y pidiendo la versión de CELULAR, y
+   el rango 641-1023px (tablet) se queda exactamente como estaba,
+   centrado.
+
+   MEDIDO ANTES (Playwright, hueco entre el borde de la sección y la
+   envoltura del contenido — arriba / abajo):
+     · 393x852 -> 108.6 / 116.6      · 430x932 -> 137.1 / 145.1
+     · 640x900 ->  94.4 / 102.4      · 360x640 ->  56.0 /  64.0
+   O sea: el sobrante estaba repartido casi por mitades, porque la regla
+   base es justify-content:center (Fase 4.4). Se veía más abajo que
+   arriba nada más por los 8px de diferencia entre el padding de arriba
+   (56) y el de abajo (64).
+
+   ARREGLO: justify-content pasa a flex-end SOLO aquí. Con eso TODO el
+   sobrante se junta arriba y el bloque queda apoyado sobre el
+   padding-bottom de siempre. MEDIDO DESPUÉS:
+     · 393x852 -> 161.2 / 64.0       · 430x932 -> 218.2 / 64.0
+     · 640x900 -> 132.8 / 64.0       · 360x640 ->  56.0 / 64.0
+
+   >>> Por qué flex-end y no un height fijo ni un margin-top: la regla
+   base tiene min-height (no height) justamente porque en pantallas
+   chicas el contenido mide MÁS que el viewport — a 360x640 mide 743px y
+   la sección crece sola. flex-end respeta eso: cuando NO sobra espacio
+   (360x640) no hay nada que repartir y el resultado es idéntico a antes
+   (56/64, o sea el puro padding), sin desbordar ni montar la foto sobre
+   el hero. Un height fijo o un margin/translate empujarían igual en ese
+   caso y sí romperían. Ver la nota grande de .tk-carta-seccion allá
+   arriba. <<<
+
+   El colchón de abajo se queda en el padding-bottom de 64px de la regla
+   base — no es "pegado al footer": esos 64px son los mismos que ya tenía
+   la sección a 360px, donde el dueño nunca reportó que se viera
+   apretado. */
+@media (max-width: 640px) {
+  .tk-carta-seccion { justify-content: flex-end; }
 }
