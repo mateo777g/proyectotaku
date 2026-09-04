@@ -111,7 +111,7 @@
 
 <footer class="tk-footer">
   <div class="tk-envoltura">
-    <div>
+    <div class="tk-footer-marca-columna">
       <a class="tk-footer-marca" href="index.html">
         <img src="assets/logomonky.png" alt="">
         <span>Taku monky</span>
@@ -150,6 +150,54 @@
       </ul>
     </div>
   </div>
+  <div class="tk-footer-movil">
+    <div class="tk-footer-acordeon">
+      <details class="tk-footer-acc-item">
+        <summary class="tk-footer-acc-boton">
+          Menú
+          <svg class="tk-footer-acc-flecha" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="tk-footer-acc-panel">
+          <div class="tk-footer-acc-fila">
+            <a class="tk-footer-enlace" href="menu-platillos.html">Platillos</a>
+            <a class="tk-footer-enlace" href="menu-bebidas.html">Bebidas</a>
+            <a class="tk-footer-enlace" href="menu-postres.html">Postres</a>
+          </div>
+        </div>
+      </details>
+      <details class="tk-footer-acc-item">
+        <summary class="tk-footer-acc-boton">
+          Dirección
+          <svg class="tk-footer-acc-flecha" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="tk-footer-acc-panel">
+          <p class="tk-footer-acc-texto tk-footer-acc-direccion">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+            Josefa Ortiz de Domínguez, entre Cedro y Álamo
+          </p>
+        </div>
+      </details>
+      <details class="tk-footer-acc-item">
+        <summary class="tk-footer-acc-boton">
+          Legales
+          <svg class="tk-footer-acc-flecha" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="tk-footer-acc-panel">
+          <p class="tk-footer-acc-texto tk-footer-acc-vacio">Próximamente.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="tk-footer-social">
+      <a class="tk-footer-social-icono" id="enlace-whatsapp-footer-movil" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L4 20l1-4a8.5 8.5 0 1 1 15.5-4.5Z"/><path d="M8.7 9.8c.25-.6.5-.6.75-.6h.4c.15 0 .35 0 .5.35l.6 1.35c.1.2 0 .45-.1.55l-.4.5c-.1.15-.1.35 0 .5.25.5 1.25 1.6 2.2 1.95.2.1.35 0 .45-.1l.5-.5c.15-.2.35-.2.5-.1l1.3.65c.15.1.25.25.25.45 0 .65-.75 1.3-1.4 1.3-1.45 0-4.15-1.25-5.25-3.7-.4-.9-.4-1.85 0-2.5Z" fill="currentColor" stroke="none"/></svg>
+      </a>
+      <a class="tk-footer-social-icono" href="https://www.instagram.com/taku_monky/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
+      </a>
+    </div>
+  </div>
+
   <p class="tk-footer-copy">© 2026 Taku monky</p>
 </footer>
 
@@ -162,6 +210,7 @@
 <script src="menu.js"></script>
 <script>
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
+  document.getElementById("enlace-whatsapp-footer-movil").href = URL_WHATSAPP;
   iniciarNavbar();
   iniciarCatalogo("Bebidas");
 </script>

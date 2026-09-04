@@ -847,6 +847,23 @@ body.tk-sin-scroll { overflow: hidden; }
   .tk-cat-encabezado { margin-bottom: 30px; }
 }
 
+/* Esconder/mostrar al hacer scroll — mismo mecanismo que
+   .tk-navbar--oculta en style.css (el listener vive en
+   iniciarNavbar(), catalogo.js, compartido por las 4 páginas). Pedido
+   del dueño (4 sep 2026): "igual que la navbar del index".
+   A propósito en su propio @media (max-width: 640px) y NO dentro del
+   bloque de 860px de arriba: 640 es el corte que usa esMovil() en el
+   JS, así que este número tiene que coincidir con ESE, no con los
+   otros cortes (860/680/620) de este archivo — si algún día cambia
+   uno, hay que revisar el otro. .tk-cat-header sigue siendo
+   position:sticky (no se toca); una vez "pegado" arriba pinta igual
+   que fixed, así que el transform lo desliza fuera sin dejar hueco:
+   el contenido de abajo ya venía scrolleando por debajo de él. */
+@media (max-width: 640px) {
+  .tk-cat-header { transition: transform .35s ease; }
+  .tk-cat-header--oculta { transform: translateY(-100%); }
+}
+
 @media (max-width: 620px) {
   .tk-cat-grid { gap: 40px; }
   .tk-cat-marca span { display: none; }
