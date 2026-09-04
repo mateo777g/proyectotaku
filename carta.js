@@ -35,6 +35,27 @@ const _CARTA_BREAKPOINT_DESKTOP = "(min-width: 1024px)";
 const _CARTA_AUTOPLAY_MS = 5000; // mismo valor que _CARRUSEL_AUTOPLAY_MS del carrusel de PC
 const _CARTA_LIMITE = 5;
 
+// -------- Efecto de salida de la foto (3 sep 2026) --------
+// Pedido del dueño: que la foto NO se vea rebanada por el borde de la
+// ventanita al deslizar. Se resolvió dejándola deslizar (el gesto se
+// siente igual que antes) pero apagándola y encogiéndola conforme se
+// aleja del centro, de modo que se apaga ANTES de alcanzar la orilla.
+//
+// _CARTA_DERIVA: cuánto se mueve la foto, como fracción del ancho del
+//   carril, cuando su slide se aleja un slide completo. Es MENOR que 1 a
+//   propósito: el slide sí recorre todo el ancho (eso lo hace el scroll
+//   nativo y no se toca), pero la foto de adentro solo "deriva" un poco,
+//   y ese margen que gana es justo lo que evita que toque el borde.
+// _CARTA_ENCOGE: cuánto se encoge en ese mismo recorrido (14%).
+//
+// ⚠️ Van amarrados al `max-width: 84%` de .tk-carta-foto-slide img en
+// style.css — la cuenta completa está comentada ahí. Resumen: el borde
+// más lejano que alcanza la foto es 0.12 + 0.42*0.86 = 0.481·W, contra el
+// 0.5·W del carril. Si tocas uno de los tres números, rehaz esa cuenta o
+// vuelve el corte que se acaba de arreglar.
+const _CARTA_DERIVA = 0.12;
+const _CARTA_ENCOGE = 0.14;
+
 function _cartaPrefiereMovimientoReducido() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
@@ -153,6 +174,54 @@ async function iniciarCarta() {
     return mejor;
   }
 
+  // Recalcula opacidad/escala/deriva de cada foto segun que tan lejos del
+  // centro del carril quedo SU slide. p = 0 -> centrada; p = ±1 -> a un
+  // slide completo de distancia. La opacidad es 1 - |p| para que en el
+  // punto medio de un deslizamiento las dos fotos vayan a 0.5 y sumen 1:
+  // asi nunca hay un hueco negro entre una y otra.
+  function _actualizarEfecto() {
+    const ancho = fotos.clientWidth;
+    if (!ancho) return;
+    const centro = fotos.scrollLeft + ancho / 2;
+    for (const slide of fotos.children) {
+      const img = slide.querySelector("img");
+      if (!img) continue; // los estados de carga/error no llevan <img>
+      const p = (slide.offsetLeft + ancho / 2 - centro) / ancho;
+      const lejania = Math.min(1, Math.abs(p));
+
+      // El slide YA se movio p*ancho por su cuenta: eso lo hace el scroll
+      // nativo y no se toca (es lo que da el swipe con inercia y el snap).
+      // Queremos que la FOTO de adentro se separe del centro mucho menos
+      // que eso, solo _CARTA_DERIVA del recorrido, asi que el transform no
+      // suma movimiento: RESTA la diferencia entre lo que el slide ya se
+      // movio y lo poco que queremos que se note.
+      //   correccion = (deseado) - (lo que ya se movio) -> siempre negativa
+      // Si esto se escribe como una suma (p * DERIVA * ancho, sin restar el
+      // recorrido del slide) la foto se mueve MAS que el slide en vez de
+      // menos, y el corte que este efecto venia a resolver empeora.
+      const deseado = p * _CARTA_DERIVA * ancho;
+      const correccion = deseado - p * ancho;
+
+      img.style.opacity = String(Math.max(0, 1 - lejania));
+      img.style.transform =
+        "translateX(" + correccion.toFixed(1) + "px)" +
+        " scale(" + (1 - lejania * _CARTA_ENCOGE).toFixed(3) + ")";
+    }
+  }
+
+  // El scroll dispara muchisimos eventos por segundo; sin esto se
+  // recalcularia el efecto varias veces por cuadro para nada. Con rAF se
+  // hace una sola vez por cuadro, justo antes de pintar.
+  let efectoPendiente = false;
+  function _pedirEfecto() {
+    if (efectoPendiente) return;
+    efectoPendiente = true;
+    requestAnimationFrame(() => {
+      efectoPendiente = false;
+      _actualizarEfecto();
+    });
+  }
+
   function irA(idx) {
     if (items.length === 0) return;
     indiceActual = ((idx % items.length) + items.length) % items.length;
@@ -169,6 +238,11 @@ async function iniciarCarta() {
   fotos.addEventListener(
     "scroll",
     () => {
+      // Pegado al scroll, sin el debounce de abajo: el efecto tiene que
+      // seguir al dedo cuadro por cuadro. Lo que si va con debounce es la
+      // resincronizacion del titulo/lista/puntitos, que solo importa
+      // cuando el deslizamiento ya se detuvo.
+      _pedirEfecto();
       clearTimeout(sincronizando);
       sincronizando = setTimeout(() => {
         if (items.length === 0) return;
@@ -203,6 +277,10 @@ async function iniciarCarta() {
 
     fotos.scrollLeft = 0;
     pintar();
+    // Las <img> recien creadas nacen sin opacidad/transform inline, asi
+    // que sin esto las 4 no centradas se verian a opacidad 1 hasta el
+    // primer scroll.
+    _actualizarEfecto();
     iniciarAutoplay();
   }
 
@@ -259,6 +337,10 @@ async function iniciarCarta() {
       mostrarError();
     }
   }
+
+  // Al rotar el telefono o cambiar el tamano de la ventana cambia
+  // clientWidth, y la deriva se calcula a partir de el.
+  window.addEventListener("resize", _pedirEfecto, { passive: true });
 
   await cargar();
   iniciarAutoRefresco(cargar);

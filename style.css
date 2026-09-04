@@ -1350,13 +1350,37 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   scroll-snap-align: center;
 }
 .tk-carta-foto-slide img {
-  max-width: 100%;
+  /* 84% y NO 100% (3 sep 2026, pedido del dueño: "no me gusta cómo se
+     corta la imagen por el fondo negro cuando se mueven los productos").
+     Antes la foto medía exactamente lo mismo que el carril, o sea 0px de
+     aire a los lados, así que en cuanto empezaba a moverse el borde de la
+     ventanita la rebanaba de golpe.
+
+     Este 84% es la mitad del arreglo; la otra mitad es el efecto de
+     salida en carta.js (_CARTA_DERIVA / _CARTA_ENCOGE), que la apaga y la
+     encoge antes de que llegue a la orilla.
+
+     ⚠️ LOS TRES NÚMEROS ESTÁN ATADOS — si cambias uno, rehaz la cuenta:
+       aire a cada lado = (1 - 0.84) / 2      = 0.08 · W
+       media foto       = 0.84 / 2            = 0.42 · W
+       borde más lejano = DERIVA + media foto * (1 - ENCOGE)
+                        = 0.12 + 0.42 * 0.86  = 0.481 · W
+       borde del carril =                       0.500 · W
+     0.481 < 0.500, así que la foto JAMÁS cruza la ventanita, en ningún
+     punto del recorrido (la fórmula es lineal en el desplazamiento, así
+     que el peor caso es el extremo, ya calculado arriba). Si subes el
+     max-width o la deriva sin bajar lo otro, vuelve el corte. */
+  max-width: 84%;
   max-height: 100%;
   /* contain, NUNCA cover: el recorte ya viene sin fondo y de forma
      irregular (bounding box del canal alfa) — "cover" lo recortaría de
      más y rompería el efecto de "producto flotando" que pidió el dueño. */
   object-fit: contain;
   filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.6));
+  /* Sin `transition`: opacidad y transform los maneja carta.js pegados al
+     scroll, cuadro por cuadro. Una transición CSS aquí iría siempre un
+     paso atrás del dedo y se sentiría elástica. */
+  will-change: transform, opacity;
 }
 
 .tk-carta-titulo {
