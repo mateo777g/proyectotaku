@@ -76,6 +76,7 @@ const formLogin = document.getElementById("tk-mesas-form-login");
 const campoPassword = document.getElementById("tk-mesas-password");
 const zonaErrorLogin = document.getElementById("tk-mesas-login-error");
 const botonEntrar = document.getElementById("tk-mesas-boton-entrar");
+const textoBotonEntrar = document.getElementById("tk-mesas-boton-entrar-texto");
 
 window.addEventListener("load", async () => {
   const { data: { session } } = await _supabase.auth.getSession();
@@ -90,7 +91,7 @@ formLogin.addEventListener("submit", async (e) => {
   e.preventDefault();
   zonaErrorLogin.hidden = true;
   botonEntrar.disabled = true;
-  botonEntrar.textContent = "Entrando...";
+  textoBotonEntrar.textContent = "Entrando...";
 
   const { error } = await _supabase.auth.signInWithPassword({
     email: ADMIN_EMAIL,
@@ -101,7 +102,7 @@ formLogin.addEventListener("submit", async (e) => {
     zonaErrorLogin.textContent = "Contraseña incorrecta. Intenta de nuevo.";
     zonaErrorLogin.hidden = false;
     botonEntrar.disabled = false;
-    botonEntrar.textContent = "Entrar";
+    textoBotonEntrar.textContent = "Entrar";
     return;
   }
 
@@ -113,11 +114,43 @@ function mostrarApp() {
   elLogin.hidden = true;
   elApp.hidden = false;
   botonEntrar.disabled = false;
-  botonEntrar.textContent = "Entrar";
+  textoBotonEntrar.textContent = "Entrar";
+  cerrarMenuHeader();
   mostrarVistaLista();
 }
 
+// Menú de hamburguesa del header (abre/cierra el panel con "Cerrar
+// sesión" — hoy es la única opción, pero ya queda el patrón para
+// agregar más sin rediseñar el header otra vez).
+const botonMenuHeader = document.getElementById("tk-mesas-menu-boton");
+const panelMenuHeader = document.getElementById("tk-mesas-menu-panel");
+
+function cerrarMenuHeader() {
+  panelMenuHeader.hidden = true;
+  botonMenuHeader.setAttribute("aria-expanded", "false");
+}
+
+botonMenuHeader.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const yaAbierto = !panelMenuHeader.hidden;
+  if (yaAbierto) {
+    cerrarMenuHeader();
+  } else {
+    panelMenuHeader.hidden = false;
+    botonMenuHeader.setAttribute("aria-expanded", "true");
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!panelMenuHeader.hidden && !e.target.closest(".tk-mesas-menu")) cerrarMenuHeader();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !panelMenuHeader.hidden) cerrarMenuHeader();
+});
+
 document.getElementById("tk-mesas-cerrar-sesion").addEventListener("click", async () => {
+  cerrarMenuHeader();
   await _supabase.auth.signOut();
   elApp.hidden = true;
   _ventaActual = null;
