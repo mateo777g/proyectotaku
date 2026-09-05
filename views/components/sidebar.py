@@ -39,6 +39,7 @@ class Sidebar(ft.Container):
                         
                         self._crear_boton_menu("Inicio", ft.Icons.GRID_VIEW_ROUNDED, "home"),
                         self._crear_boton_menu("Mi menú", ft.Icons.REORDER_ROUNDED, "menu"),
+                        self._crear_boton_menu("Mesas", ft.Icons.TABLE_RESTAURANT_OUTLINED, "mesas"),
                         self._crear_boton_menu("Agente IA", ft.Icons.SMART_TOY_OUTLINED, "agente_financiero", tiene_ia=True),
                         self._crear_boton_menu("Crear contenido", ft.Icons.AUTO_AWESOME, "contenido"),
                         self._crear_boton_menu("Mi biblioteca", ft.Icons.DASHBOARD_CUSTOMIZE_OUTLINED, "biblioteca"),

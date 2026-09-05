@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taku Monky — Mesas</title>
+<!-- Herramienta interna de staff, no una página del menú público: no
+     debe indexarse ni aparecer en buscadores. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="assets/logomonky.png">
+<link rel="stylesheet" href="mesas.css">
+</head>
+<body>
+
+<!-- Toast global de estado (éxito/error), mismo papel que #toast en
+     EJEMPLOS/lilshop.html. -->
+<div id="tk-mesas-toast" class="tk-mesas-toast" hidden></div>
+
+<!-- ==========================================
+     LOGIN — mismo lenguaje visual que views/sesion_view.py (tarjeta de
+     420px, mismos colores/radios/tipografía). El correo NO se pide: es
+     siempre el mismo admin, igual que ADMIN_EMAIL en lilshop.html.
+     ========================================== -->
+<div id="tk-mesas-login" class="tk-mesas-login" hidden>
+  <div class="tk-mesas-tarjeta-login">
+    <img src="assets/logomonky.png" alt="" class="tk-mesas-logo">
+    <p class="tk-mesas-eyebrow">SISTEMA DE MESAS</p>
+    <h1 class="tk-mesas-marca">Taku monky</h1>
+    <p class="tk-mesas-subtitulo">Inicia sesión para registrar ventas.</p>
+
+    <form id="tk-mesas-form-login">
+      <input type="password" id="tk-mesas-password" class="tk-mesas-campo" placeholder="Tu contraseña" required autofocus>
+      <p id="tk-mesas-login-error" class="tk-mesas-error-texto" hidden></p>
+      <button type="submit" id="tk-mesas-boton-entrar" class="tk-mesas-boton-primario">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==========================================
+     APP — oculta hasta que hay sesión.
+     ========================================== -->
+<div id="tk-mesas-app" hidden>
+  <header class="tk-mesas-header">
+    <div class="tk-mesas-header-marca">
+      <img src="assets/logomonky.png" alt="">
+      <span>Mesas</span>
+    </div>
+    <button id="tk-mesas-cerrar-sesion" class="tk-mesas-enlace-header" type="button">Cerrar sesión</button>
+  </header>
+
+  <main class="tk-mesas-main">
+
+    <!-- VISTA 1: catálogo de mesas (Fase 5.1) con su estado -->
+    <section id="tk-mesas-vista-lista">
+      <p class="tk-mesas-seccion-titulo">Mesas</p>
+      <!-- La lista de mesas es fija — se agregan/renombran/borran desde el
+           panel de Flet (sección "Mesas"), no aquí. mesas.js pinta cada una
+           como "Disponible" u "Ocupada · $total" según si tiene una venta
+           abierta ahorita mismo. -->
+      <div id="tk-mesas-lista" class="tk-mesas-lista"></div>
+    </section>
+
+    <!-- VISTA 2: orden en curso de una mesa -->
+    <section id="tk-mesas-vista-orden" hidden>
+      <div class="tk-mesas-orden-encabezado">
+        <button id="tk-mesas-volver" class="tk-mesas-enlace-header" type="button">‹ Todas las mesas</button>
+        <button id="tk-mesas-cancelar-mesa" class="tk-mesas-enlace-peligro" type="button">Cancelar mesa</button>
+      </div>
+
+      <h2 id="tk-mesas-orden-titulo" class="tk-mesas-orden-titulo">Mesa</h2>
+
+      <div id="tk-mesas-orden-items" class="tk-mesas-orden-items"></div>
+
+      <button id="tk-mesas-agregar-producto" class="tk-mesas-boton-secundario" type="button">+ Agregar producto</button>
+
+      <div class="tk-mesas-orden-pie">
+        <div class="tk-mesas-orden-total-fila">
+          <span>Total</span>
+          <span id="tk-mesas-orden-total">$0</span>
+        </div>
+        <button id="tk-mesas-cerrar-venta" class="tk-mesas-boton-primario" type="button">Cerrar venta</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ==========================================
+     MODAL: selector de platillos (agregar producto a la orden)
+     ========================================== -->
+<div id="tk-mesas-selector" class="tk-mesas-selector" hidden>
+  <div id="tk-mesas-selector-overlay" class="tk-mesas-selector-overlay"></div>
+  <div class="tk-mesas-selector-caja">
+    <div class="tk-mesas-selector-encabezado">
+      <input type="text" id="tk-mesas-selector-buscar" class="tk-mesas-campo" placeholder="Buscar en el menú...">
+      <button id="tk-mesas-selector-cerrar" class="tk-mesas-selector-cerrar-boton" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="tk-mesas-selector-lista" class="tk-mesas-selector-lista"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="mesas.js"></script>
+</body>
+</html>

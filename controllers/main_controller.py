@@ -2,6 +2,7 @@ import flet as ft
 import asyncio
 from views.home_view import HomeView
 from views.menu_view import MenuView
+from views.mesas_view import MesasView
 from views.agenteIA_view import AgenteIAView
 from views.contenido_view import ContenidoView
 from views.ajustes_view import AjustesView
@@ -116,6 +117,8 @@ class MainController:
             vista_actual_widget = HomeView(self)
         elif vista == "menu":
             vista_actual_widget = MenuView(self, abrir_dialogo_nuevo=abrir_dialogo_nuevo)
+        elif vista == "mesas":
+            vista_actual_widget = MesasView(self)
         elif vista == "agente_financiero":
             vista_actual_widget = AgenteIAView(self)
         elif vista == "contenido":
