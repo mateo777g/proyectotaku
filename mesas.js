@@ -3,10 +3,11 @@
 // Solo lo usa mesas.html. Es una herramienta de STAFF, no una página
 // pública: por eso este archivo NO comparte nada con catalogo.js (ni
 // el cliente de Supabase, ni el caché, ni iniciarNavbar()) — necesita
-// sesión real y persistida, justo lo que catalogo.js desactiva a
-// propósito (ver la nota de persistSession:false ahí). El patrón de
-// referencia es EJEMPLOS/lilshop.html (login con Supabase Auth +
-// CRUD directo desde el navegador), no las páginas del menú público.
+// un login de verdad, que es justo lo que catalogo.js no tiene. El
+// patrón de referencia es EJEMPLOS/lilshop.html (login con Supabase
+// Auth + CRUD directo desde el navegador), no las páginas del menú
+// público. Ojo: la sesión NO se persiste (ver persistSession abajo) y
+// el login pasa por el candado de licencia (ver licenciaActiva()).
 // ================================================================
 
 const SUPABASE_URL = "https://yiafxeibhqyghrkwvmju.supabase.co";
@@ -16,14 +17,27 @@ const SUPABASE_ANON_KEY =
 // sí sola no puede leer ni escribir NADA en ventas/venta_items (esas
 // tablas no tienen ninguna política para el rol anon). El acceso de
 // verdad lo da la sesión de Supabase Auth que se abre abajo.
-const ADMIN_EMAIL = "matthewsantreys13@gmail.com";
+const ADMIN_EMAIL = "takumonky5@gmail.com";
 
 const { createClient } = supabase;
-// A diferencia de catalogo.js, AQUÍ SÍ se necesita sesión persistida
-// (el mesero no debería tener que loguearse cada vez que recarga) —
-// por eso se usan las opciones por defecto de createClient en vez de
-// desactivar auth como hace el menú público.
-const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// SIN sesión persistida (decisión del 2026-09-05, ANTES era al revés): la
+// sesión vive solo en la memoria de la pestaña, así que abrir o recargar
+// mesas.html SIEMPRE pide contraseña. Es a propósito — es una herramienta
+// interna y no debe quedarse abierta sola en el celular de nadie. De paso,
+// este cambio invalida las sesiones que ya estaban guardadas en los
+// navegadores de todos, sin tener que tocar cada aparato.
+//
+// autoRefreshToken se queda PRENDIDO (o sea, solo se apaga persistSession):
+// el access_token dura 3600s, y sin renovación una pestaña abierta toda la
+// jornada empezaría a fallar sola a la hora. Lo que se quiere es que no
+// SOBREVIVA a una recarga, no que se caiga estando abierta.
+//
+// Ojo, NO es el mismo caso que catalogo.js: ahí se desactiva auth entera por
+// el problema de Tracking Prevention con localStorage (ver ese archivo).
+// Aquí sí hay login de verdad; simplemente no se guarda en disco.
+const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: false },
+});
 
 // ----------------------------------------------------------------
 // Utilidades — mismas que ya usa catalogo.js, copiadas aquí a
@@ -80,9 +94,14 @@ const textoBotonEntrar = document.getElementById("tk-mesas-boton-entrar-texto");
 
 window.addEventListener("load", async () => {
   const { data: { session } } = await _supabase.auth.getSession();
-  if (session) {
+  // Hoy esto SIEMPRE es null (persistSession: false, ver arriba), así que
+  // en la práctica siempre cae en el else. El candado va aquí de todos
+  // modos: si algún día se volviera a persistir la sesión, este camino no
+  // puede ser una puerta trasera que se salte la licencia.
+  if (session && (await licenciaActiva()) === true) {
     mostrarApp();
   } else {
+    if (session) await cerrarSesionSilenciosa();
     elLogin.hidden = false;
   }
 });
@@ -99,16 +118,66 @@ formLogin.addEventListener("submit", async (e) => {
   });
 
   if (error) {
-    zonaErrorLogin.textContent = "Contraseña incorrecta. Intenta de nuevo.";
-    zonaErrorLogin.hidden = false;
-    botonEntrar.disabled = false;
-    textoBotonEntrar.textContent = "Entrar";
+    rechazarLogin("Contraseña incorrecta. Intenta de nuevo.");
+    return;
+  }
+
+  // EL CANDADO DE LICENCIA. Va DESPUÉS del login a fuerza: leer
+  // configuracion_negocio necesita sesión (anon no tiene ninguna política
+  // sobre esa tabla), así que primero se autentica y luego se pregunta.
+  const licencia = await licenciaActiva();
+  if (licencia !== true) {
+    await cerrarSesionSilenciosa();
+    rechazarLogin(
+      licencia === false
+        ? "Este sistema está desactivado. Comunícate con el proveedor del software para reactivarlo."
+        : "No se pudo verificar la licencia. Revisa tu internet e intenta de nuevo."
+    );
     return;
   }
 
   campoPassword.value = "";
   mostrarApp();
 });
+
+function rechazarLogin(mensaje) {
+  zonaErrorLogin.textContent = mensaje;
+  zonaErrorLogin.hidden = false;
+  botonEntrar.disabled = false;
+  textoBotonEntrar.textContent = "Entrar";
+}
+
+// Devuelve true (puede entrar), false (licencia apagada) o null (no se
+// pudo averiguar). Quien llama trata `null` igual que `false`: si dejara
+// pasar ante un error, saltarse el candado sería tan fácil como tumbar
+// esta consulta. Y no le quita nada al cliente legítimo — si Supabase no
+// contesta, esta página no sirve de todos modos.
+async function licenciaActiva() {
+  const { data, error } = await _supabase
+    .from("configuracion_negocio")
+    .select("activo")
+    .limit(1);
+
+  if (error) {
+    console.error("[licencia] no se pudo leer configuracion_negocio:", error);
+    return null;
+  }
+  // Sin filas = o la tabla está vacía, o RLS no deja leerla. Ninguna de las
+  // dos es "sí, adelante".
+  if (!data || data.length === 0) {
+    console.error("[licencia] configuracion_negocio no devolvió ninguna fila.");
+    return null;
+  }
+  return data[0].activo === true;
+}
+
+async function cerrarSesionSilenciosa() {
+  try {
+    await _supabase.auth.signOut();
+  } catch (e) {
+    console.error("[licencia] signOut tras el rechazo falló, se ignora:", e);
+  }
+}
 
 function mostrarApp() {
   elLogin.hidden = true;

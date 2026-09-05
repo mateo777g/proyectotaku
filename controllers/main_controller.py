@@ -10,7 +10,6 @@ from views.biblioteca_view import BibliotecaView
 from views.components.sidebar import Sidebar
 from views.sesion_view import SesionView
 from models.supabase_client import client
-from models import sesion
 
 class MainController:
     def __init__(self, page: ft.Page):
@@ -27,14 +26,18 @@ class MainController:
         self.content_container = None
         self.layout_principal = None
 
-        # Arranca en el login o directo en el panel según haya (o no) una
-        # sesión válida guardada en disco. OJO: la pantalla de login NO pasa
-        # por cambiar_vista() — ocupa toda la ventana, sin Sidebar, así que
-        # se decide aquí, antes de armar layout_principal (Fase 2.0).
-        if sesion.restaurar(client):
-            self.mostrar_panel()
-        else:
-            self.mostrar_login()
+        # SIEMPRE arranca en el login. La sesión NO se guarda en disco
+        # (2026-09-05: se borró models/sesion.py y aquí se llamaba a
+        # sesion.restaurar()), así que abrir la app siempre pide contraseña.
+        # Es una decisión de NEGOCIO, no de seguridad — ver el bloque
+        # "POR QUÉ EL LOGIN NO SE GUARDA" del roadmap: con la sesión viva,
+        # cortarle la licencia a un local no surtía efecto hasta que
+        # venciera su refresh_token; sin ella, el corte pega en el
+        # siguiente arranque. Mismo criterio que mesas.js (persistSession:
+        # false). OJO: la pantalla de login NO pasa por cambiar_vista() —
+        # ocupa toda la ventana, sin Sidebar, así que se decide aquí, antes
+        # de armar layout_principal (Fase 2.0).
+        self.mostrar_login()
 
         self.page.window.maximized = True
         self.page.update()
@@ -94,12 +97,15 @@ class MainController:
 
     def cerrar_sesion(self):
         """Cierra sesión y regresa al login. Se llama desde ajustes_view.py
-        (Fase 7) — no hay botón para esto todavía en ningún lado."""
-        sesion.borrar()
+        (Fase 7) — no hay botón para esto todavía en ningún lado.
+
+        Ya no borra nada de disco (antes llamaba a sesion.borrar()): desde
+        2026-09-05 la sesión solo vive en memoria, así que basta con el
+        sign_out y volver al login."""
         try:
             client.auth.sign_out()
         except Exception as e:
-            print(f"[sesion] sign_out falló, se ignora (ya se borró la sesión local): {e}")
+            print(f"[sesion] sign_out falló, se ignora (la sesión local ya no sirve): {e}")
         self.mostrar_login()
 
     def cambiar_vista(self, vista: str, abrir_dialogo_nuevo: bool = False):

@@ -13,7 +13,7 @@ import flet as ft
 import httpx
 from supabase_auth.errors import AuthApiError
 
-from models import sesion
+from models.configuracion_negocio_dao import ConfiguracionNegocioDAO
 from models.supabase_client import SUPABASE_ADMIN_EMAIL, client
 
 # Ancho útil dentro de la tarjeta (420 de ancho total, 36px de padding a
@@ -185,7 +185,20 @@ class SesionView(ft.Container):
                 self._set_cargando(False)
                 return
 
-            sesion.guardar(respuesta.session)
+            # NO se guarda nada en disco (2026-09-05, antes aquí iba
+            # sesion.guardar()): la sesión vive solo en la memoria del
+            # cliente de Supabase y muere al cerrar la app, así que el panel
+            # pide contraseña en CADA arranque. Ver el bloque "POR QUÉ EL
+            # LOGIN NO SE GUARDA" del roadmap — es una decisión de negocio,
+            # no de seguridad: es lo que hace que cortarle la licencia a un
+            # local surta efecto de inmediato.
+
+            # EL CANDADO DE LICENCIA. Va aquí, DESPUÉS del login y ANTES de
+            # mostrar_panel(): leer configuracion_negocio necesita sesión
+            # (anon no tiene ninguna política sobre esa tabla), así que
+            # autenticar primero es obligado, no un descuido.
+            if not await self._licencia_ok():
+                return
             self.router.mostrar_panel()
             return  # la vista ya se reemplazó; no tocar más sus controles
         except AuthApiError as e:
@@ -201,6 +214,56 @@ class SesionView(ft.Container):
             self._mostrar_error("Algo salió mal al iniciar sesión. Intenta de nuevo.")
 
         self._set_cargando(False)
+
+    async def _licencia_ok(self) -> bool:
+        """Revisa el interruptor de licencia del negocio (configuracion_
+        negocio.activo). Si no está activo —o si no se pudo averiguar—
+        cierra la sesión recién abierta y deja al usuario en el login.
+
+        POR QUÉ EXISTE: este software se renta por semestre. Cuando se
+        acaba el pago, la idea es justamente esta: que ya no puedan entrar
+        ni al panel ni a mesas.html, y solo les quede la página pública del
+        menú, que sola no les sirve. Ver el bloque "POR QUÉ EL LOGIN NO SE
+        GUARDA" del roadmap.
+
+        SI NO SE PUDO AVERIGUAR, NO DEJA PASAR. No es paranoia: si dejara
+        pasar ante un error, saltarse el candado sería tan fácil como
+        tumbar esa consulta. Y no le quita nada al cliente legítimo — si
+        Supabase no contesta, el panel no sirve igual, porque el menú, las
+        ventas y las mesas viven ahí.
+        """
+        try:
+            activa = await asyncio.to_thread(ConfiguracionNegocioDAO.licencia_activa)
+        except Exception as e:
+            print(f"[licencia] no se pudo verificar la licencia: {e}")
+            await self._cerrar_sesion_silenciosa()
+            self._mostrar_error(
+                "No se pudo verificar la licencia. Revisa tu internet e "
+                "intenta de nuevo."
+            )
+            self._set_cargando(False)
+            return False
+
+        if not activa:
+            print("[licencia] activo = False: se bloquea la entrada al panel.")
+            await self._cerrar_sesion_silenciosa()
+            self._mostrar_error(
+                "Este sistema está desactivado. Comunícate con el proveedor "
+                "del software para reactivarlo."
+            )
+            self._set_cargando(False)
+            return False
+
+        return True
+
+    async def _cerrar_sesion_silenciosa(self):
+        """Tira la sesión que se acaba de abrir, para que no quede viva en
+        `client.auth` después de un rechazo. Si el sign_out falla da igual:
+        la sesión no se guarda en ningún lado y muere al cerrar la app."""
+        try:
+            await asyncio.to_thread(client.auth.sign_out)
+        except Exception as e:
+            print(f"[licencia] sign_out tras el rechazo falló, se ignora: {e}")
 
     def _mostrar_error(self, mensaje: str):
         self.texto_error.value = mensaje

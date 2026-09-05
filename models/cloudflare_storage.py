@@ -353,8 +353,10 @@ def eliminar_imagen(image_url: Optional[str]) -> None:
 
 # ----------------------------------------------------------------------
 # Registro de huérfanos — ver el bloque HUÉRFANOS en el docstring del
-# módulo. Mismo lugar que models/sesion.py (fuera del repo, en la carpeta
-# del usuario) — nunca dentro del proyecto.
+# módulo. Fuera del repo, en la carpeta del usuario (%LOCALAPPDATA%\TakuMonky)
+# — nunca dentro del proyecto. Desde que se borró models/sesion.py (2026-09-05)
+# este es el ÚNICO archivo que vive ahí, y _ruta_huerfanos() crea la carpeta
+# sola, así que no importa que no exista todavía.
 # ----------------------------------------------------------------------
 def _ruta_huerfanos() -> Path:
     base = os.getenv("LOCALAPPDATA") or str(Path.home())

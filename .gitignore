@@ -17,3 +17,8 @@ sesion.json
 
 # Archivos temporales de Claude Code (traen permisos locales, no van al repo).
 .claude/settings.local.json*
+
+# Credenciales de MIS clientes para panel_licencias/. Su sitio correcto es
+# %LOCALAPPDATA%\PanelLicencias\clientes.json (fuera del repo, que es publico);
+# esto es por si alguna vez queda una copia dentro de la carpeta.
+clientes.json
