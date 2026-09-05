@@ -1,7 +1,22 @@
 """
 views/sesion_view.py
-Pantalla de login del panel (Fase 2.0). Ocupa toda la ventana, sin Sidebar
-— NO pasa por router.cambiar_vista(), la mete directo MainController.mostrar_login().
+Pantalla de login del panel (Fase 2.0; rediseño de layout 2026-09-05, a
+pedido del dueño del código — referencia visual: una plantilla de login de
+dos columnas). Ocupa toda la ventana, sin Sidebar — NO pasa por
+router.cambiar_vista(), la mete directo MainController.mostrar_login().
+
+LAYOUT DE DOS COLUMNAS:
+  · Izquierda: una sección de marca/bienvenida, fondo oscuro con los MISMOS
+    tokens que ya usa views/components/sidebar.py (#0d0905 de fondo, #f4ca83
+    dorado, #999288 texto muted, #18120b/#2c2013 para las tarjetas) — no se
+    inventó paleta nueva, se reusó la que ya existe para "superficie oscura"
+    en este mismo proyecto. Incluye estadísticas reales del menú
+    (PlatilloDAO.obtener_estadisticas(), mismo dato que la tarjeta
+    "PRODUCTOS EN VENTA" de home_view.py), legibles sin sesión porque esa
+    consulta solo cuenta visible=true, que es justo lo que anon puede leer.
+  · Derecha: el formulario de acceso de siempre. El rediseño es puramente
+    visual — sign_in_with_password, el candado de licencia y los mensajes
+    de error NO se tocaron.
 
 Sin sesión iniciada el panel no tiene permisos para leer ni escribir en
 platillos (las políticas RLS están amarradas al UID del admin), así que esta
@@ -14,25 +29,35 @@ import httpx
 from supabase_auth.errors import AuthApiError
 
 from models.configuracion_negocio_dao import ConfiguracionNegocioDAO
+from models.platillo_dao import PlatilloDAO
 from models.supabase_client import SUPABASE_ADMIN_EMAIL, client
 
-# Ancho útil dentro de la tarjeta (420 de ancho total, 36px de padding a
-# cada lado) — todos los campos y el botón lo comparten para verse alineados.
-_ANCHO_CAMPO = 420 - 36 - 36
+# Ancho de los campos, el botón y el bloque de texto/stats del lado
+# izquierdo — antes salía de "420 de tarjeta - 36 de padding a cada lado";
+# ya no hay una tarjeta con borde que centrar, así que ahora es directo.
+_ANCHO_CAMPO = 380
+_ANCHO_PANEL_TEXTO = 440
 
 
 class SesionView(ft.Container):
     def __init__(self, router):
         super().__init__()
         self.router = router
-        # Sin height=float("inf") a propósito: a diferencia de las demás
-        # vistas (dentro de un Row/Column ya expandido), esta pantalla se
-        # agrega directo a la page y necesita una altura real resuelta para
-        # que alignment centre la tarjeta de verdad.
+        # expand + height=inf: mismo patrón que layout_principal en
+        # main_controller.py (Sidebar + content_container) — un Row de dos
+        # columnas a todo lo alto de la ventana. Antes esta pantalla dejaba
+        # height sin poner a propósito, porque necesitaba alignment para
+        # centrar UNA tarjeta; ya no hay una sola tarjeta que centrar, hay
+        # dos columnas que deben llenar la ventana completa.
         self.expand = True
+        self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.alignment = ft.Alignment(0, 0)
 
+        # ------------------------------------------------------------
+        # Controles del formulario (columna derecha) — sin cambios de
+        # lógica respecto a la versión anterior, solo cambia dónde viven
+        # dentro del árbol de controles.
+        # ------------------------------------------------------------
         self.campo_correo = ft.TextField(
             value=SUPABASE_ADMIN_EMAIL,
             hint_text="Tu correo",
@@ -87,7 +112,7 @@ class SesionView(ft.Container):
         # Contenido normal del botón; se guarda aparte para poder volver a
         # ponerlo cuando termina de validar (ver _set_cargando).
         self._contenido_boton = ft.Text(
-            "Entrar", color="#ffffff", weight="bold", size=16
+            "Entrar al panel", color="#ffffff", weight="bold", size=16
         )
         self.boton_entrar = ft.Container(
             content=self._contenido_boton,
@@ -100,53 +125,29 @@ class SesionView(ft.Container):
             on_click=self._on_entrar_click,
         )
 
-        tarjeta = ft.Container(
-            width=420,
-            bgcolor="#f8f1de",
-            border=ft.border.all(1, "#eadfca"),
-            border_radius=16,
-            padding=ft.padding.symmetric(horizontal=36, vertical=40),
-            shadow=ft.BoxShadow(
-                blur_radius=12,
-                color=ft.Colors.with_opacity(0.28, ft.Colors.BLACK),
-                offset=ft.Offset(0, 4),
-            ),
+        formulario = ft.Container(
+            width=_ANCHO_CAMPO,
             content=ft.Column(
                 # tight=True: por default un Column reclama TODO el alto
-                # disponible (así estira a `tarjeta` con él); con tight=True
-                # usa solo el mínimo que pide su contenido, que es lo que
-                # necesita una tarjeta que se va a centrar en la pantalla.
+                # disponible; con tight=True usa solo el mínimo que pide su
+                # contenido, que es lo que necesita un bloque que se va a
+                # centrar verticalmente en la mitad derecha de la pantalla.
                 tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
                 spacing=0,
                 controls=[
-                    ft.CircleAvatar(
-                        foreground_image_src="assets/logomonky.png",
-                        radius=34,
-                        bgcolor=ft.Colors.TRANSPARENT,
-                    ),
-                    ft.Container(height=18),
                     ft.Text(
-                        "PANEL DEL DUEÑO",
-                        size=11,
-                        weight="bold",
-                        color="#b58a6d",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        "Taku monky",
-                        size=40,
+                        "Inicia sesión",
+                        size=32,
                         font_family="Georgia",
                         italic=True,
                         color="#18120d",
-                        text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=6),
                     ft.Text(
-                        "Inicia sesión para administrar tu menú.",
+                        "Ingresa tus datos para administrar tu menú.",
                         size=13,
                         color="#7c7267",
-                        text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=28),
                     self.campo_correo,
@@ -159,7 +160,160 @@ class SesionView(ft.Container):
             ),
         )
 
-        self.content = tarjeta
+        panel_derecho = ft.Container(
+            expand=True,
+            height=float("inf"),
+            bgcolor="#fbf5e9",
+            alignment=ft.Alignment(0, 0),
+            content=formulario,
+        )
+
+        # ------------------------------------------------------------
+        # Columna izquierda — sección de marca/bienvenida. Los números de
+        # las tarjetas de abajo arrancan en "–" y _cargar_estadisticas() (al
+        # final de este __init__) los reemplaza cuando responde Supabase;
+        # si esa consulta falla, se quedan en "–" — no es motivo para
+        # bloquear ni ensuciar el login con un error (ver el método).
+        # ------------------------------------------------------------
+        self.texto_stat_platillos = ft.Text(
+            "–", size=30, weight="bold", color="#f4ca83"
+        )
+        self.texto_stat_categorias = ft.Text(
+            "–", size=30, weight="bold", color="#f4ca83"
+        )
+
+        def _tarjeta_stat(control_numero: ft.Text, etiqueta: str) -> ft.Container:
+            # Mismos tokens que la tarjeta de ayuda de sidebar.py
+            # (#18120b/#2c2013): es la "tarjeta sobre fondo oscuro" que ya
+            # existe en este proyecto, reusada tal cual en vez de inventar
+            # una nueva.
+            return ft.Container(
+                expand=True,
+                bgcolor="#18120b",
+                border=ft.border.all(1, "#2c2013"),
+                border_radius=16,
+                padding=ft.padding.symmetric(horizontal=18, vertical=16),
+                content=ft.Column(
+                    spacing=2,
+                    controls=[
+                        control_numero,
+                        ft.Text(etiqueta, size=12, color="#999288"),
+                    ],
+                ),
+            )
+
+        panel_izquierdo = ft.Container(
+            expand=True,
+            height=float("inf"),
+            bgcolor="#0d0905",
+            padding=ft.padding.symmetric(horizontal=56, vertical=48),
+            content=ft.Column(
+                expand=True,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                controls=[
+                    # Lockup de marca — mismo patrón que la parte de arriba
+                    # de sidebar.py (logo + nombre + eyebrow).
+                    ft.Row(
+                        controls=[
+                            ft.CircleAvatar(
+                                foreground_image_src="assets/logomonky.png",
+                                radius=26,
+                                bgcolor=ft.Colors.TRANSPARENT,
+                            ),
+                            ft.Column(
+                                spacing=1,
+                                controls=[
+                                    ft.Text(
+                                        "Taku monky",
+                                        color=ft.Colors.WHITE,
+                                        weight="bold",
+                                        size=19,
+                                        font_family="Georgia",
+                                        italic=True,
+                                    ),
+                                    ft.Text(
+                                        "PANEL DEL DUEÑO",
+                                        color="#f4ca83",
+                                        size=10,
+                                        weight="bold",
+                                    ),
+                                ],
+                            ),
+                        ],
+                        spacing=14,
+                    ),
+                    # Mensaje de bienvenida
+                    ft.Container(
+                        width=_ANCHO_PANEL_TEXTO,
+                        content=ft.Column(
+                            spacing=14,
+                            horizontal_alignment=ft.CrossAxisAlignment.START,
+                            controls=[
+                                ft.Text(
+                                    "Bienvenido\nde vuelta",
+                                    size=44,
+                                    font_family="Georgia",
+                                    italic=True,
+                                    color=ft.Colors.WHITE,
+                                ),
+                                ft.Text(
+                                    "Administra tu menú, tus ventas y tus "
+                                    "mesas desde un solo lugar.",
+                                    size=14,
+                                    color="#999288",
+                                ),
+                            ],
+                        ),
+                    ),
+                    # Estadísticas reales del menú
+                    ft.Container(
+                        width=_ANCHO_PANEL_TEXTO,
+                        content=ft.Row(
+                            spacing=16,
+                            controls=[
+                                _tarjeta_stat(
+                                    self.texto_stat_platillos, "platillos en tu menú"
+                                ),
+                                _tarjeta_stat(
+                                    self.texto_stat_categorias, "categorías activas"
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        )
+
+        self.content = ft.Row(
+            expand=True,
+            height=float("inf"),
+            spacing=0,
+            controls=[panel_izquierdo, panel_derecho],
+        )
+
+        # Estadísticas del panel izquierdo: se piden aparte del login (no
+        # requieren sesión, PlatilloDAO.obtener_estadisticas() solo cuenta
+        # visible=true) — mismo patrón que home_view.py, que llama a sus
+        # cargas async al final de __init__ vía page.run_task().
+        self.router.page.run_task(self._cargar_estadisticas)
+
+    async def _cargar_estadisticas(self):
+        """Llena los dos números de la columna izquierda con datos reales
+        del menú. Es un detalle de "bienvenida", no parte del flujo de
+        login: si falla (sin internet, Supabase caído, etc.) los números se
+        quedan en "–" y no se le muestra ningún error al usuario — el login
+        en sí no depende de esto para nada."""
+        try:
+            stats = await asyncio.to_thread(PlatilloDAO.obtener_estadisticas)
+        except Exception as e:
+            print(f"[login] no se pudieron cargar las estadísticas del menú: {e}")
+            return
+
+        self.texto_stat_platillos.value = str(stats["total"])
+        self.texto_stat_categorias.value = str(stats["categorias_en_uso"])
+        self.texto_stat_platillos.update()
+        self.texto_stat_categorias.update()
 
     def _on_entrar_click(self, e):
         self.router.page.run_task(self._iniciar_sesion)
