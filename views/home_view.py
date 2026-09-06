@@ -4,6 +4,7 @@ import datetime
 import flet as ft
 import httpx
 
+from models.tiempo import saludo_por_hora
 from models.platillo_dao import PlatilloDAO
 
 
@@ -20,22 +21,6 @@ def _texto_categorias(cantidad: int) -> str:
     if cantidad == 1:
         return "1 categoría"
     return f"{cantidad} categorías"
-
-
-def _saludo_por_hora(hora: int) -> str:
-    """'Buenos días' / 'Buenas tardes' / 'Buenas noches' según la hora local
-    de la máquina. Antes el saludo era el texto fijo "Buenos días", así que
-    a las 8 de la noche el panel seguía dando los buenos días.
-
-    Cortes de uso común en México: mañana hasta las 12, tarde hasta las 19,
-    noche de ahí en adelante. Recibe la hora como parámetro (en vez de
-    llamar a datetime.now() aquí adentro) para que se pueda probar sin
-    depender del reloj real."""
-    if hora < 12:
-        return "Buenos días"
-    if hora < 19:
-        return "Buenas tardes"
-    return "Buenas noches"
 
 
 def _analizar_fecha(valor):
@@ -103,7 +88,7 @@ class HomeView(ft.Container):
         hoy = datetime.datetime.now()
         fecha_texto = f"{dias[hoy.weekday()]}, {hoy.day} DE {meses[hoy.month - 1]}"
         dia_actual = dias[hoy.weekday()].capitalize()
-        saludo = _saludo_por_hora(hoy.hour)
+        saludo = saludo_por_hora(hoy.hour)
 
         # Fase 2.7: los "cuerpos" de las 2 tarjetas que sí dependen del menú
         # se crean ANTES de armar self.content (van referenciados adentro) y

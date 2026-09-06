@@ -35,6 +35,8 @@ saltarse una venta entera al sumar a mano contra la base real.
 """
 import datetime
 import os
+import random
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -42,6 +44,7 @@ from openai import OpenAI
 
 from models.mesa_dao import MesaDAO
 from models.platillo_dao import PlatilloDAO
+from models.tiempo import momento_del_dia, saludo_por_hora
 from models.venta_dao import VentaDAO
 
 # .env vive en la raíz del repo, un nivel arriba de esta carpeta — mismo
@@ -257,10 +260,10 @@ def _agrupar_por_producto(ventas: list[dict]) -> list[tuple]:
 def _bloque_desglose(titulo: str, seleccion: list[dict], nombres_mesa: dict) -> list[str]:
     """El desglose por mesa y por producto de UN periodo.
 
-    Hay uno por periodo (hoy, ayer, la semana, el histórico) y no uno solo
-    histórico, porque la pregunta natural del dueño es "¿cómo me fue HOY por
-    mesa?" — si el único desglose fuera el histórico, el modelo tendría que
-    volver a filtrar y sumar a mano, que es exactamente lo que este archivo
+    Hay uno por periodo (hoy, ayer, la semana, el mes, el histórico) y no
+    uno solo histórico, porque la pregunta natural del dueño es "¿cómo me fue
+    HOY por mesa?" — si el único desglose fuera el histórico, el modelo tendría
+    que volver a filtrar y sumar a mano, que es exactamente lo que este archivo
     existe para evitar.
     """
     if not seleccion:
@@ -283,6 +286,31 @@ def _bloque_desglose(titulo: str, seleccion: list[dict], nombres_mesa: dict) -> 
                 f"  - {etiqueta}: {_plural(unidades, 'unidad', 'unidades')} — "
                 f"{_dinero(importe)}"
             )
+        # El renglón de totales de la lista de productos, sumado aquí y no
+        # allá. Entró el 2026-09-06 después de VER al modelo equivocarse con
+        # los datos reales: pedirle el reporte semanal por producto le salió
+        # con "Total 21 unidades" donde eran 25 (1+2+2+10+4+1+1+4). El
+        # dinero sí lo tenía bien, o sea que ni siquiera falla parejo — falla
+        # en la columna que a nadie se le ocurre revisar. Es el mismo fallo
+        # que ya documenta el docstring de _resumen_calculado, solo que
+        # sumando una columna en vez de una lista de ventas, y se arregla
+        # igual: dándoselo hecho.
+        #
+        # El total de dinero se saca de los propios productos y NO se copia
+        # del bloque POR PERIODO. Normalmente dan lo mismo, pero POR PERIODO
+        # suma ventas.total, que lo escribe mesas.js por su cuenta (ver la
+        # Fase 5 en CLAUDE.md), mientras que esto suma los renglones de la
+        # tabla que el dueño está viendo. Si algún día se separaran, más vale
+        # que el total al pie de una tabla cuadre con la tabla.
+        unidades_total = sum(u for _, _, u, _ in productos)
+        importe_total = sum(i for _, _, _, i in productos)
+        lineas.append(
+            f"  TOTAL POR PRODUCTO de este periodo (ya sumado, cópialo tal "
+            f"cual y NO vuelvas a sumar la columna): "
+            f"{_plural(len(productos), 'producto distinto', 'productos distintos')}, "
+            f"{_plural(unidades_total, 'unidad vendida', 'unidades vendidas')} — "
+            f"{_dinero(importe_total)}"
+        )
     return lineas
 
 
@@ -411,12 +439,117 @@ def _resumen_calculado(ventas: list[dict], mesas: list[dict], ahora) -> str:
         (f"DESGLOSE DE HOY ({_DIAS[hoy.weekday()]} {hoy.isoformat()})", sel_hoy),
         (f"DESGLOSE DE AYER ({_DIAS[ayer.weekday()]} {ayer.isoformat()})", sel_ayer),
         (f"DESGLOSE DE ESTA SEMANA (desde el lunes {lunes.isoformat()})", sel_semana),
+        # El del MES entró el 2026-09-06 con los atajos de "Ideas para ti" de
+        # agenteIA_view.py: uno de los tres pide justo el reporte mensual por
+        # producto. Sin este bloque el modelo tendría que sumar el mes a mano
+        # a partir de los días sueltos — que es EXACTAMENTE el fallo por el
+        # que existe toda esta sección (ver el docstring). El periodo mensual
+        # ya venía en POR PERIODO desde el principio; lo que faltaba era su
+        # desglose.
+        (
+            f"DESGLOSE DE ESTE MES ({_MESES[hoy.month - 1]} {hoy.year}, desde el "
+            f"{hoy.replace(day=1).isoformat()})",
+            sel_mes,
+        ),
         ("DESGLOSE HISTÓRICO (todas las ventas cerradas registradas)", cerradas),
     ):
         partes.append("")
         partes.extend(_bloque_desglose(titulo, seleccion, nombres_mesa))
 
     return "\n".join(partes)
+
+
+# ---------------------------------------------------------------------------
+# Saludo de bienvenida de la pantalla del agente
+# ---------------------------------------------------------------------------
+# El saludo de agenteIA_view.py lo escribe el modelo, no está hardcodeado —
+# lo pidió el desarrollador para que cambie en cada visita, como el de
+# Claude. Es la única parte del panel donde el modelo redacta texto libre;
+# todo lo demás que dice sale de datos reales.
+
+# Tonos que se sortean en cada llamada. NO son un adorno: sin esto el modelo
+# se acomoda en una sola fórmula y devuelve prácticamente la misma frase
+# aunque la temperatura esté alta, que es justo lo contrario de lo que se
+# pidió. El tono entra al prompt, no al texto.
+_TONOS_SALUDO = [
+    "cálido y sencillo",
+    "breve y directo, casi telegráfico",
+    "con energía, como quien tiene ganas de ponerse a trabajar",
+    "cercano, de confianza, como un colega que ya lleva rato aquí",
+    "sereno y profesional",
+    "con curiosidad, invitando a revisar cómo va el negocio",
+    "amable y ligero, con un guiño",
+]
+
+# Formas que se sortean junto con el tono. Los tonos solos NO alcanzaron:
+# en una prueba real contra el modelo, ocho llamadas seguidas devolvieron
+# ocho variantes de la MISMA frase ("Ary, es hora de revisar cómo va el
+# negocio"), porque una regla del prompt que sugería aludir a revisar el
+# negocio acabó siendo, de hecho, la única forma posible. El tono le cambia
+# el color a la frase; la forma le cambia la estructura, que es lo que de
+# verdad se nota.
+_FORMAS_SALUDO = [
+    "un saludo por la hora del día seguido de su nombre",
+    "una pregunta corta dirigida a Ary",
+    "una bienvenida breve, sin pregunta y sin saludo por hora",
+    "una frase que muestre que estás listo para ponerte a trabajar",
+    "un saludo que aluda al momento del día sin nombrarlo directamente",
+    "una frase de reencuentro, como quien saluda al ver llegar a alguien",
+    "una invitación a revisar cómo va el negocio, sin decir ninguna cifra",
+]
+
+# Tope de largo. Es una línea de Georgia a 40 px en una pantalla de 720:
+# más largo que esto se parte en dos renglones y descuadra el bloque.
+_MAX_LARGO_SALUDO = 60
+
+# Palabras que le asignarían un género a Ary. El prompt ya pide redactar
+# neutro y ayuda, pero NO alcanza: midiéndolo contra el modelo real, 1 de
+# cada 8 saludos se colaba igual con un "¿listo para...?". Como no sabemos
+# el género de la persona que usa el panel, el saludo que traiga una de
+# estas se descarta y entra saludo_de_respaldo(), que siempre es neutro —
+# perder uno de cada ocho saludos generados no le cuesta nada a nadie,
+# tratar a alguien de "bienvenido" cuando no lo es, sí.
+_MARCA_GENERO = re.compile(
+    r"\b(bienvenid|list|prepar|cansad|content|ocupad|atent|segur)[oa]s?\b",
+    re.IGNORECASE,
+)
+
+
+def saludo_de_respaldo(nombre: str = "Ary", hora: int | None = None) -> str:
+    """El saludo cuando el modelo no está disponible (sin OPENAI_API_KEY,
+    sin internet, o si devolvió algo inservible).
+
+    No es un mensaje de error ni se ve como tal: el saludo es decorativo,
+    así que si falla la llamada el dueño ve una frase normal y nunca se
+    entera. Los avisos rojos se reservan para cuando algo que sí importa
+    falla (ver _burbuja_error en la vista)."""
+    if hora is None:
+        hora = datetime.datetime.now().hour
+    saludo = saludo_por_hora(hora)
+    return random.choice([
+        f"{saludo}, {nombre}.",
+        f"{saludo}, {nombre}. ¿Qué revisamos?",
+        f"Qué gusto verte, {nombre}.",
+        f"Aquí andamos, {nombre}.",
+        f"¿Cómo va el negocio, {nombre}?",
+        f"Cuando tú digas, {nombre}.",
+    ])
+
+
+def _limpiar_saludo(texto: str) -> str:
+    """Deja utilizable lo que devolvió el modelo, o cadena vacía si no sirve.
+
+    Quita comillas (las mete a veces aunque se le pida que no), se queda con
+    el primer renglón y descarta lo que no quepa en una línea. Vacío = el
+    llamador usa saludo_de_respaldo()."""
+    renglones = (texto or "").strip().splitlines()
+    texto = renglones[0].strip() if renglones else ""
+    texto = texto.strip('"').strip("'").strip("«").strip("»").strip()
+    if not texto or len(texto) > _MAX_LARGO_SALUDO:
+        return ""
+    if _MARCA_GENERO.search(texto):
+        return ""
+    return texto
 
 
 class IAController:
@@ -427,6 +560,88 @@ class IAController:
                 "arrancar sin ella."
             )
         self.client = OpenAI(api_key=_OPENAI_API_KEY)
+
+    def saludo(self, nombre: str = "Ary") -> str:
+        """Una línea de bienvenida para la pantalla del agente, escrita por
+        el modelo. Bloqueante, igual que preguntar() — la vista la manda a
+        asyncio.to_thread().
+
+        Nunca levanta: si la llamada falla o devuelve algo inservible,
+        regresa saludo_de_respaldo(). El saludo es decorativo y el dueño no
+        tiene por qué enterarse de que OpenAI no contestó; los avisos rojos
+        se reservan para lo que sí importa.
+
+        No lee NADA de la base: es un saludo, no un reporte. Meterle las
+        ventas del día costaría 4 consultas y una espera larga cada vez que
+        se abre la pantalla, y de paso tentaría al modelo a soltar cifras
+        sin que nadie se las pidiera — o a inventarlas, que es peor.
+        """
+        ahora = datetime.datetime.now()
+        momento = momento_del_dia(ahora.hour)
+        saludo_hora = saludo_por_hora(ahora.hour)
+
+        system_prompt = (
+            "Escribes UNA sola línea de bienvenida para el panel de "
+            f"administración de una taquería. Quien la lee es {nombre}, "
+            "el dueño del negocio, y acaba de abrir la pantalla de su "
+            "asistente de datos.\n\n"
+            "REGLAS:\n"
+            f"- Una sola línea, máximo {_MAX_LARGO_SALUDO} caracteres. Sin "
+            "saltos de línea.\n"
+            f"- Menciona a {nombre} por su nombre.\n"
+            "- Español de México, natural, ni acartonado ni exagerado.\n"
+            "- Sin comillas, sin emojis, sin markdown, sin firmar.\n"
+            "- No inventes datos del negocio (ventas, platillos, mesas): no "
+            "los tienes. Es un saludo, no un reporte.\n"
+            "- No expliques nada ni ofrezcas una lista de cosas que puedes "
+            "hacer. Solo el saludo.\n"
+            "- NO hables de tacos, comida ni antojos, y no le desees un "
+            "buen día de ventas: esto es la pantalla de trabajo donde "
+            "revisa sus números, no un anuncio del restaurante.\n"
+            "- Evita las fórmulas de porrista (\"¿listo para un gran "
+            "día?\", \"¡a darle con todo!\").\n"
+            "- NADA de palabras que marquen género sobre Ary: ni "
+            "\"bienvenido/bienvenida\" ni \"¿listo/lista?\". Redacta "
+            "neutro (\"qué gusto verte\", \"por aquí de nuevo\", "
+            "\"empezamos\").\n\n"
+            "CONTEXTO DE LA HORA (úsalo solo si te sirve, no es "
+            "obligatorio):\n"
+            f"- Ahora mismo es de {momento}, así que el saludo por hora que "
+            f'corresponde es "{saludo_hora}".\n\n'
+            f"FORMA DE ESTA VEZ: {random.choice(_FORMAS_SALUDO)}.\n"
+            f"TONO DE ESTA VEZ: {random.choice(_TONOS_SALUDO)}.\n"
+            "Respeta esa forma y ese tono: son lo que hace que el saludo "
+            "no salga igual cada vez que el dueño abre la pantalla."
+        )
+
+        # Dos intentos, no uno. Medido contra el modelo real: 4 de cada 12
+        # saludos se descartaban, TODOS por colar un "¿listo para...?" pese a
+        # que el prompt lo prohíbe. Un tercio de respaldos era mucho — con el
+        # reintento baja a la décima parte, y el tope de dos llamadas evita
+        # que un modelo terco deje al dueño esperando.
+        texto = ""
+        for _ in range(2):
+            try:
+                respuesta = self.client.chat.completions.create(
+                    model=_OPENAI_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": "Escribe el saludo."},
+                    ],
+                    # Alta a propósito: el chiste es que no salga lo mismo
+                    # cada vez. Aun así el tono y la forma sorteados hacen
+                    # más por la variedad que este número.
+                    temperature=1.1,
+                    max_tokens=40,
+                )
+                texto = _limpiar_saludo(respuesta.choices[0].message.content)
+            except Exception:
+                # Sin internet o sin cuota: no tiene caso reintentar.
+                break
+            if texto:
+                break
+
+        return texto or saludo_de_respaldo(nombre, ahora.hour)
 
     def preguntar(self, pregunta_usuario: str, historial: list[dict] | None = None) -> str:
         """Bloqueante — llamar siempre desde asyncio.to_thread(), igual que
