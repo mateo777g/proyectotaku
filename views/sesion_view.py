@@ -1,9 +1,10 @@
-"""
+﻿"""
 views/sesion_view.py
-Pantalla de login del panel (Fase 2.0; rediseño de layout 2026-09-05, a
-pedido del dueño del código — referencia visual: una plantilla de login de
-dos columnas). Ocupa toda la ventana, sin Sidebar — NO pasa por
-router.cambiar_vista(), la mete directo MainController.mostrar_login().
+Pantalla de login del panel (Fase 2.0; layout de dos columnas 2026-09-05,
+reajustado el mismo día contra una referencia visual que mandó el dueño del
+código — la primera pasada quedó "parecida pero no igual"). Ocupa toda la
+ventana, sin Sidebar — NO pasa por router.cambiar_vista(), la mete directo
+MainController.mostrar_login().
 
 LAYOUT DE DOS COLUMNAS:
   · Izquierda: una sección de marca/bienvenida, fondo oscuro con los MISMOS
@@ -17,6 +18,26 @@ LAYOUT DE DOS COLUMNAS:
   · Derecha: el formulario de acceso de siempre. El rediseño es puramente
     visual — sign_in_with_password, el candado de licencia y los mensajes
     de error NO se tocaron.
+
+LO QUE CAMBIÓ AL CUADRAR CON LA REFERENCIA (por si alguien la compara otra
+vez y cree que son detalles al azar — todos salieron de medir la imagen
+contra una captura real de la app a 1920x1080, no de gusto propio):
+  · La partición dejó de ser 50/50: el panel oscuro se queda con todo lo que
+    sobre y el formulario tiene ANCHO FIJO (_ANCHO_FORMULARIO). A 1920 eso
+    da ~70/30, que es la proporción de la referencia. Es fijo y no un
+    expand=3 a propósito: con proporciones, en una ventana angosta el panel
+    derecho se encoge por debajo del ancho de los campos y el formulario se
+    corta; así el que se encoge es el panel oscuro, que aguanta.
+  · El eyebrow "PANEL DEL DUEÑO" se bajó: ya no cuelga del logo, ahora
+    encabeza el bloque de bienvenida.
+  · El título lleva el nombre del dueño en dorado ("...de vuelta, Ary."), y
+    por eso se arma con spans en vez de un Text plano — es un solo párrafo
+    con dos colores, no dos controles pegados. "Ary" va escrito duro, igual
+    que el saludo de home_view.py.
+  · Toda la tipografía de esta pantalla subió de tamaño y el bloque de
+    bienvenida se pegó al fondo del panel (antes los tres bloques se
+    repartían el alto parejo con SPACE_BETWEEN entre 3 hijos; ahora son 2 —
+    marca arriba, todo lo demás abajo).
 
 Sin sesión iniciada el panel no tiene permisos para leer ni escribir en
 platillos (las políticas RLS están amarradas al UID del admin), así que esta
@@ -32,11 +53,16 @@ from models.configuracion_negocio_dao import ConfiguracionNegocioDAO
 from models.platillo_dao import PlatilloDAO
 from models.supabase_client import SUPABASE_ADMIN_EMAIL, client
 
-# Ancho de los campos, el botón y el bloque de texto/stats del lado
-# izquierdo — antes salía de "420 de tarjeta - 36 de padding a cada lado";
-# ya no hay una tarjeta con borde que centrar, así que ahora es directo.
-_ANCHO_CAMPO = 380
-_ANCHO_PANEL_TEXTO = 440
+# Anchos de la pantalla. _ANCHO_FORMULARIO es el ancho FIJO de la mitad
+# crema (ver la nota de arriba sobre por qué es fijo y no proporcional);
+# _ANCHO_CAMPO deja ~59px de aire a cada lado dentro de ella.
+_ANCHO_FORMULARIO = 568
+_ANCHO_CAMPO = 450
+# Bloque de bienvenida del panel oscuro: el ancho de las dos tarjetas de
+# stats. El subtítulo va más angosto a propósito, para que caiga en dos
+# renglones como en la referencia en vez de estirarse en uno solo.
+_ANCHO_BLOQUE = 545
+_ANCHO_SUBTITULO = 370
 
 
 class SesionView(ft.Container):
@@ -65,14 +91,20 @@ class SesionView(ft.Container):
             keyboard_type=ft.KeyboardType.EMAIL,
             autofocus=True,
             width=_ANCHO_CAMPO,
-            height=52,
+            height=58,
+            # OJO: en Flet el `height` del TextField NO engorda la cajita
+            # con borde, solo reserva alto alrededor. Lo que la hace más
+            # alta es el content_padding — sin esto los campos se ven
+            # flacos al lado del botón, que fue justo una de las
+            # diferencias contra la referencia.
+            content_padding=ft.padding.symmetric(horizontal=12, vertical=16),
             border_radius=16,
             border_color="#eadfca",
             focused_border_color="#f4ca83",
             bgcolor="#f8f1de",
             color="#5e5449",
             hint_style=ft.TextStyle(color="#9b8f7e"),
-            text_size=14,
+            text_size=15,
         )
 
         self.campo_password = ft.TextField(
@@ -81,28 +113,37 @@ class SesionView(ft.Container):
             password=True,
             can_reveal_password=True,
             width=_ANCHO_CAMPO,
-            height=52,
+            height=58,
+            # OJO: en Flet el `height` del TextField NO engorda la cajita
+            # con borde, solo reserva alto alrededor. Lo que la hace más
+            # alta es el content_padding — sin esto los campos se ven
+            # flacos al lado del botón, que fue justo una de las
+            # diferencias contra la referencia.
+            content_padding=ft.padding.symmetric(horizontal=12, vertical=16),
             border_radius=16,
             border_color="#eadfca",
             focused_border_color="#f4ca83",
             bgcolor="#f8f1de",
             color="#5e5449",
             hint_style=ft.TextStyle(color="#9b8f7e"),
-            text_size=14,
+            text_size=15,
             on_submit=self._on_entrar_click,
         )
 
-        self.texto_error = ft.Text("", size=12, color="#a33c39", expand=True)
+        # size=14 (no 12 como en el resto del proyecto): esta pantalla
+        # quedó a una escala más grande que las demás y con 12 el error se
+        # veía como una nota al pie. Los colores son los de siempre.
+        self.texto_error = ft.Text("", size=14, color="#a33c39", expand=True)
         self.zona_error = ft.Container(
             visible=False,
             width=_ANCHO_CAMPO,
             bgcolor="#f7e4e3",
             border=ft.border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.padding.symmetric(horizontal=14, vertical=12),
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=17, color="#d9534f"),
                     self.texto_error,
                 ],
                 spacing=8,
@@ -112,7 +153,7 @@ class SesionView(ft.Container):
         # Contenido normal del botón; se guarda aparte para poder volver a
         # ponerlo cuando termina de validar (ver _set_cargando).
         self._contenido_boton = ft.Text(
-            "Entrar al panel", color="#ffffff", weight="bold", size=16
+            "Entrar al panel", color="#ffffff", weight="bold", size=19
         )
         self.boton_entrar = ft.Container(
             content=self._contenido_boton,
@@ -120,7 +161,7 @@ class SesionView(ft.Container):
             bgcolor="#0d0905",
             border_radius=30,
             width=_ANCHO_CAMPO,
-            padding=ft.padding.symmetric(vertical=16),
+            padding=ft.padding.symmetric(vertical=23),
             ink=True,
             on_click=self._on_entrar_click,
         )
@@ -138,30 +179,31 @@ class SesionView(ft.Container):
                 controls=[
                     ft.Text(
                         "Inicia sesión",
-                        size=32,
+                        size=38,
                         font_family="Georgia",
                         italic=True,
                         color="#18120d",
                     ),
-                    ft.Container(height=6),
+                    ft.Container(height=8),
                     ft.Text(
                         "Ingresa tus datos para administrar tu menú.",
-                        size=13,
+                        size=15,
                         color="#7c7267",
                     ),
-                    ft.Container(height=28),
+                    ft.Container(height=40),
                     self.campo_correo,
-                    ft.Container(height=14),
+                    ft.Container(height=20),
                     self.campo_password,
                     self.zona_error,
-                    ft.Container(height=24),
+                    ft.Container(height=30),
                     self.boton_entrar,
                 ],
             ),
         )
 
         panel_derecho = ft.Container(
-            expand=True,
+            # Ancho fijo, no expand: ver la nota del encabezado del archivo.
+            width=_ANCHO_FORMULARIO,
             height=float("inf"),
             bgcolor="#fbf5e9",
             alignment=ft.Alignment(0, 0),
@@ -176,10 +218,10 @@ class SesionView(ft.Container):
         # bloquear ni ensuciar el login con un error (ver el método).
         # ------------------------------------------------------------
         self.texto_stat_platillos = ft.Text(
-            "–", size=30, weight="bold", color="#f4ca83"
+            "–", size=36, weight="bold", color="#f4ca83"
         )
         self.texto_stat_categorias = ft.Text(
-            "–", size=30, weight="bold", color="#f4ca83"
+            "–", size=36, weight="bold", color="#f4ca83"
         )
 
         def _tarjeta_stat(control_numero: ft.Text, etiqueta: str) -> ft.Container:
@@ -192,96 +234,116 @@ class SesionView(ft.Container):
                 bgcolor="#18120b",
                 border=ft.border.all(1, "#2c2013"),
                 border_radius=16,
-                padding=ft.padding.symmetric(horizontal=18, vertical=16),
+                padding=ft.padding.all(22),
                 content=ft.Column(
-                    spacing=2,
+                    spacing=4,
                     controls=[
                         control_numero,
-                        ft.Text(etiqueta, size=12, color="#999288"),
+                        ft.Text(etiqueta, size=16, color="#999288"),
                     ],
                 ),
             )
+
+        # Lockup de marca — mismo patrón que la parte de arriba de
+        # sidebar.py, pero SIN el eyebrow debajo del nombre: en la
+        # referencia "PANEL DEL DUEÑO" encabeza el bloque de bienvenida de
+        # abajo, no la marca.
+        marca = ft.Row(
+            spacing=16,
+            controls=[
+                ft.CircleAvatar(
+                    foreground_image_src="assets/logomonky.png",
+                    radius=22,
+                    bgcolor=ft.Colors.TRANSPARENT,
+                ),
+                ft.Text(
+                    "Taku monky",
+                    color=ft.Colors.WHITE,
+                    weight="bold",
+                    size=30,
+                    font_family="Georgia",
+                    italic=True,
+                ),
+            ],
+        )
+
+        bienvenida = ft.Column(
+            tight=True,
+            spacing=0,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
+            controls=[
+                ft.Text(
+                    "PANEL DEL DUEÑO",
+                    color="#f4ca83",
+                    size=14,
+                    weight="bold",
+                    # El único letter_spacing del proyecto. La referencia
+                    # trae el eyebrow claramente espaciado y a este tamaño
+                    # se nota; el resto de los eyebrows (menu_view, etc.)
+                    # son más chicos y se quedan como están.
+                    style=ft.TextStyle(letter_spacing=3),
+                ),
+                ft.Container(height=16),
+                ft.Text(
+                    # Dos colores en un mismo párrafo => spans. El size/
+                    # font_family/italic/color del Text son el estilo base y
+                    # el span dorado solo pisa el color.
+                    spans=[
+                        ft.TextSpan("Bienvenido\nde vuelta, "),
+                        ft.TextSpan("Ary.", ft.TextStyle(color="#f4ca83")),
+                    ],
+                    size=66,
+                    font_family="Georgia",
+                    italic=True,
+                    color=ft.Colors.WHITE,
+                    # 1.32 en vez del interlineado por default de Georgia
+                    # (~1.15): con dos renglones tan grandes, apretados se
+                    # ven como un bloque; la referencia los trae aireados.
+                    style=ft.TextStyle(height=1.32),
+                ),
+                ft.Container(height=22),
+                ft.Container(
+                    width=_ANCHO_SUBTITULO,
+                    content=ft.Text(
+                        "Administra tu menú, tus ventas y tus "
+                        "mesas desde un solo lugar.",
+                        size=24,
+                        color="#999288",
+                        style=ft.TextStyle(height=1.45),
+                    ),
+                ),
+                ft.Container(height=62),
+                # Estadísticas reales del menú
+                ft.Container(
+                    width=_ANCHO_BLOQUE,
+                    content=ft.Row(
+                        spacing=22,
+                        controls=[
+                            _tarjeta_stat(
+                                self.texto_stat_platillos, "platillos en tu menú"
+                            ),
+                            _tarjeta_stat(
+                                self.texto_stat_categorias, "categorías activas"
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+        )
 
         panel_izquierdo = ft.Container(
             expand=True,
             height=float("inf"),
             bgcolor="#0d0905",
-            padding=ft.padding.symmetric(horizontal=56, vertical=48),
+            padding=ft.padding.only(left=56, right=56, top=52, bottom=60),
             content=ft.Column(
                 expand=True,
+                # Solo DOS hijos: marca arriba, todo lo demás abajo. Con los
+                # tres bloques de antes, SPACE_BETWEEN los repartía parejo y
+                # el título quedaba flotando a media altura.
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 horizontal_alignment=ft.CrossAxisAlignment.START,
-                controls=[
-                    # Lockup de marca — mismo patrón que la parte de arriba
-                    # de sidebar.py (logo + nombre + eyebrow).
-                    ft.Row(
-                        controls=[
-                            ft.CircleAvatar(
-                                foreground_image_src="assets/logomonky.png",
-                                radius=26,
-                                bgcolor=ft.Colors.TRANSPARENT,
-                            ),
-                            ft.Column(
-                                spacing=1,
-                                controls=[
-                                    ft.Text(
-                                        "Taku monky",
-                                        color=ft.Colors.WHITE,
-                                        weight="bold",
-                                        size=19,
-                                        font_family="Georgia",
-                                        italic=True,
-                                    ),
-                                    ft.Text(
-                                        "PANEL DEL DUEÑO",
-                                        color="#f4ca83",
-                                        size=10,
-                                        weight="bold",
-                                    ),
-                                ],
-                            ),
-                        ],
-                        spacing=14,
-                    ),
-                    # Mensaje de bienvenida
-                    ft.Container(
-                        width=_ANCHO_PANEL_TEXTO,
-                        content=ft.Column(
-                            spacing=14,
-                            horizontal_alignment=ft.CrossAxisAlignment.START,
-                            controls=[
-                                ft.Text(
-                                    "Bienvenido\nde vuelta",
-                                    size=44,
-                                    font_family="Georgia",
-                                    italic=True,
-                                    color=ft.Colors.WHITE,
-                                ),
-                                ft.Text(
-                                    "Administra tu menú, tus ventas y tus "
-                                    "mesas desde un solo lugar.",
-                                    size=14,
-                                    color="#999288",
-                                ),
-                            ],
-                        ),
-                    ),
-                    # Estadísticas reales del menú
-                    ft.Container(
-                        width=_ANCHO_PANEL_TEXTO,
-                        content=ft.Row(
-                            spacing=16,
-                            controls=[
-                                _tarjeta_stat(
-                                    self.texto_stat_platillos, "platillos en tu menú"
-                                ),
-                                _tarjeta_stat(
-                                    self.texto_stat_categorias, "categorías activas"
-                                ),
-                            ],
-                        ),
-                    ),
-                ],
+                controls=[marca, bienvenida],
             ),
         )
 

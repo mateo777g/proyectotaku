@@ -77,10 +77,10 @@ class ContenidoView(ft.Container):
                             ft.Container(height=22),
                             ft.Row(
                                 controls=[
-                                    self._muestra("assets/img1.jpg", "Producto protagonista"),
-                                    self._muestra("assets/img2.jpg", "Detalle del platillo"),
-                                    self._muestra("assets/img3.jpg", "Color y textura"),
-                                    self._muestra("assets/img4.jpg", "Anuncio destacado"),
+                                    self._muestra("assets/img1.png", "Producto protagonista"),
+                                    self._muestra("assets/img2.png", "Detalle del platillo"),
+                                    self._muestra("assets/img3.png", "Color y textura"),
+                                    self._muestra("assets/img4.png", "Anuncio destacado"),
                                 ],
                                 spacing=18,
                                 alignment=ft.MainAxisAlignment.CENTER,
