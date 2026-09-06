@@ -1,5 +1,6 @@
 import asyncio
 import math
+import traceback
 
 import flet as ft
 
@@ -31,6 +32,41 @@ ANCHO_BOTON_EXPANDIR = 30
 ANCHO_BOTON_ENVIAR = 34
 HUECO_BOTONES = 4
 
+# El logo animado que se ve mientras la IA piensa. Es UN archivo WebP
+# animado (36 cuadros, 70 ms cada uno, ~2.5 s por vuelta, con transparencia
+# real), no los 36 SVG sueltos, y ese cambio arregló un fallo de verdad.
+#
+# ⚠️ NO lo regreses a "un SVG por cuadro con un temporizador de python".
+# Así estaba, y en la máquina del desarrollador la animación se veía
+# CONGELADA. Medido en un video suyo de la app real: el logo estuvo 3.87 s
+# en pantalla y solo cambió de dibujo 3 veces —con un hueco de 1.70 s— donde
+# tocaban ~55. La causa no es el diseño ni el tamaño: con un cuadro por
+# archivo, python tiene que empujar 14 actualizaciones por segundo al
+# cliente, y eso es lo primero que se muere cuando la máquina está ocupada,
+# que es SIEMPRE en esta pantalla — mientras el logo gira, el mismo proceso
+# está leyendo 4 tablas de Supabase, armando el prompt y esperando a OpenAI.
+# Reproducido y medido: en reposo repintaba a 12.6 cuadros/s, con la CPU
+# ocupada bajaba a 7.4, y en la máquina del desarrollador (más cargada, con
+# la ventana maximizada y grabando video) a ~1.
+#
+# Con el WebP animado el cliente reproduce la animación SOLO y python no
+# manda un solo cuadro: medido igual, 13.6 cuadros/s en reposo y 13.2 con la
+# CPU al tope, o sea que ya no le afecta. De paso desaparecieron el
+# threading.Timer, el .start()/.stop() y la trampa de autoplay.
+#
+# El archivo se generó desde los 36 SVG de assets/svg/ y esos se quedan como
+# la FUENTE: si algún día cambia la secuencia, hay que volver a generarlo
+# (ver el bloque de la Fase 6 en CLAUDE.md, que trae la receta exacta).
+RUTA_LOGO_PENSANDO = "assets/logo-pensando.webp"
+
+# Lado del logo y tamaño del "Pensando..." de al lado. Fueron subiendo el
+# 2026-09-06: 28/13 al montarlo, 36/14 porque a 28 no se alcanzaba a apreciar
+# que se movía —que es justo para lo que existe— y 42/14 al llegar la
+# secuencia nueva de 36 cuadros. Los dos números viven aquí para que se
+# puedan reajustar juntos: si uno crece y el otro no, la fila se desbalancea.
+TAMANO_LOGO_PENSANDO = 42
+TAMANO_TEXTO_PENSANDO = 14
+
 
 def _icono(nombre, tamano: int, color: str) -> ft.Icon:
     """Un ft.Icon nuevo, para ASIGNARLO a .content del botón que lo usa.
@@ -50,45 +86,91 @@ def _icono(nombre, tamano: int, color: str) -> ft.Icon:
     return ft.Icon(nombre, size=tamano, color=color)
 
 
+# Tipografía de las respuestas del agente (2026-09-06). Georgia es la serif
+# que el proyecto YA usa en los títulos, así que no entra ninguna fuente
+# nueva; el desarrollador la eligió comparando las tres opciones renderizadas
+# en la ventana real, con la de Claude como referencia. 16 con interlineado
+# 1.55 es lo que hace que un párrafo largo se lea descansado en vez de
+# apretado — que era el punto.
+FUENTE_RESPUESTA = "Georgia"
+TAMANO_RESPUESTA = 16
+INTERLINEADO_RESPUESTA = 1.55
+
+
 def _estilo_markdown() -> ft.MarkdownStyleSheet:
     """Estilos con los que se pinta el markdown de las respuestas (ver
     _burbuja_ia). Todo sale de la paleta del proyecto, nada nuevo: cuerpo
-    #1c1610 a 14 como el resto de las burbujas, encabezados en el café de
-    los rótulos (#806f61), y las cajas de tabla/cita/código en #f3ead4 — el
-    mismo tono de superficie que #eee5cf le da a los encabezados de tabla en
-    menu_view.py, un punto más claro para que se despegue del fondo de la
-    burbuja (#f8f1de) sin gritar.
+    #1c1610, encabezados en el café de los rótulos (#806f61), y las cajas de
+    tabla/cita/código en #f3ead4 — el mismo tono de superficie que #eee5cf le
+    da a los encabezados de tabla en menu_view.py, un punto más claro para
+    que se despegue sin gritar del fondo sobre el que caen, que desde que la
+    respuesta perdió su burbuja es el de la vista (#fbf5e9).
+
+    DOS BLOQUES SE QUEDAN FUERA DE GEORGIA, a propósito:
+
+    - El código, que ya era Consolas desde siempre — una serif proporcional
+      no sirve para eso.
+    - Las TABLAS. Georgia dibuja los números en estilo antiguo (el 4 y el 7
+      de "$4,147" bajan de la línea), que se ve elegante en un párrafo pero
+      deja una columna de dinero visiblemente despareja, y una tabla existe
+      justo para escanear cifras de arriba abajo. Se quedan en la sans por
+      omisión, con números normales. No es una inconsistencia suelta: la
+      tabla ya es un bloque aparte con su propio fondo #f3ead4, igual que el
+      código, así que el cambio de fuente se lee como intencional.
 
     Devuelve una instancia nueva en cada llamada, en vez de ser una
     constante compartida por todas las burbujas: cuesta nada y evita
     preguntarse si flet puede reutilizar el mismo objeto en varios
     controles a la vez.
     """
+
+    def prosa(**extra) -> ft.TextStyle:
+        """Un estilo de párrafo: Georgia, 16, aireado."""
+        extra.setdefault("size", TAMANO_RESPUESTA)
+        extra.setdefault("color", "#1c1610")
+        return ft.TextStyle(
+            font_family=FUENTE_RESPUESTA,
+            height=INTERLINEADO_RESPUESTA,
+            **extra,
+        )
+
+    def titulo(tam: int, color: str) -> ft.TextStyle:
+        """Un encabezado: Georgia también, pero más junto — el interlineado
+        del cuerpo aquí solo abriría huecos."""
+        return ft.TextStyle(
+            font_family=FUENTE_RESPUESTA,
+            size=tam,
+            weight=ft.FontWeight.BOLD,
+            color=color,
+            height=1.3,
+        )
+
     return ft.MarkdownStyleSheet(
-        p_text_style=ft.TextStyle(size=14, color="#1c1610"),
-        strong_text_style=ft.TextStyle(
-            size=14, weight=ft.FontWeight.BOLD, color="#18120d"
-        ),
-        em_text_style=ft.TextStyle(size=14, italic=True, color="#1c1610"),
-        h1_text_style=ft.TextStyle(size=17, weight=ft.FontWeight.BOLD, color="#18120d"),
-        h2_text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD, color="#18120d"),
-        h3_text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD, color="#806f61"),
-        h4_text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD, color="#806f61"),
-        list_bullet_text_style=ft.TextStyle(size=14, color="#8a7e72"),
-        blockquote_text_style=ft.TextStyle(size=13, color="#5e5449"),
+        p_text_style=prosa(),
+        strong_text_style=prosa(weight=ft.FontWeight.BOLD, color="#18120d"),
+        em_text_style=prosa(italic=True),
+        h1_text_style=titulo(21, "#18120d"),
+        h2_text_style=titulo(19, "#18120d"),
+        h3_text_style=titulo(17, "#806f61"),
+        h4_text_style=titulo(16, "#806f61"),
+        list_bullet_text_style=prosa(color="#8a7e72"),
+        blockquote_text_style=prosa(size=15, color="#5e5449"),
         blockquote_decoration=ft.BoxDecoration(bgcolor="#f3ead4", border_radius=8),
-        blockquote_padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        code_text_style=ft.TextStyle(size=13, font_family="Consolas", color="#bf571d"),
+        blockquote_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        code_text_style=ft.TextStyle(size=14, font_family="Consolas", color="#bf571d"),
         codeblock_decoration=ft.BoxDecoration(bgcolor="#f3ead4", border_radius=8),
         codeblock_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        # Sin font_family: la sans por omisión, por los números (ver arriba).
         table_head_text_style=ft.TextStyle(
-            size=13, weight=ft.FontWeight.BOLD, color="#18120d"
+            size=14, weight=ft.FontWeight.BOLD, color="#18120d"
         ),
-        table_body_text_style=ft.TextStyle(size=13, color="#1c1610"),
-        table_cells_padding=ft.padding.symmetric(horizontal=12, vertical=7),
+        table_body_text_style=ft.TextStyle(size=14, color="#1c1610"),
+        table_cells_padding=ft.padding.symmetric(horizontal=12, vertical=8),
         table_cells_decoration=ft.BoxDecoration(bgcolor="#f3ead4"),
-        block_spacing=10,
-        list_indent=18,
+        # Sube de 10 a 12 con el cuerpo más aireado: con párrafos de 16 y
+        # interlineado 1.55, 10 los dejaba pegados entre si.
+        block_spacing=12,
+        list_indent=20,
     )
 
 
@@ -131,6 +213,9 @@ class AgenteIAView(ft.Container):
         self._procesando = False
         self._modo_chat = False
         self._entrada_expandida = False
+        # Si la caja tiene el cursor dentro. Solo la usa
+        # _aplicar_realce_caja(); en BIENVENIDA da igual lo que valga.
+        self._entrada_enfocada = False
         # Numera las preguntas para poder desplazarse hasta la última con
         # scroll_to(scroll_key=...) — ver _ir_a().
         self._contador_preguntas = 0
@@ -172,22 +257,35 @@ class AgenteIAView(ft.Container):
             max_lines=LINEAS_COLAPSADA,
             shift_enter=True,
             border=ft.InputBorder.NONE,
-            bgcolor="#f8f1de",
-            # Material le pone una capa oscura encima al fondo del campo
-            # cuando está enfocado o con el mouse encima (medido: #f8f1de se
-            # va a #eee8d5). Antes no se notaba porque el campo ocupaba toda
-            # la píldora; ahora que el botón de desplegar le quita 42 px a la
-            # derecha, esa franja se quedaba del color original y la caja se
-            # veía partida en dos tonos. Fijando los tres al mismo valor, la
-            # píldora se ve pareja siempre.
-            focused_bgcolor="#f8f1de",
-            hover_color="#f8f1de",
+            # ⚠️ El campo NO pinta fondo: lo pinta caja_entrada y este va
+            # transparente encima. No le pongas bgcolor "para que combine" —
+            # ese es justo el bug que esto arregla. Un TextField con relleno
+            # se dibuja ENCIMA del borde del Container que lo envuelve, y como
+            # caja_entrada no tiene padding a la izquierda, se comía el tramo
+            # central del borde izquierdo: la píldora salía con las curvas de
+            # arriba y de abajo pero con un hueco en medio. Se ve a simple
+            # vista al ampliar la esquina, y se confirmó comparando tres
+            # variantes lado a lado (con relleno, con padding izquierdo, y
+            # sin relleno): solo esta cierra el contorno.
+            #
+            # De paso resuelve lo que antes se parchaba con focused_bgcolor/
+            # hover_color: Material oscurece el RELLENO del campo al enfocarlo
+            # o al pasarle el mouse (medido: #f8f1de -> #eee8d5), y como los
+            # botones le quitan 72 px a la derecha, esa franja se quedaba del
+            # color original y la píldora se veía partida en dos tonos. Sin
+            # relleno no hay nada que oscurecer, así que el problema no existe
+            # y esas dos propiedades ya no hacen falta.
+            filled=False,
             color="#1c1610",
             hint_style=ft.TextStyle(color="#8a7e72", size=15),
             text_size=15,
             content_padding=ft.padding.symmetric(horizontal=24, vertical=20),
             on_submit=self._enviar_mensaje,
             on_change=self._on_cambio_entrada,
+            # Solo mueven el borde y la sombra de la caja en CONVERSACIÓN
+            # — ver _aplicar_realce_caja(). En BIENVENIDA no cambian nada.
+            on_focus=self._on_foco_entrada,
+            on_blur=self._on_foco_entrada,
         )
 
         # Botón de desplegar: solo aparece cuando el texto del dueño ya no
@@ -218,6 +316,10 @@ class AgenteIAView(ft.Container):
         )
         self._estilizar_boton_enviar()
 
+        # Misma superficie que la burbuja del usuario (#f8f1de); la de la IA
+        # ya no tiene. El borde y la sombra NO
+        # se declaran aqui a proposito: los pone _aplicar_realce_caja(), que
+        # decide segun el estado de la pantalla y el foco.
         self.caja_entrada = ft.Container(
             width=ANCHO_CHAT,
             bgcolor="#f8f1de",
@@ -228,13 +330,8 @@ class AgenteIAView(ft.Container):
                 spacing=HUECO_BOTONES,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            shadow=ft.BoxShadow(
-                blur_radius=24,
-                spread_radius=1,
-                color=ft.Colors.with_opacity(0.30, ft.Colors.BLACK),
-                offset=ft.Offset(0, 7),
-            ),
         )
+        self._aplicar_realce_caja()
 
         # --------------------------------------------------------------
         # Saludo (solo en el estado de bienvenida)
@@ -290,6 +387,10 @@ class AgenteIAView(ft.Container):
         mensaje: de ahí en adelante la pantalla ya no cambia de forma."""
         self._modo_chat = True
         self._estilizar_boton_enviar()
+        # En chat la sombra pasa a depender del foco, y al mandar el primer
+        # mensaje la caja se queda enfocada — o sea que aqui normalmente
+        # sigue encendida; lo que cambia es que ahora se apagara al salir.
+        self._aplicar_realce_caja()
         self.raiz.controls = [
             self.zona_conversacion,
             ft.Container(height=14),
@@ -315,18 +416,33 @@ class AgenteIAView(ft.Container):
         )
 
     def _burbuja_usuario(self, texto: str) -> ft.Container:
+        # La UNICA burbuja que queda en la pantalla: la de la IA se quito
+        # para que la respuesta caiga directa sobre el fondo (ver
+        # _burbuja_ia). Sus colores son los mismos de la caja de texto
+        # (#f8f1de + borde #eadfca). Era dorada (#f4ca83, relleno y sin
+        # borde) y el dueño la cambio a proposito: quiso que las piezas de
+        # la pantalla se vieran igual de simples. Lo que distingue al
+        # usuario de la IA es la alineacion (derecha vs izquierda), el ancho
+        # maximo (HUECO_USUARIO vs HUECO_IA) y, desde que la IA perdio la
+        # suya, tener burbuja o no tenerla.
         return ft.Container(
             content=ft.Text(texto, size=14, color="#1c1610"),
-            bgcolor="#f4ca83",
+            bgcolor="#f8f1de",
+            border=ft.border.all(1, "#eadfca"),
             padding=ft.padding.symmetric(horizontal=18, vertical=10),
             border_radius=20,
         )
 
     def _burbuja_ia(self, texto: str) -> ft.Container:
-        # Misma forma que la burbuja del usuario (mismo border_radius=20,
-        # mismo padding) pero con los colores de superficie de tarjeta que
-        # ya usa el resto del panel (#f8f1de/#eadfca), para distinguirla de
-        # la burbuja dorada del usuario sin inventar una paleta nueva.
+        # SIN burbuja, a propósito: la respuesta se pinta directa sobre el
+        # fondo de la vista, como en Claude/ChatGPT. La del usuario sí
+        # conserva la suya (#f8f1de + borde #eadfca), y esa diferencia es
+        # ahora una tercera señal de quién habla, junto al lado y al ancho
+        # máximo (ver _burbuja_usuario).
+        # No se pinta bgcolor="#fbf5e9" a mano: un Container sin bgcolor ya
+        # deja ver el fondo de la vista, y así sigue siendo correcto si ese
+        # fondo cambia algún día. border_radius también se fue: sin
+        # superficie ni borde no redondeaba nada.
         # selectable=True porque las respuestas suelen traer cifras/precios
         # que el dueño va a querer copiar.
         #
@@ -353,20 +469,51 @@ class AgenteIAView(ft.Container):
                 soft_line_break=True,
                 md_style_sheet=_estilo_markdown(),
             ),
-            bgcolor="#f8f1de",
-            border=ft.border.all(1, "#eadfca"),
-            padding=ft.padding.symmetric(horizontal=18, vertical=12),
-            border_radius=20,
+            # Sin bgcolor, sin border y sin border_radius: la burbuja de la
+            # IA desapareció (ver el comentario de arriba).
+            #
+            # El padding horizontal también se quita (era 18). Sin una
+            # superficie que lo justifique ese hueco solo dejaba el texto de
+            # la IA sangrado 18 px respecto al borde izquierdo de la
+            # conversación y respecto al "Pensando..." que aparece justo
+            # antes en ese mismo sitio, que no lleva padding propio.
+            # El vertical se queda en 12 a propósito: sumado al spacing=18 de
+            # lista_mensajes da exactamente el mismo aire entre mensajes que
+            # había con burbuja, o sea que quitarla no movió nada de sitio.
+            padding=ft.padding.symmetric(horizontal=0, vertical=12),
         )
 
     def _burbuja_pensando(self) -> ft.Row:
-        # Mismo lenguaje visual de "cargando" que menu_view.py/home_view.py:
-        # ProgressRing dorado + texto gris, solo que aquí en fila porque no
-        # hay una tarjeta que envolver.
+        """La fila de "Pensando..." con el logo animado al lado.
+
+        Es el ÚNICO indicador de carga de la app que no es un ProgressRing:
+        los otros siete (menú, mesas, home, login y los dos diálogos) siguen
+        con el aro dorado.
+
+        El logo es un WebP animado que el cliente reproduce solo — python no
+        manda un cuadro ni programa nada, y por eso esta función devuelve la
+        fila y ya, sin referencias que arrancar o detener. Ver
+        RUTA_LOGO_PENSANDO arriba para por qué dejó de ser un temporizador.
+
+        Sin bgcolor ni contenedor de color detrás: el WebP lleva
+        transparencia real, así que el fondo crema (#fbf5e9) se ve a través.
+        """
+        # spacing=8 y la alineación vertical se quedan como estaban desde el
+        # ProgressRing (Row centra en vertical por omisión), así el texto
+        # sigue a la misma altura aunque el logo mida 42 y no 16.
         return ft.Row(
             controls=[
-                ft.ProgressRing(width=16, height=16, stroke_width=2, color="#f4ca83"),
-                ft.Text("Pensando...", size=13, color="#8a7e72"),
+                ft.Image(
+                    src=RUTA_LOGO_PENSANDO,
+                    width=TAMANO_LOGO_PENSANDO,
+                    height=TAMANO_LOGO_PENSANDO,
+                    fit=ft.BoxFit.CONTAIN,
+                ),
+                ft.Text(
+                    "Pensando...",
+                    size=TAMANO_TEXTO_PENSANDO,
+                    color="#8a7e72",
+                ),
             ],
             spacing=8,
             tight=True,
@@ -392,6 +539,65 @@ class AgenteIAView(ft.Container):
     # ------------------------------------------------------------------
     # Caja de texto: enviar, crecer, desplegar, plegar
     # ------------------------------------------------------------------
+    def _on_foco_entrada(self, e):
+        """Realza y apaga la caja al entrar y salir de ella.
+
+        Es el mismo manejador para on_focus y on_blur: e.name dice cuál de
+        los dos llegó, así que no hacen falta dos funciones casi idénticas.
+        """
+        self._entrada_enfocada = e.name == "focus"
+        self._aplicar_realce_caja()
+        self._refrescar()
+
+    def _aplicar_realce_caja(self):
+        """Decide cómo se ve la caja de texto: sombra y color del borde. No
+        repinta — quien llama decide cuándo hacerlo.
+
+        Las dos piezas NO siguen la misma regla, y esa asimetría es el punto
+        entero de este método:
+
+        - El BORDE responde al foco en los dos estados por igual: #eadfca en
+          reposo (el mismo de las burbujas) y #d8c3a4 con el cursor dentro
+          —el mismo tono oscurecido, no uno nuevo—, lo justo para notarse sin
+          volverse un recuadro marcado. Nunca desaparece, solo cambia de
+          intensidad.
+        - La SOMBRA no: en BIENVENIDA está siempre encendida, porque ahí la
+          caja es lo único que hay en la pantalla junto al saludo y la sombra
+          es lo que la sostiene. En CONVERSACIÓN se apaga en reposo, para que
+          la caja no compita con la respuesta que el dueño está leyendo, y se
+          enciende al enfocar.
+
+        El disparador es el FOCO, no el contenido: da igual si hay texto
+        escrito o si la caja está vacía. Salió de mirar cómo se comportan los
+        chats de las empresas grandes.
+
+        Mientras la IA piensa la caja se ve plana, y es correcto: deshabilitar
+        el campo dispara on_blur de verdad (medido), así que se apaga sola
+        mientras no se puede escribir y se vuelve a encender al devolver el
+        foco — ver el finally de _responder.
+
+        Los números de la sombra (blur 10 / sin spread / 7% de negro / 2px de
+        caída) vienen de que la primera versión —blur 24, spread 1, 30% de
+        negro, offset (0,7)— se leía como una nube oscura. El dueño la mandó
+        quitar, vio la caja completamente plana y pidió regresarla "pero no
+        tan exagerada" y SIN quitarle el borde. Ese es el límite si se vuelve
+        a tocar: se tiene que notar solo cuando la buscas.
+        """
+        # El BORDE responde al foco en los dos estados por igual.
+        self.caja_entrada.border = ft.border.all(
+            1, "#d8c3a4" if self._entrada_enfocada else "#eadfca"
+        )
+        # La SOMBRA no: en bienvenida está siempre, en chat solo con el foco.
+        if self._modo_chat and not self._entrada_enfocada:
+            self.caja_entrada.shadow = None
+            return
+        self.caja_entrada.shadow = ft.BoxShadow(
+            blur_radius=10,
+            spread_radius=0,
+            color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK),
+            offset=ft.Offset(0, 2),
+        )
+
     def _estilizar_boton_enviar(self):
         """Le da al botón de enviar el aspecto que le toca según el estado
         de la pantalla. No repinta — quien llama decide cuándo hacerlo.
@@ -521,12 +727,32 @@ class AgenteIAView(ft.Container):
         self._refrescar()
         self.router.page.run_task(self._responder, texto, clave)
 
+    def _quitar_indicador(self, indicador: ft.Control):
+        """Quita la fila de "Pensando..." SI todavía está puesta.
+
+        Parece defensivo de más y no lo es: los tres caminos de _responder
+        lo hacían con un .remove() pelón, y eso escondió un fallo real el
+        2026-09-06. Si algo truena DESPUÉS de haber quitado el indicador
+        —por ejemplo al construir la burbuja de la respuesta— el except
+        intenta quitarlo otra vez, list.remove levanta ValueError, esa
+        segunda excepción se lleva por delante al except entero y la
+        burbuja roja de error NUNCA se llega a agregar. Resultado en
+        pantalla: la pregunta se queda sola, sin respuesta y sin aviso de
+        nada, que es justo lo que vio el desarrollador y lo que le costó
+        grabar un video para poder reportarlo.
+        """
+        if indicador in self.lista_mensajes.controls:
+            self.lista_mensajes.controls.remove(indicador)
+
     async def _responder(self, pregunta: str, clave: str):
         self._procesando = True
         self.entrada.disabled = True
         indicador = self._fila(self._burbuja_pensando(), derecha=False)
         self.lista_mensajes.controls.append(indicador)
         self._refrescar()
+        # Nada que arrancar: el logo es un WebP animado y lo reproduce el
+        # cliente. Tampoco hay nada que detener al terminar — la fila se
+        # quita de la conversación y con ella se va la animación.
         await self._ir_a(clave)
 
         try:
@@ -535,7 +761,7 @@ class AgenteIAView(ft.Container):
             respuesta = await asyncio.to_thread(
                 self._ia.preguntar, pregunta, self._historial
             )
-            self.lista_mensajes.controls.remove(indicador)
+            self._quitar_indicador(indicador)
             self.lista_mensajes.controls.append(
                 self._fila(self._burbuja_ia(respuesta), derecha=False)
             )
@@ -547,12 +773,17 @@ class AgenteIAView(ft.Container):
             self._historial.append({"role": "assistant", "content": respuesta})
         except RuntimeError as error:
             # Típicamente el OPENAI_API_KEY faltante — ver IAController.__init__.
-            self.lista_mensajes.controls.remove(indicador)
+            self._quitar_indicador(indicador)
             self.lista_mensajes.controls.append(
                 self._fila(self._burbuja_error(str(error)), derecha=False)
             )
         except Exception:
-            self.lista_mensajes.controls.remove(indicador)
+            # traceback a consola a propósito: aquí caen tanto los fallos de
+            # red (que el dueño ve como el aviso rojo y ya) como los errores
+            # de programación, y estos últimos no deben desaparecer sin
+            # dejar rastro — ver _quitar_indicador.
+            traceback.print_exc()
+            self._quitar_indicador(indicador)
             self.lista_mensajes.controls.append(
                 self._fila(
                     self._burbuja_error(
@@ -573,6 +804,16 @@ class AgenteIAView(ft.Container):
             # que volver a hacer clic para escribir la siguiente pregunta.
             try:
                 await self.entrada.focus()
+                # El realce se marca a mano y NO se deja al evento: medido en
+                # la ventana real, un focus() programático mueve el cursor
+                # pero NO dispara on_focus (ni en escritorio ni en web). Sin
+                # esto la caja se quedaba plana con el cursor ya dentro —
+                # lista para escribir pero sin verse así — hasta que el dueño
+                # hiciera clic. El on_blur del usuario la apaga igual que
+                # siempre, así que las dos rutas siguen de acuerdo.
+                self._entrada_enfocada = True
+                self._aplicar_realce_caja()
+                self._refrescar()
             except Exception:
                 pass
 
