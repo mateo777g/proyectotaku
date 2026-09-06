@@ -1384,19 +1384,23 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   text-shadow: 0 3px 12px rgba(0, 0, 0, 0.95);
 }
 
+/* ⚠️ REGLA COMPARTIDA por el carrusel de PC (.tk-cf-tarjeta, carrusel.js) y
+   por la carta de celular (.tk-carta-envoltura, index.html): lo que se toque
+   aquí le pega a las DOS. Ya pasó una vez — el 4 sep 2026 el ajuste del
+   celular (subir la línea 40px) se metió en esta regla base y se llevó de
+   corbata al carrusel de escritorio: ahí la rayita de 34px que va DEBAJO del
+   nombre se volvió una línea de 260px pintada ENCIMA del título (y con
+   títulos de 2 renglones, "Agua de Leonardo", le cruzaba el texto a la
+   mitad). Lo del celular (ancho 260px + el -40px) vive ahora acotado a
+   .tk-carta-envoltura, más abajo, en el bloque de la carta; aquí solo va lo
+   que las dos secciones sí comparten. */
 .tk-cf-divisor {
-  width: 260px;
+  width: 34px;
   height: 2px;
   background-color: #c5a880;
   border-radius: 2px;
   margin: 5px auto 4px;
   box-shadow: 0 0 8px rgba(197, 168, 128, 0.7);
-  /* Un poco más arriba (pedido del dueño, 4 sep 2026) — position:relative +
-     top en vez de tocar el margin, para que el título de abajo (.tk-carta-titulo)
-     no se mueva con ella: solo esta línea se pinta más arriba, su espacio
-     en el flujo (y por lo tanto la posición de lo que sigue) no cambia. */
-  position: relative;
-  top: -40px;
 }
 
 .tk-cf-desc {
@@ -1520,6 +1524,21 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    se calcula contra la caja SIN desplazar de los puntitos) empareja el
    reparto a 36/36. Si cambias el top de .tk-cf-divisor o los márgenes de
    aquí abajo, este -8px hay que recalcularlo. */
+/* Línea dorada ancha (260px) y 40px más arriba, SOLO en la carta de celular
+   (pedido del dueño, 4 sep 2026) — position:relative + top en vez de tocar el margin,
+   para que el título de abajo (.tk-carta-titulo) no se mueva con ella: solo
+   esta línea se pinta más arriba, su espacio en el flujo (y por lo tanto la
+   posición de lo que sigue) no cambia. Acotado a .tk-carta-envoltura porque
+   .tk-cf-divisor también la usa el carrusel de escritorio, donde estos dos
+   valores la deformaban y la pintaban encima del título (corregido el 5 sep
+   2026: allá la línea volvió a ser la rayita de 34px sin desplazar, debajo
+   del nombre, tal como estaba en la Fase 4). */
+.tk-carta-envoltura .tk-cf-divisor {
+  width: 260px;
+  position: relative;
+  top: -40px;
+}
+
 .tk-carta-dots { margin-bottom: 26px; position: relative; top: -8px; }
 /* Más grande que el CTA del carrusel de escritorio (pedido del dueño, 4 sep
    2026) — acotado a .tk-carta-cta (además de tk-cf-cta) para no tocar el

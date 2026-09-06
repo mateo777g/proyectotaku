@@ -12,7 +12,7 @@ ventas, venta_items) en vez de una sola, y no hay ninguna simulación de
 red neuronal/Keras de adorno como en el ejemplo — el ejemplo la traía
 apagada de todos modos.
 
-MODELO: OpenAI (gpt-4o por defecto, configurable con OPENAI_MODEL en el
+MODELO: OpenAI (gpt-4o-mini por defecto, configurable con OPENAI_MODEL en el
 .env), NO Claude/el SDK `anthropic`. El roadmap (CLAUDE.md y el .txt)
 decía "aquí se usa Claude, salvo que el dueño diga lo contrario" — el
 dueño puso OPENAI_API_KEY en el .env él mismo para esta fase (2026-09-05),
@@ -53,7 +53,7 @@ _OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Configurable por si algún día se quiere probar otro modelo sin tocar
 # código — pero con un default sensato, igual que ADMIN_EMAIL en
 # supabase_client.py trae su propio default vacío.
-_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 _DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 _MESES = [

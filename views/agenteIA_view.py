@@ -22,6 +22,33 @@ HUECO_IA = 70
 LINEAS_COLAPSADA = 4
 LINEAS_EXPANDIDA = 14
 
+# Lo que miden los dos botones que viven dentro de la píldora, a la derecha
+# del campo. Están aquí arriba y no sueltos en el código porque
+# _lineas_estimadas() los tiene que restar del ancho para saber cuántos
+# caracteres caben por renglón: si un botón cambia de tamaño y este número
+# no, el botón de desplegar empieza a aparecer tarde o temprano de más.
+ANCHO_BOTON_EXPANDIR = 30
+ANCHO_BOTON_ENVIAR = 34
+HUECO_BOTONES = 4
+
+
+def _icono(nombre, tamano: int, color: str) -> ft.Icon:
+    """Un ft.Icon nuevo, para ASIGNARLO a .content del botón que lo usa.
+
+    ⚠️ No cambies un icono ya montado con `mi_icono.name = ft.Icons.OTRO`:
+    en esta versión de flet esa mutación NO se propaga al cliente — el
+    icono se queda dibujado como estaba, para siempre y sin ningún error.
+    Se comprobó con dos iconos lado a lado en la ventana real: al que se
+    le mutó `.name` no se movió, y el que se reemplazó entero sí cambió.
+    (Las propiedades del Container que lo envuelve —bgcolor, border_radius—
+    sí se propagan, lo que hace el fallo todavía más confuso: medio botón
+    cambia y el otro medio no.) Por eso los dos botones de la caja de
+    texto reemplazan su `.content` en vez de mutar el icono; el de
+    desplegar arrastraba justo ese bug y nunca llegaba a mostrar
+    UNFOLD_LESS al expandirse.
+    """
+    return ft.Icon(nombre, size=tamano, color=color)
+
 
 def _estilo_markdown() -> ft.MarkdownStyleSheet:
     """Estilos con los que se pinta el markdown de las respuestas (ver
@@ -166,18 +193,30 @@ class AgenteIAView(ft.Container):
         # Botón de desplegar: solo aparece cuando el texto del dueño ya no
         # cabe en la caja. Mismo formato de botón-icono que menu_view.py
         # (30x30, radio 15, ink) para que no se sienta de otra app.
-        self.icono_expandir = ft.Icon(ft.Icons.UNFOLD_MORE, size=16, color="#756b5e")
         self.boton_expandir = ft.Container(
-            content=self.icono_expandir,
-            width=30,
-            height=30,
+            content=_icono(ft.Icons.UNFOLD_MORE, 16, "#756b5e"),
+            width=ANCHO_BOTON_EXPANDIR,
+            height=ANCHO_BOTON_EXPANDIR,
             alignment=ft.Alignment(0, 0),
-            border_radius=15,
+            border_radius=ANCHO_BOTON_EXPANDIR / 2,
             ink=True,
             visible=False,
             tooltip="Ver todo el mensaje",
             on_click=self._alternar_expansion,
         )
+
+        # Botón de enviar: la caja vacía no muestra NADA a la derecha, y en
+        # cuanto el dueño escribe algo aparece. Se ve distinto según el
+        # estado de la pantalla — ver _estilizar_boton_enviar() para el
+        # porqué de los dos aspectos.
+        self.boton_enviar = ft.Container(
+            alignment=ft.Alignment(0, 0),
+            ink=True,
+            visible=False,
+            tooltip="Enviar (Enter)",
+            on_click=self._enviar_mensaje,
+        )
+        self._estilizar_boton_enviar()
 
         self.caja_entrada = ft.Container(
             width=ANCHO_CHAT,
@@ -185,8 +224,8 @@ class AgenteIAView(ft.Container):
             border_radius=35,
             padding=ft.padding.only(right=12),
             content=ft.Row(
-                controls=[self.entrada, self.boton_expandir],
-                spacing=0,
+                controls=[self.entrada, self.boton_expandir, self.boton_enviar],
+                spacing=HUECO_BOTONES,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             shadow=ft.BoxShadow(
@@ -250,6 +289,7 @@ class AgenteIAView(ft.Container):
         llama una sola vez, desde _enviar_mensaje, al mandar el primer
         mensaje: de ahí en adelante la pantalla ya no cambia de forma."""
         self._modo_chat = True
+        self._estilizar_boton_enviar()
         self.raiz.controls = [
             self.zona_conversacion,
             ft.Container(height=14),
@@ -350,8 +390,35 @@ class AgenteIAView(ft.Container):
         )
 
     # ------------------------------------------------------------------
-    # Caja de texto: crecer, desplegar, plegar
+    # Caja de texto: enviar, crecer, desplegar, plegar
     # ------------------------------------------------------------------
+    def _estilizar_boton_enviar(self):
+        """Le da al botón de enviar el aspecto que le toca según el estado
+        de la pantalla. No repinta — quien llama decide cuándo hacerlo.
+
+        En BIENVENIDA es un cuadro naranja relleno: la pantalla está vacía,
+        no hay ninguna otra cosa que mirar, y el botón es la invitación a
+        mandar la primera pregunta. En CONVERSACIÓN se apaga al formato
+        discreto de al lado —sin fondo, redondo, el mismo gris #756b5e del
+        botón de desplegar— porque ahí ya compite con las burbujas y el
+        dueño ya aprendió que Enter manda: un cuadro naranja gritando en
+        cada respuesta cansa. El tamaño (34) no cambia entre los dos, para
+        que la píldora no se encoja al mandar el primer mensaje.
+
+        El naranja es #bf571d, el mismo del "¿En qué puedo ayudarte hoy?"
+        que tiene justo encima, no un tono nuevo.
+        """
+        self.boton_enviar.width = ANCHO_BOTON_ENVIAR
+        self.boton_enviar.height = ANCHO_BOTON_ENVIAR
+        if self._modo_chat:
+            self.boton_enviar.border_radius = ANCHO_BOTON_ENVIAR / 2
+            self.boton_enviar.bgcolor = None
+            self.boton_enviar.content = _icono(ft.Icons.KEYBOARD_RETURN, 17, "#756b5e")
+        else:
+            self.boton_enviar.border_radius = 12
+            self.boton_enviar.bgcolor = "#bf571d"
+            self.boton_enviar.content = _icono(ft.Icons.ARROW_UPWARD, 18, "#fbf5e9")
+
     def _lineas_estimadas(self, texto: str) -> int:
         """Cuántos renglones ocupa el texto dentro de la caja.
 
@@ -363,10 +430,23 @@ class AgenteIAView(ft.Container):
 
         Los 7.9 px por carácter no son un número al aire: se midieron
         tecleando un texto real en la caja y contando dónde partía los
-        renglones (~79 caracteres por renglón con text_size=15). Si se
-        cambia ANCHO_CHAT o text_size, hay que volver a medir.
+        renglones con text_size=15. Ese ancho por carácter es del tipo de
+        letra, no de la caja, así que sigue valiendo aunque el campo se
+        angoste; lo que cambia es cuántos caben (~74 por renglón desde que
+        entró el botón de enviar, ~79 antes). Si se cambia ANCHO_CHAT o
+        text_size, hay que volver a medir.
         """
-        ancho_util = ANCHO_CHAT - 24 * 2 - 42  # padding del campo + el botón
+        # Ancho real del campo: la píldora menos su padding derecho, menos
+        # los dos botones con sus huecos, menos el padding horizontal del
+        # propio TextField. Se cuentan los dos botones aunque el de
+        # desplegar todavía no se vea, porque para cuando el texto llega a
+        # desbordarse los dos están ahí.
+        ancho_util = (
+            ANCHO_CHAT
+            - 12
+            - (ANCHO_BOTON_EXPANDIR + ANCHO_BOTON_ENVIAR + HUECO_BOTONES * 2)
+            - 24 * 2
+        )
         por_renglon = max(20, int(ancho_util / 7.9))
         renglones = 0
         for parrafo in texto.split("\n"):
@@ -378,16 +458,26 @@ class AgenteIAView(ft.Container):
         decide cuándo hacerlo."""
         self._entrada_expandida = False
         self.entrada.max_lines = LINEAS_COLAPSADA
-        self.icono_expandir.name = ft.Icons.UNFOLD_MORE
+        self.boton_expandir.content = _icono(ft.Icons.UNFOLD_MORE, 16, "#756b5e")
         self.boton_expandir.tooltip = "Ver todo el mensaje"
 
     def _on_cambio_entrada(self, evento):
-        """Aparece o desaparece el botón de desplegar según si lo escrito ya
-        no cabe en la caja. Corre en cada tecla, así que sale temprano
-        cuando no cambió nada para no repintar de más."""
-        desborda = self._lineas_estimadas(self.entrada.value or "") > LINEAS_COLAPSADA
-        if desborda == self.boton_expandir.visible:
+        """Enciende y apaga los dos botones de la derecha según lo escrito:
+        el de enviar en cuanto hay algo que mandar, el de desplegar solo
+        cuando el texto ya no cabe en la caja. Corre en cada tecla, así que
+        sale temprano cuando ninguno de los dos cambió, para no repintar de
+        más."""
+        texto = self.entrada.value or ""
+        hay_texto = bool(texto.strip())
+        desborda = self._lineas_estimadas(texto) > LINEAS_COLAPSADA
+
+        if (
+            hay_texto == self.boton_enviar.visible
+            and desborda == self.boton_expandir.visible
+        ):
             return
+
+        self.boton_enviar.visible = hay_texto
         self.boton_expandir.visible = desborda
         if not desborda:
             # El dueño borró texto hasta que volvió a caber: la caja se
@@ -401,7 +491,7 @@ class AgenteIAView(ft.Container):
         else:
             self._entrada_expandida = True
             self.entrada.max_lines = LINEAS_EXPANDIDA
-            self.icono_expandir.name = ft.Icons.UNFOLD_LESS
+            self.boton_expandir.content = _icono(ft.Icons.UNFOLD_LESS, 16, "#756b5e")
             self.boton_expandir.tooltip = "Contraer"
         self._refrescar()
 
@@ -426,6 +516,7 @@ class AgenteIAView(ft.Container):
 
         self.entrada.value = ""
         self.boton_expandir.visible = False
+        self.boton_enviar.visible = False
         self._plegar_entrada()
         self._refrescar()
         self.router.page.run_task(self._responder, texto, clave)
