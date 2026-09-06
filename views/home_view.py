@@ -228,7 +228,7 @@ class HomeView(ft.Container):
                                 controls=[
                                     ft.Text("SUGERENCIA DE HOY", size=12, weight="bold", color="#8b7764"),
                                     # Esta tarjeta sigue siendo un ejemplo de lo que hará el
-                                    # Agente IA (Fase 7) — todavía no hay datos de ventas ni
+                                    # Agente IA (Fase 8) — todavía no hay datos de ventas ni
                                     # de publicaciones detrás. Pero el texto ya no inventa
                                     # cifras: antes decía "Llevas 3 semanas sin postear" y
                                     # "+X% de interés" (con la X literal, se veía como bug),

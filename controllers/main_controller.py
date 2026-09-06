@@ -97,7 +97,8 @@ class MainController:
 
     def cerrar_sesion(self):
         """Cierra sesión y regresa al login. Se llama desde ajustes_view.py
-        (Fase 7) — no hay botón para esto todavía en ningún lado.
+        (Fase 8, el repaso final) — no hay botón para esto todavía en
+        ningún lado.
 
         Ya no borra nada de disco (antes llamaba a sesion.borrar()): desde
         2026-09-05 la sesión solo vive en memoria, así que basta con el
