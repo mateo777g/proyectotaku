@@ -27,15 +27,15 @@ del resultado de contenido_view.py. Un did_mount() aquí sería trabajo
 repetido, no una corrección.
 
 ALCANCE DE "EXPORTAR" -- decidido explícitamente en el prompt de esta
-fase en vez de dejar el botón deshabilitado: la ruta secundaria que
-configura ajustes_view.py (Fase 7.5) TODAVÍA NO TIENE PANTALLA -- lo que
-sí existe es el pedacito de lógica que hacía falta,
+fase en vez de dejar el botón deshabilitado: al construirse esta vista, la
+ruta secundaria que configura ajustes_view.py (Fase 7.5) todavía no tenía
+pantalla -- lo que sí existía era el pedacito de lógica que hacía falta,
 models/config_usuario.py (nuevo, junto con esta vista), que lee/guarda esa
-ruta fuera del repo con fallback a ~/Downloads. "Exportar" ya funciona hoy
-mismo copiando a ~/Downloads (o a lo que el dueño configure una vez que
-exista la 7.5, sin tocar esta vista) en vez de quedarse inerte con una
-nota -- exportar-a-Descargas por default es un resultado útil por sí
-mismo, no solo un relleno.
+ruta fuera del repo con fallback a ~/Downloads. Desde la Fase 7.5
+(2026-09-06) esa pantalla ya existe y escribe por ese mismo módulo, así
+que "Exportar" copia a lo que el dueño haya configurado ahí -- sin ningún
+cambio en este archivo, por compartir la misma fuente de verdad -- y sigue
+cayendo a ~/Downloads mientras no haya nada guardado.
 """
 import asyncio
 import datetime

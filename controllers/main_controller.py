@@ -96,9 +96,11 @@ class MainController:
         self.page.update()
 
     def cerrar_sesion(self):
-        """Cierra sesión y regresa al login. Se llama desde ajustes_view.py
-        (Fase 8, el repaso final) — no hay botón para esto todavía en
-        ningún lado.
+        """Cierra sesión y regresa al login. Se llama desde el botón
+        "Cerrar sesión" de ajustes_view.py (Fase 7.5, 2026-09-06) — directo
+        en el hilo de la UI, no vía asyncio.to_thread, porque este método
+        mezcla el sign_out (lo único que toca la red) con mostrar_login()
+        (mutaciones de la Page, que no son seguras desde un hilo aparte).
 
         Ya no borra nada de disco (antes llamaba a sesion.borrar()): desde
         2026-09-05 la sesión solo vive en memoria, así que basta con el

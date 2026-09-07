@@ -5,17 +5,17 @@ secundaria de exportación que usa views/biblioteca_view.py (Fase 7.4).
 
 NOTA DE ALCANCE, explícita a propósito (pedida así en el prompt de la Fase
 7.4 en vez de asumirse en silencio): este archivo NO es la pantalla de
-Ajustes. Es solo el pedacito de lógica que hacía falta para que el botón
-"Exportar" de la biblioteca funcione HOY, antes de que exista un lugar en
-la UI para elegir esa ruta — la 7.5 (views/ajustes_view.py, con el mismo
-selector de carpeta por Tkinter que dialogo_platillo.py ya usa para la
-foto) todavía no se construyó. Cuando se construya, esa pantalla debe leer
-y escribir por AQUÍ (obtener_ruta_exportacion() / guardar_ruta_exportacion()),
-no inventar su propio archivo — el roadmap ya lo marca explícito en el
+Ajustes. Nació como el pedacito de lógica que hacía falta para que el botón
+"Exportar" de la biblioteca funcionara antes de que existiera un lugar en
+la UI para elegir esa ruta. Desde la Fase 7.5 (2026-09-06) esa pantalla
+(views/ajustes_view.py, con el mismo selector de carpeta por Tkinter que
+dialogo_platillo.py ya usa para la foto) ya existe y lee/escribe por AQUÍ
+(obtener_ruta_exportacion() / guardar_ruta_exportacion()) — ninguna de las
+dos pantallas inventó su propio archivo, tal como pedía el roadmap en el
 bloque "FASE 7" → "LOS AJUSTES": "la ruta la consultan DOS pantallas. Vive
-en un solo lugar y las dos lo leen." Mientras la 7.5 no exista,
-obtener_ruta_exportacion() simplemente no tiene nada guardado que leer y
-cae siempre a ~/Downloads — ver esa función.
+en un solo lugar y las dos lo leen." obtener_ruta_exportacion() sigue
+cayendo a ~/Downloads cuando el dueño nunca guardó nada (o la ruta
+guardada ya no existe en disco) — ver esa función.
 
 DÓNDE SE GUARDA — la pregunta que el roadmap dejó abierta en el bloque
 "CÓMO SE ARMA" de la Fase 7 ("LO ÚNICO QUE PROPONGO CAMBIAR" frente a
