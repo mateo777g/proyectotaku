@@ -249,7 +249,15 @@ def _ruta_salida(platillo: dict, plantilla, formato) -> str:
     slug = _slug(platillo.get("nombre", "platillo"))
     marca_tiempo = int(time.time() * 1000)
     nombre = f"{slug}-{plantilla.id}-{formato.id}-{marca_tiempo}.png"
-    return os.path.join(_RUTA_BIBLIOTECA, nombre)
+    # Diagonal explícita, NO os.path.join: en Windows os.path.join produce
+    # "biblioteca\archivo.png", y ese backslash rompe ft.Image(src=...) en
+    # el cliente de flet (que resuelve assets_dir="." como una URL, donde
+    # "\" no es separador) -- se encontró integrando esto con
+    # views/contenido_view.py (Fase 7.3), el primer consumidor real que
+    # pasa esta ruta directo a un ft.Image. Pillow (open()/save()) y
+    # os.makedirs() aceptan "/" en Windows sin ningún problema, así que
+    # esto no le cuesta nada al otro consumidor de esta ruta.
+    return f"{_RUTA_BIBLIOTECA}/{nombre}"
 
 
 def _validar_textos(formato, textos: dict) -> None:

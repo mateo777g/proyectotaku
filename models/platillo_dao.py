@@ -64,6 +64,12 @@ _CATEGORIAS_FIJAS = ("Platillos", "Bebidas", "Postres")
 # solo altas.
 _COLUMNAS_RECIENTES = "id, nombre, created_at, updated_at"
 
+# Solo lo que pinta el selector de platillo del asistente de contenido
+# (Fase 7.3, views/contenido_view.py) — igual criterio que _COLUMNAS
+# arriba, nunca select('*'). No trae precio/descripcion/categoria porque
+# ese paso solo necesita mostrar la foto recortada y el nombre.
+_COLUMNAS_CON_RECORTE = "id, nombre, image_url_recortada"
+
 
 class PlatilloDAO:
     @staticmethod
@@ -329,4 +335,24 @@ class PlatilloDAO:
             .execute()
         )
         return respuesta.count or 0
+
+    @staticmethod
+    def obtener_con_recorte() -> list[dict]:
+        """Para el paso 3 del asistente de contenido (Fase 7.3, "Elegir
+        platillo"): solo los Platillos que YA tienen image_url_recortada
+        generado — un anuncio siempre estampa la foto recortada, nunca la
+        original con fondo (ver models/generador_anuncios.py). Mismo
+        filtro que contar_platillos_con_recorte(), pero trayendo las filas
+        en vez de solo el conteo — hoy son 5 (ids 5, 30, 31, 32, 33, ver
+        CLAUDE.md → Fase 7)."""
+        respuesta = (
+            client.from_("platillos")
+            .select(_COLUMNAS_CON_RECORTE)
+            .eq("categoria", "Platillos")
+            .not_.is_("image_url_recortada", "null")
+            .order("orden")
+            .order("id")
+            .execute()
+        )
+        return respuesta.data or []
 
