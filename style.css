@@ -43,7 +43,10 @@
   --radio-badge: 12px;
   --sombra-boton: 0 4px 12px rgba(0, 0, 0, 0.28);
 
-  --navbar-alto: 78px;
+  /* 90px porque ahora el navbar es una píldora con su propio padding-top
+     de 22px + ~68px de alto de cápsula (antes era una barra pegada al
+     borde de 78px en total) — ver .tk-navbar más abajo. */
+  --navbar-alto: 90px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -75,12 +78,28 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 
 /* ================= Navbar =================
-   Flotante tipo "sombra" (degradado, no un bloque sólido) sobre el
-   contenido, igual patrón que EJEMPLOS/style.css (.navbar ahí):
-   position:fixed + pointer-events:none en el contenedor, pointer-events:
-   auto solo en marca/links/botón para que el degradado transparente no
-   bloquee clics debajo de él. Los colores/tipografía siguen siendo los
-   de Taku Monky, no los de Anxie Store. */
+   Píldora flotante — remodelada 7 sep 2026 a pedido del dueño, sobre
+   la Opción B ("píldora flotante") de un canvas de Claude Design
+   comparado en vivo contra la barra de sombra/degradado que había
+   antes. Ya no es un bloque pegado a los bordes con un degradado que
+   se apaga hacia abajo: es una cápsula redondeada, separada de los
+   bordes, flotando sobre el hero. El hero ya tiene su propio fondo
+   sólido (ver .tk-hero, degradado verde-a-negro) y la píldora trae su
+   propio fondo oscuro translúcido + blur, así que ya no hace falta el
+   degradado ancho de antes solo para que el texto blanco se lea — de
+   paso se acaba la "sombra" que antes se quedaba flotando sobre el
+   fondo crema al hacer scroll más allá del hero.
+
+   SOLO existe en index.html a propósito (pedido explícito del dueño:
+   "al menú ya le tocaría una remodelación más difícil") — las 3
+   páginas de categoría usan .tk-cat-header, un componente totalmente
+   aparte (ver CLAUDE.md) que ninguna regla de aquí toca.
+
+   Mismo patrón pointer-events que antes: position:fixed +
+   pointer-events:none en el contenedor para no bloquear clics fuera
+   de la píldora, pointer-events:auto en la píldora misma (se hereda
+   a todo lo de adentro, por eso ya no hace falta repetirlo en cada
+   hijo como antes). */
 .tk-navbar {
   position: fixed;
   top: 0;
@@ -88,52 +107,35 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   width: 100%;
   z-index: 500;
   display: flex;
-  align-items: flex-start;
-  padding-top: 26px;
-  padding-bottom: 110px;
+  justify-content: center;
+  padding: 22px 20px 0;
   pointer-events: none;
-  /* Degradado más claro (calcado de EJEMPLOS/style.css .navbar: .5/.2/0
-     en vez de nuestro .82/.42/0 anterior) — el nuestro se veía mucho
-     más oscuro que el de referencia.
-     5 paradas en vez de 3 (y padding-bottom más alto que antes, 110px)
-     — pedido del dueño: con solo 0%/55%/100% se notaba un "codo" a
-     medio camino y se sentía que la sombra se recortaba de golpe en
-     vez de irse apagando. (Hasta el 28 ago 2026, .tk-hero::after más
-     abajo compartía esta misma curva reescalada a un pico distinto —
-     ya no: ese difuminado ahora necesita llegar a opacidad 1 para
-     emparejar el color sólido de la sección 2 de ahí abajo, algo que
-     este navbar no necesita — solo oscurecer lo justo para que su
-     texto blanco se lea. Tocar esta curva ya no obliga a tocar la
-     otra.) */
-  background: linear-gradient(to bottom,
-    rgba(13, 9, 5, .55) 0%,
-    rgba(13, 9, 5, .28) 25%,
-    rgba(13, 9, 5, .12) 50%,
-    rgba(13, 9, 5, .05) 75%,
-    rgba(13, 9, 5, 0) 100%);
 }
 .tk-navbar .tk-envoltura {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 36px;
   width: 100%;
-  /* Sin max-width propio: la marca y los links se van derecho a las
-     esquinas del viewport (borde a borde, solo el padding de aquí como
-     margen), igual que EJEMPLOS/style.css .navbar (padding 3.5rem, sin
-     max-width) — con el max-width de 1400px que tenía antes seguían
-     quedando lejos de la esquina en pantallas anchas. */
-  max-width: none;
-  padding: 0 56px;
+  max-width: 1040px;
+  margin: 0;
+  padding: 12px 30px;
+  pointer-events: auto;
+  border-radius: 999px;
+  background: rgba(13, 9, 5, .55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
 }
 .tk-marca {
   display: flex;
   align-items: center;
   gap: 12px;
-  pointer-events: auto;
 }
 .tk-marca img {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -142,14 +144,13 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   font-family: Georgia, serif;
   font-style: italic;
   font-weight: bold;
-  font-size: 22px;
+  font-size: 20px;
   color: var(--blanco);
   white-space: nowrap;
 }
 .tk-nav-links {
   display: flex;
-  gap: 40px;
-  pointer-events: auto;
+  gap: 36px;
 }
 /* El "atajo" ya no saca una píldora de color al hover: saca una
    barrita dorada animada creciendo debajo del texto (mismo mecanismo
@@ -198,6 +199,39 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 .tk-nav-link--activo { opacity: 1; }
 .tk-nav-link--activo::after { width: 100%; }
 
+/* Grupo de la derecha de la píldora: ícono de WhatsApp + hamburguesa.
+   En escritorio este grupo trae nada más el ícono (la hamburguesa
+   sigue oculta), así que el space-between de .tk-envoltura reparte
+   los 3 grupos (marca / links / acciones) igual que antes. En móvil
+   .tk-nav-links desaparece y este grupo pasa a tener los dos juntos,
+   pegados a la esquina derecha de la píldora. */
+.tk-nav-acciones {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Ícono de WhatsApp en la píldora — mismo SVG y el mismo naranja que
+   ya usa el botón "Pedir por WhatsApp" del hero (.tk-btn--secundario),
+   para no inventar un segundo color para "esto manda a WhatsApp".
+   Pedido explícito del dueño: quería el logo visible en la barra
+   misma, no solo en el hero/footer. */
+.tk-nav-whatsapp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--naranja);
+  color: var(--blanco);
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(191, 87, 29, .35);
+  transition: filter .18s ease, transform .18s ease;
+}
+.tk-nav-whatsapp svg { width: 19px; height: 19px; }
+.tk-nav-whatsapp:hover { filter: brightness(0.94); transform: scale(1.06); }
+
 /* Botón hamburguesa — oculto en escritorio, solo aparece en móvil. */
 .tk-menu-boton {
   display: none;
@@ -206,7 +240,6 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   gap: 5px;
   width: 34px;
   height: 34px;
-  pointer-events: auto;
 }
 .tk-menu-boton span {
   display: block;
@@ -304,15 +337,15 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 @media (max-width: 640px) {
   .tk-nav-links { display: none; }
   .tk-menu-boton { display: flex; }
-  /* El padding de 56px de .tk-navbar .tk-envoltura (arriba) es a
-     propósito en escritorio, pero en celular ese mismo inset se comía
-     demasiado ancho y dejaba el logo y la hamburguesa apretados hacia
-     el centro en vez de pegados a las esquinas — pedido del dueño
-     (3 sep 2026), comparando contra una navbar de referencia donde sí
-     llegan hasta el borde. Se baja al mismo padding que ya usa el
-     resto del contenido en móvil (.tk-envoltura genérico, el hero, las
-     secciones, el footer), no un número inventado. */
-  .tk-navbar .tk-envoltura { padding: 0 20px; }
+  /* La píldora en móvil no usa max-width (ya angosta de por sí): se
+     achica de alto/ancho en vez de quedarse del mismo tamaño que en
+     escritorio, y el hueco entre marca y el grupo de acciones baja de
+     36 a 14px para que no se vea forzado en una barra tan angosta. */
+  .tk-navbar { padding: 16px 16px 0; }
+  .tk-navbar .tk-envoltura { max-width: none; padding: 10px 18px; gap: 14px; }
+  .tk-marca img { width: 38px; height: 38px; }
+  .tk-nav-whatsapp { width: 34px; height: 34px; }
+  .tk-nav-whatsapp svg { width: 17px; height: 17px; }
   /* Solo en móvil se quita el texto de la marca (queda nada más el
      logo) y la navbar se puede esconder al hacer scroll — en
      escritorio se queda como siempre. Ver el listener de scroll en
@@ -335,13 +368,14 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    (var(--radio-pill), no el 12px cuadriculado del mockup) porque
    todos los botones del sitio ya son píldora completa; el ícono real
    de WhatsApp (no la flecha genérica que reusa el mockup) porque es
-   el mismo que ya usan las tarjetas de menu.js; y el verde #589f26 del
-   botón, que ya era una excepción de paleta deliberada del dueño
-   (documentada abajo) — no el #1c7a43 del mockup. */
+   el mismo que ya usan las tarjetas de menu.js. El botón sí llevó el
+   verde #589f26 del mockup al principio (excepción de paleta
+   deliberada) pero volvió al naranja var(--naranja) el 7 sep 2026 —
+   ver la nota junto a .tk-btn--secundario más abajo para el porqué. */
 .tk-hero {
   /* Ancla del difuminado del pie (.tk-hero::after, justo abajo), del
-     velo de fondo (.tk-hero-fondo) y de las hojas decorativas
-     .tk-hoja--hero-izq/der, todas position:absolute. */
+     velo de fondo (.tk-hero-fondo) y del humo decorativo
+     (.tk-humo--hero), todas position:absolute. */
   position: relative;
   min-height: 100vh;
   min-height: 100svh;
@@ -353,15 +387,17 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      su propio espacio en el flujo — este padding-top es lo que evita
      que el logo/marca de la barra tape el contenido del hero. */
   padding: calc(var(--navbar-alto) + 28px) 20px 28px;
-  /* Degradado café-a-negro — fondo FINAL del hero, no un respaldo por
+  /* Degradado verde-a-negro — fondo FINAL del hero, no un respaldo por
      si falta una foto. Sí hubo una foto real de por medio (assets/
      hero-fondo.png) durante el remodelado de este hero; el dueño la
      probó y pidió quitarla (7 sep 2026: "se ve malisimo, mejor dejale
      el degradado... que ya no sea un error sino parte del diseño").
-     Mismo tono que el velo de abajo (.tk-hero-fondo-velo), que se
-     queda encima de este degradado aunque ya no haya ninguna <img>
-     detrás — los dos juntos son el look que ya se verificó y aprobó. */
-  background: linear-gradient(160deg, #6b4325 0%, #2b1c10 55%, #171310 100%);
+     El tono cambió de café a verde el mismo día 7 sep 2026, a pedido
+     del dueño con una captura de referencia. Mismo tono que el velo
+     de abajo (.tk-hero-fondo-velo), que se queda encima de este
+     degradado aunque ya no haya ninguna <img> detrás — los dos juntos
+     son el look que ya se verificó y aprobó. */
+  background: linear-gradient(160deg, #3f4e2a 0%, #1c2814 55%, #10160c 100%);
   /* Recorta SOLO a lo ancho, para que las hojas (que se salen a propósito por
      el borde derecho con right: calc(--hoja-tam * -0.30)) no agranden el
      documento. Sin esto, en celular el ancho scrolleable pasaba de 393 a 467px
@@ -404,10 +440,12 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 .tk-hero-fondo-velo {
   position: absolute;
   inset: 0;
+  /* Verde, no ámbar — cambiado junto con el degradado base de .tk-hero
+     de arriba (7 sep 2026), mismo pedido del dueño. */
   background: linear-gradient(180deg,
-    rgba(224, 138, 69, .55) 0%,
-    rgba(36, 24, 15, .35) 46%,
-    rgba(15, 12, 9, .88) 100%);
+    rgba(122, 156, 74, .5) 0%,
+    rgba(28, 40, 20, .35) 46%,
+    rgba(10, 14, 8, .88) 100%);
 }
 
 /* -------- Difuminado entre sección 1 (hero) y sección 2 --------
@@ -470,8 +508,8 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    difuminado de la foto ya se nota aunque no hayas scrolleado nada).
 
    pointer-events:none para que nunca bloquee los botones del hero, y
-   sin z-index propio: .tk-hero-contenido (z-index:2) y las hojas
-   decorativas (.tk-hoja, z-index:1) se siguen pintando encima. */
+   sin z-index propio: .tk-hero-contenido (z-index:2) y el humo
+   decorativo (.tk-humo, z-index:1) se siguen pintando encima. */
 .tk-hero::after {
   content: '';
   position: absolute;
@@ -547,13 +585,20 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   gap: 12px;
 }
 .tk-hero-linea { width: 36px; height: 1px; }
-.tk-hero-linea--izq { background: linear-gradient(90deg, transparent, var(--eyebrow)); }
-.tk-hero-linea--der { background: linear-gradient(90deg, var(--eyebrow), transparent); }
+/* var(--dorado), no var(--eyebrow) — cambiado el 7 sep 2026 a pedido
+   del desarrollador para que "TAQUERÍA" y sus líneas compartan el
+   mismo tono amarillo/dorado que ya tenía el punto de .tk-hero-punto
+   (var(--dorado) también), en vez del tostado más café de --eyebrow
+   que usan las demás secciones del sitio (#platillos/#bebidas/
+   #postres, etc. — esas NO se tocaron, siguen en --eyebrow). Cambio
+   scoped a estas 3 reglas, no a la variable global. */
+.tk-hero-linea--izq { background: linear-gradient(90deg, transparent, var(--dorado)); }
+.tk-hero-linea--der { background: linear-gradient(90deg, var(--dorado), transparent); }
 .tk-hero-eyebrow {
   font-size: 12px;
   font-weight: bold;
   letter-spacing: .3em;
-  color: var(--eyebrow);
+  color: var(--dorado);
   text-transform: uppercase;
 }
 
@@ -642,20 +687,21 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   border: none;
 }
 .tk-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-/* Verde #589f26, pedido explícito del dueño (28 ago 2026) — primero
-   probamos el verde WhatsApp de marca (#25D366), pero lo cambió por
-   este tono para que el botón haga juego con el verde de las hojas
-   decorativas de la sección (.tk-hoja), no con la app. Es una
-   excepción de paleta deliberada, igual que el verde/dorado sueltos
-   del carrusel (ver CLAUDE.md → Design rules → carrusel): un hex ajeno
-   a la paleta, pero pedido a propósito por el dueño, no inventado —
-   por eso este remodelado lo conserva en vez de adoptar el #1c7a43
-   del mockup. La sombra de color sí se tomó de la opción 1a (antes no
-   tenía). */
+/* Naranja var(--naranja), desde el 7 sep 2026 — antes era verde #589f26
+   (pedido del dueño el 28 ago 2026 para hacer juego con las hojas
+   decorativas verdes que entonces tenía la sección). Las hojas se
+   quitaron el 7 sep 2026 (ver .tk-humo más abajo) y con ellas se fue
+   el motivo original del tono; ese mismo día el fondo del hero
+   también pasó a verde (ver el degradado de .tk-hero más arriba), así
+   que un botón verde sobre fondo verde perdía todo el contraste que
+   sí tenía contra el café de antes. Se volvió al naranja de la paleta
+   ya establecida en vez de inventar un tono nuevo — coincide además
+   con el botón naranja de la captura de referencia que motivó este
+   cambio. */
 .tk-btn--secundario {
-  background: #589f26;
+  background: var(--naranja);
   color: var(--blanco);
-  box-shadow: 0 8px 20px rgba(88, 159, 38, .35);
+  box-shadow: 0 8px 20px rgba(191, 87, 29, .35);
 }
 .tk-btn--secundario:hover { filter: brightness(0.94); }
 /* "Ver menú" pasa de sólido oscuro a outline transparente — en la
@@ -1212,17 +1258,19 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   min-height: 100svh;
   align-items: center;
   justify-content: center;
-  /* SIN overflow:hidden aquí a propósito (corregido 28 ago 2026) — antes
-     vivía en esta regla y recortaba en seco a .tk-hoja--menu-izq/der,
-     que a propósito bleedean por fuera del borde superior de la sección
-     (ver la nota grande de .tk-hoja más abajo). El recorte que sí hace
-     falta (el fondo difuminado + las tarjetas del coverflow, que no
-     deben desbordar la sección) se movió a .tk-carrusel-recorte, un
-     envoltorio interno que NO incluye a las hojas — así cada quien
-     recorta solo lo suyo. (El overflow-x:hidden global de <body> ya
-     cubre que una tarjeta en el extremo de su traslación ±510px no
-     provoque scroll horizontal de página, así que quitar esto de aquí
-     no reabre ese problema.) */
+  /* SIN overflow:hidden aquí a propósito (corregido 28 ago 2026, cuando
+     esta sección todavía tenía hojas decorativas que bleedeaban fuera
+     de su borde superior). El motivo original ya no aplica (el humo
+     que las reemplazó era self-contained, y desde el 7 sep 2026 ni
+     siquiera existe ya en esta sección — ver .tk-humo--carrusel más
+     arriba), pero la regla se deja igual: el recorte que sí hace falta
+     (el fondo difuminado +
+     las tarjetas del coverflow, que no deben desbordar la sección) ya
+     vive en .tk-carrusel-recorte, un envoltorio interno aparte — así
+     cada quien recorta solo lo suyo. (El overflow-x:hidden global de
+     <body> ya cubre que una tarjeta en el extremo de su traslación
+     ±510px no provoque scroll horizontal de página, así que agregar
+     overflow:hidden aquí tampoco haría falta por eso.) */
   padding: 48px 0;
   background-color: #0c0a09;
   color: #ffffff;
@@ -1230,13 +1278,16 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   user-select: none;
 }
 
-/* Envoltorio interno que sí recorta (fondo difuminado + coverflow) sin
-   tocar a las hojas, que quedan como hermanas fuera de este div — ver
-   la nota en .tk-carrusel-seccion de arriba. position:absolute sin
-   z-index propio: NO crea su propio stacking context (a diferencia de
-   darle z-index:0), así .tk-cf-fondo (z-index:0) y .tk-cf-envoltura
-   (z-index:10), sus hijos, se siguen intercalando con .tk-hoja
-   (z-index:1) exactamente igual que antes de que existiera este div. */
+/* Envoltorio interno que sí recorta (fondo difuminado + coverflow).
+   Hasta el 7 sep 2026 esto convivía con el humo decorativo de esta
+   sección (.tk-humo--carrusel), que quedaba como hermano fuera de
+   este div sin que este recorte lo tocara — ver la nota en
+   .tk-carrusel-seccion de arriba para por qué ese humo ya no existe.
+   position:absolute sin z-index propio: NO crea su propio stacking
+   context (a diferencia de darle z-index:0), así .tk-cf-fondo
+   (z-index:0) y .tk-cf-envoltura (z-index:10), sus hijos, se siguen
+   intercalando exactamente igual que antes de que existiera este
+   div. */
 .tk-carrusel-recorte {
   position: absolute;
   inset: 0;
@@ -1792,391 +1843,91 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 
 /* ================================================================
-   Hojas decorativas de esquina — hero y carrusel (28 ago 2026,
-   ajustado el mismo día tras feedback del dueño — ver las 4 notas
-   "AJUSTE" abajo, una por cada problema que reportó)
+   Humo del asador — reemplaza las hojas decorativas de esquina que
+   vivían aquí (7 sep 2026, decisión del desarrollador: las hojas de
+   palmera ya no encajaban con el hero oscuro tipo asador armado ese
+   mismo día — ver el remodelado de .tk-hero más arriba — ni con una
+   taquería en general; el motivo, además, apuntaba a "tropical", no
+   a "al pastor cortado al momento"). Explorado antes como 4
+   direcciones en un canvas de Claude Design ("Taku Monky Hero —
+   Hojas": limpio / chispas de brasa / humo / papel picado); esta es
+   la que se eligió.
    ================================================================
-   4 hojas en total, ancladas a las esquinas de dos secciones:
-     - Sección 1 (.tk-hero): inferior-izquierda + inferior-derecha.
-     - Sección 2 (.tk-carrusel-seccion, el carrusel — SOLO existe en
-       escritorio, ≥1024px): superior-izquierda + superior-derecha.
-       No hace falta ocultarlas aparte en móvil para esta sección: la
-       sección entera ya es display:none ahí (ver el bloque del
-       carrusel más arriba), así que estas dos ni se llegan a pintar.
+   Mismas 2 secciones que antes ocupaban las hojas — hero (esquinas de
+   abajo, .tk-humo--hero) y .tk-carrusel-seccion (esquinas de arriba,
+   .tk-humo--carrusel). ⚠️ El 7 sep 2026, mismo día, el dueño pidió
+   quitar el humo de ESAS DOS esquinas — la que hay "entre la sección 1
+   y 2" — pero solo en escritorio; la versión de celular se queda tal
+   cual. .tk-humo--carrusel se borró por completo (marcado + reglas):
+   como .tk-carrusel-seccion ya era display:none debajo de 1024px,
+   nunca se pintaba en celular, así que borrarlo no toca esa versión.
+   .tk-humo--hero sigue existiendo (celular la sigue mostrando) y se
+   oculta con un display:none dentro de un @media (min-width: 1024px)
+   — ver esa regla más abajo, junto a las manchas del hero.
 
-   assets/hojas.png (el archivo original) trae bastante margen
-   transparente alrededor del dibujo real de la hoja — posicionado tal
-   cual pegado a 0,0 se vería separado/descuadrado de la esquina.
-   assets/hoja.png es un recorte a ras del contenido real (bbox del
-   canal alfa, +2px de margen de seguridad), hecho una sola vez para
-   este efecto; hojas.png se queda intacto por si hace falta para
-   otra cosa después.
-
-   AJUSTE 3 (orientación): en el dibujo original el tallo nace
-   abajo-izquierda y la hoja se abre hacia arriba-derecha. El espejeado
-   ahora SOLO pasa entre izquierda/derecha (scaleX), nunca entre
-   arriba/abajo (nada de scaleY) — el dueño reportó que voltear
-   verticalmente se veía mal (folíolos "luchando contra la gravedad")
-   y que quería que la hoja de arriba y la de abajo del mismo lado
-   apuntaran en la misma dirección:
-     - hero-izq:  imagen tal cual (tallo abajo-izquierda).
-     - hero-der:  scaleX(-1) → tallo abajo-derecha.
-     - menu-izq:  imagen tal cual, igual que hero-izq (antes llevaba
-       scaleY, ya no).
-     - menu-der:  scaleX(-1), igual que hero-der (antes era
-       scaleX+scaleY = 180°, ya no).
-   El espejeado vive en el <img> interno, con su origen por defecto
-   (centro) — así el volteo no mueve la caja, solo voltea el dibujo
-   adentro de ella.
-
-   AJUSTE 2 (bbox real + "mordiendo" la esquina): sin scaleY, las 4
-   hojas usan solo 2 de las 4 esquinas del archivo como zona "densa"
-   (la del tallo y la de la punta, diagonalmente opuestas) — las otras
-   2 esquinas del bbox están casi vacías. Medido con Pillow sobre
-   hoja.png (273×310, umbral alfo>150 = contenido sólido, no solo
-   antialiasing): la esquina del tallo (abajo-izquierda del archivo
-   original) tiene el primer píxel sólido a ~1% de distancia — pegada.
-   La esquina opuesta (arriba-izquierda del archivo original, que es
-   la que usan menu-izq sin espejear y, espejeada, menu-der) tiene el
-   primer píxel sólido a ~30% del ancho / ~32% del alto — un hueco
-   enorme si el contenedor se posicionara a ras (0,0).
-   --hoja-sangrado-x/--hoja-sangrado-y (30%/36% del tamaño de la
-   propia hoja, vía calc(var(--hoja-tam) * …) para que escale con el
-   tamaño responsivo) sacan las 4 hojas por igual más allá de su
-   esquina — no solo tapa ese hueco en las 2 que lo tienen, también le
-   da a las otras 2 el look de "muerde/se sale del borde" que pidió el
-   dueño en vez de quedar solo a ras (que ya se había probado y seguía
-   viéndose "flotando hacia adentro" comparado con la referencia).
-
-   AJUSTE 1 (tamaño): --hoja-tam bastante más grande que el primer
-   intento (antes clamp(56px,8vw,140px) hero / clamp(90px,8vw,160px)
-   menú) — el dueño pidió presencia visual real, no un detalle
-   chiquito.
-
-   pointer-events:none en el contenedor (nunca deben poder bloquear un
-   clic) y z-index:1 — por debajo del contenido real de cada sección
-   (.tk-hero-contenido sube a z-index:2 aquí abajo; en el carrusel
-   .tk-cf-envoltura ya vive en z-index:10 desde arriba en este mismo
-   archivo) pero por encima del fondo difuminado del carrusel
-   (.tk-cf-fondo, z-index:0), para que se lean como una capa decorativa
-   de primer plano y no se pierdan contra ese fondo.
-
-   AJUSTE 4 (animación — historial, ver AJUSTE 9 junto a @keyframes
-   tk-viento más abajo para el estado actual): por un tiempo, el
-   balanceo tipo "viento" dejó de correr en loop infinito y solo se
-   activaba mientras había scroll activo, vía una clase .is-swaying
-   que agregaba/quitaba JS en index.html. Revertido — ver AJUSTE 9.
-   ================================================================ */
+   A diferencia de la hoja (que "mordía" la esquina a propósito y
+   necesitaba overflow-x:clip en .tk-hero para no ensanchar el
+   documento — ver el historial de ese bug más arriba en este mismo
+   archivo), el humo no necesita ningún ajuste de sangrado: cada
+   .tk-humo es position:absolute;inset:0, el mismo tamaño exacto de la
+   sección que lo contiene, con overflow:hidden — así que por más que
+   una mancha se posicione en negativo (para que su centro difuso
+   quede cerca de la esquina real), nunca se sale de la sección ni
+   agranda el ancho scrolleable. z-index:1, igual que la hoja: por
+   debajo del contenido (z-index:2, ver .tk-hero-contenido justo abajo)
+   y por encima del fondo. pointer-events:none para no bloquear clics,
+   igual que antes. */
 .tk-hero-contenido { position: relative; z-index: 2; }
 
-.tk-hoja {
+.tk-humo { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.tk-humo-mancha {
   position: absolute;
-  z-index: 1;
-  aspect-ratio: 273 / 310;
-  pointer-events: none;
-  /* Ángulo de reposo — cada variante fija --hoja-rot; el keyframe de
-     abajo lo lee vía calc() en vez de valores absolutos, así que
-     sumarle el balanceo de viento nunca "resetea" la hoja a 0deg (ver
-     la nota grande junto a @keyframes tk-viento). */
-  transform: rotate(var(--hoja-rot, 0deg));
-  /* Perf: promueve cada hoja a su propia capa de composición para que
-     el navegador anime `transform` (el loop infinito de @keyframes
-     tk-viento, ver más abajo) sin recalcular layout/paint del resto
-     de la página en cada frame. Ya no hay `transition` aquí — sin
-     ninguna clase que se agregue/quite en tiempo real (ver AJUSTE 9
-     más abajo), no hay ningún cambio de golpe que suavizar. */
-  will-change: transform;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 248, 238, .22) 0%, rgba(255, 248, 238, 0) 70%);
+  filter: blur(6px);
+  animation: tk-humo-deriva var(--t) ease-in-out var(--d) infinite;
 }
-.tk-hoja-img { width: 100%; height: 100%; display: block; }
-
-/* AJUSTE 2 (28 ago 2026, misma tarde — corrección contra imagen de
-   referencia del dueño): el AJUSTE 1 de arriba seguía quedando chico.
-   El dueño adjuntó una captura mostrando el tamaño/posición exactos
-   que quiere y pidió, medido sobre esa referencia, que cada hoja
-   ocupe ~24% del ancho del viewport — hablando del footprint VISIBLE
-   ya rotado (getBoundingClientRect, no el --hoja-tam sin rotar), que
-   es lo que de verdad se "ve" ocupar en pantalla. Verificado con
-   Playwright a 1920px: antes hero=19.45vw / menu=23.13vw (ambas ya
-   topadas en su MAX del AJUSTE 1, ni siquiera llegaban a usar el
-   18vw/19vw fluido). Como la rotación agranda la caja (bbox/tam ≈
-   1.245 en hero por su rotate(14deg), ≈1.234 en menu por su
-   rotate(84deg) — ver el bloque ÁNGULOS más abajo), el --hoja-tam sin
-   rotar necesario para llegar a 24vw de bbox es ~19.3-19.5vw, no 24vw
-   directo. MAX subió a 460px (antes 300/360) para que ese 19.3-19.5vw
-   no se vuelva a topar en 1920px (necesita ~370-374px) ni en
-   monitores más anchos comunes. MIN sin tocar — solo importa por
-   debajo de 879-1024px donde esta corrección no aplicaba. Re-medido
-   tras el cambio: 23.98vw hero / 24.02vw menu — dentro de margen de
-   redondeo del 24% pedido. */
-.tk-hoja--hero-izq,
-.tk-hoja--hero-der {
-  --hoja-tam: clamp(170px, 19.3vw, 460px);
-  width: var(--hoja-tam);
+/* Deriva lenta + respiración de opacidad — nada que se lea como
+   "parpadeo", cada mancha corre con su propia duración/delay (ver las
+   variables --t/--d por instancia más abajo) para que las 4 no queden
+   sincronizadas. */
+@keyframes tk-humo-deriva {
+  0%   { transform: translate(0, 0) scale(1);           opacity: .14; }
+  50%  { transform: translate(14px, -30px) scale(1.12); opacity: .24; }
+  100% { transform: translate(-8px, -4px) scale(1);     opacity: .14; }
 }
-/* Sección 2 (carrusel): mismo 24vw objetivo que el hero (ver AJUSTE 2
-   arriba) — coeficiente vw levísimamente distinto (19.5 vs 19.3) solo
-   porque compensa la relación bbox/tam ligeramente distinta de su
-   propio ángulo (84deg vs 14deg), no una diferencia de tamaño
-   intencional entre secciones. */
-.tk-hoja--menu-izq,
-.tk-hoja--menu-der {
-  --hoja-tam: clamp(210px, 19.5vw, 460px);
-  width: var(--hoja-tam);
+@media (prefers-reduced-motion: reduce) {
+  .tk-humo-mancha { animation: none; }
 }
 
-/* ÁNGULOS (corregidos 28 ago 2026 — la primera versión dejaba las 4
-   hojas casi verticales, --hoja-rot: 0deg implícito, solo el ángulo
-   natural del recorte de assets/hoja.png, que mide ~49° sobre la
-   horizontal). El dueño pidió, literal:
-     - Hero (sección 1): diagonal ACOSTADA hacia arriba, ~30-40° sobre
-       la horizontal, no casi vertical.
-     - Menú (sección 2): diagonal ACOSTADA hacia abajo, ~30-40° bajo la
-       horizontal — su propia diagonal, distinta a la del hero, no un
-       simple espejo/ajuste menor.
-   Los dos pares (izq/der de cada sección) son espejo horizontal exacto
-   uno del otro: --hoja-rot con el mismo valor absoluto, signo
-   contrario — así, con el mismo scaleX(-1) que ya llevaba la imagen
-   de las variantes "der", el resultado es una reflexión real, no solo
-   una posición en espejo con el mismo ángulo (que se vería mal
-   espejado). Cuentas: rotate(14deg) sobre el ángulo natural de 49°
-   deja la hoja del hero en ~35° sobre la horizontal, apuntando hacia
-   arriba (sin tocar left/bottom — el pivote "left/right bottom" cae
-   casi exacto sobre el nacimiento del tallo en el recorte, así que
-   rotar no mueve ese punto y el posicionamiento de antes sigue
-   valiendo). rotate(84deg) sobre esos mismos 49° cruza la horizontal y
-   deja la hoja del menú en ~35° BAJO la horizontal, apuntando hacia
-   abajo — por eso el ancla se recalculó por completo, ver la nota de
-   .tk-hoja--menu-izq más abajo. */
-/* AJUSTE 5 (28 ago 2026, feedback en vivo — "súbelas un poco"): el
-   dueño las vio en su propia captura más abajo de lo que quiere,
-   cerca de los botones. Solo se toca el bleed VERTICAL (-0.36→-0.15,
-   menos negativo = el borde inferior de la hoja queda más arriba
-   respecto al borde de .tk-hero) — el horizontal (-0.30) y el ángulo
-   no cambiaron, así que sigue mordiendo la esquina igual, solo más
-   arriba.
+/* Hero — esquinas de ABAJO (mismo lugar donde mordían hoja--hero-izq/der). */
+.tk-humo--hero .tk-humo-mancha--izq-grande { left: -10%; bottom: -10%; width: 230px; height: 230px; --d: 0s;   --t: 11s; }
+.tk-humo--hero .tk-humo-mancha--izq-chica  { left: -2%;  bottom: 2%;   width: 120px; height: 120px; --d: 1.5s; --t: 9s; }
+.tk-humo--hero .tk-humo-mancha--der-grande { right: -10%; bottom: -8%; width: 250px; height: 250px; --d: 2s;   --t: 12s; }
+.tk-humo--hero .tk-humo-mancha--der-chica  { right: 0%;   bottom: 6%;  width: 110px; height: 110px; --d: .6s;  --t: 8.5s; }
 
-   AJUSTE 6 (mismo feedback, segunda vuelta — "un pedazo de la hoja
-   sigue en la sección 2, subelo un poquito más"): con -0.15 un trozo
-   real de la hoja (no la caja completa, el contenido sólido) seguía
-   cruzando el borde inferior de .tk-hero hacia la sección 2. Medido
-   con Pillow sobre el canal alfa de hoja.png (mismo umbral >150 que
-   el resto de este bloque) cuál es el píxel sólido que, tras aplicar
-   la rotación real de 14deg y quedarse DENTRO del viewport (excluye
-   los píxeles cerca del tallo/pivote que ya caen fuera por la
-   izquierda, ocultos por el overflow-x:hidden del body — esos no
-   cuentan porque no se ven): el más profundo queda a ~0.076×tam por
-   debajo del borde con -0.15. -0.07 lo deja al ras (con un pequeño
-   margen), sin tocar el bleed horizontal ni el ángulo — otra vez, la
-   hoja no se movió de la esquina, solo subió lo justo para dejar de
-   picar la sección 2. */
-.tk-hoja--hero-izq {
-  --hoja-rot: 14deg;
-  left: calc(var(--hoja-tam) * -0.30);
-  bottom: calc(var(--hoja-tam) * -0.07);
-  transform-origin: left bottom;
-}
-.tk-hoja--hero-der {
-  --hoja-rot: -14deg;
-  right: calc(var(--hoja-tam) * -0.30);
-  bottom: calc(var(--hoja-tam) * -0.07);
-  transform-origin: right bottom;
-}
-.tk-hoja--hero-der .tk-hoja-img { transform: scaleX(-1); }
+/* .tk-humo--carrusel (esquinas de ARRIBA de la sección 2) se quitó
+   por completo el 7 sep 2026 — pedido del dueño de dejar la sección 2
+   sin humo en escritorio, junto con .tk-humo--hero (ver más abajo).
+   Ya no hay marcado .tk-humo--carrusel en index.html; estas reglas
+   quedarían muertas, así que se borraron con él. */
 
-/* Ancla recalculada (28 ago 2026), no solo el ángulo — dos cosas
-   cambiaron a la vez y están relacionadas:
-   1) `top` pasó de -0.36*tam a un valor mucho más negativo
-      (-1.14*tam). Con rotate(84deg), el pivote "left bottom" (que cae
-      casi exacto sobre el nacimiento del tallo en el recorte) solo
-      termina a la altura del borde superior de la sección si la caja
-      SIN rotar arranca casi una altura completa por encima de ese
-      borde — es una consecuencia geométrica de la vuelta grande, no
-      un valor arbitrario. El resto de la hoja (la punta) sí queda
-      colgando bien adentro de la sección, ~1.1×tam a la derecha y
-      ~0.84×tam hacia abajo del nacimiento del tallo.
-   2) El bleed horizontal bajó de -0.30 a -0.08*tam. Con -0.36
-      original ya NO aplica en vertical: esta sección es
-      position:sticky con top:0 (ver .tk-carrusel-seccion), así que
-      durante prácticamente todo el tiempo que el usuario la ve, el
-      borde superior de la sección ES el borde superior del viewport
-      — no existe "más allá" para que la hoja sangre, cualquier
-      offset negativo en vertical simplemente se renderiza fuera de la
-      ventana y se ve cortado en seco (el bug reportado). Confirmado
-      con Playwright leyendo getBoundingClientRect() en varios scrollY:
-      el top de la sección vale 0 en prácticamente todo el rango
-      visible. `top` aquí por eso ya no es un "bleed" en el sentido de
-      la sección 1 — es el cálculo exacto para que el nacimiento del
-      tallo quede exactamente al ras (y=0) del borde/viewport, ni
-      cortado ni flotando separado de la esquina. */
-/* AJUSTE 7 (28 ago 2026, feedback en vivo — "rótalas, tipo '-',
-   acostadas, ahorita se ven paradas"): 84deg matemáticamente ya daba
-   ~35° bajo la horizontal (verificado con PCA + la matriz real de
-   Playwright: eje tallo→punta natural de hoja.png mide -49.06° en
-   coords de pantalla; -49.06+84=34.94°) — el mismo ángulo que el
-   hero, solo espejeado, y por diseño original debía ser igual de
-   "acostado". En vivo se ve más parado de lo que el dueño quiere
-   comparado con la maqueta, así que esta vez no es cuestión de que el
-   ángulo estuviera mal calculado, es que el dueño quiere ir más allá
-   del 30-40° original: bajó a 64deg → -49.06+64=14.94°, mucho más
-   cerca de la horizontal ("tipo -").
-   `top`/`left` NO se tocan y siguen siendo válidos sin recalcular:
-   ambos posicionan el PIVOTE (transform-origin left/right bottom, que
-   cae casi exacto sobre el nacimiento del tallo), y el pivote no se
-   mueve al rotar — la rotación solo cambia hacia dónde apunta la
-   punta desde ahí, nunca dónde queda el pivote. Por eso el tallo
-   sigue mordiendo la esquina exactamente igual que antes; lo único
-   que cambia es que la punta ahora llega más lejos a los lados
-   (~1.41×tam desde el pivote, antes ~1.20×tam) y cuelga menos hacia
-   abajo (~0.38×tam, antes ~0.84×tam) — justo el efecto de "acostarla"
-   que se pidió. */
-/* AJUSTE 8 (28 ago 2026, feedback en vivo — "se les ve el
-   tallo/palito, muévelas a los lados como las de la sección 1"): con
-   el AJUSTE 7 de arriba el pivote (≈ nacimiento del tallo) se queda
-   donde ya estaba (-0.08×tam, casi al ras) — pero al acostar el
-   ángulo, el tramo de tallo PELÓN (sin foliolos, solo la vara) que
-   antes quedaba escondido cerca del pivote ahora cae bien adentro del
-   viewport y se ve. En el hero esto no pasa porque su bleed horizontal
-   (-0.30) ya es bastante mayor y saca ese tramo pelón de pantalla.
-   Medido con Pillow: recorriendo el eje tallo→punta de hoja.png y
-   midiendo el ancho perpendicular en cada punto, la vara se queda
-   angosta (1-2.5px) hasta ~13% del largo y ahí empieza a abrirse en
-   foliolos de verdad (ancho 20px→50px→100px en un tramo corto). Tomé
-   el punto donde el ancho ya llega a 30px (t=0.135, claramente
-   abierto, no solo el arranque del abanico) y calculé qué tan a la
-   izquierda hay que mover el pivote para que ESE punto —ya con la
-   rotación de 64deg aplicada— caiga ~11px pasado el borde (más un
-   margen de seguridad de otros 11px): -0.08 → -0.22. El punto donde
-   empiezan los foliolos queda entonces asomando justo en la esquina
-   (X≈0, Y≈19px hacia abajo desde ahí), mordiendo el borde en vez de
-   flotar separado de él — mismo look que el hero, no una hoja más
-   chica ni movida al centro. */
-.tk-hoja--menu-izq {
-  --hoja-rot: 64deg;
-  left: calc(var(--hoja-tam) * -0.22);
-  top: calc(var(--hoja-tam) * -1.14);
-  transform-origin: left bottom;
-}
-.tk-hoja--menu-der {
-  --hoja-rot: -64deg;
-  right: calc(var(--hoja-tam) * -0.22);
-  top: calc(var(--hoja-tam) * -1.14);
-  transform-origin: right bottom;
-}
-.tk-hoja--menu-der .tk-hoja-img { transform: scaleX(-1); }
-
-/* Balanceo tipo "viento": rotación + traslación mínimas relativas al
-   --hoja-rot de reposo de cada hoja (calc(var(--hoja-rot) + Xdeg), NO
-   valores absolutos como antes) — con valores absolutos (rotate(0deg)
-   en el 0%/50%/100%), la animación pisaba por completo el ángulo de
-   reposo cada vez que corría, "enderezando" la hoja a la vertical
-   original durante todo el scroll y regresando de golpe al soltar.
-   Un solo @keyframes para las 4 — lo que evita que se vean
-   sincronizadas es que cada una corre con su propia duración/delay.
-
-   AJUSTE 9 (28 ago 2026, feedback en vivo — "quítale el bloqueo,
-   mejor pura animación fluida"): el balanceo había pasado a activarse
-   solo mientras había scroll activo (clase .is-swaying agregada/
-   quitada por un listener de "scroll" en index.html — ver el
-   historial en el AJUSTE 4 más arriba). Con scroll NO fluido (rueda
-   del mouse a saltos, trackpad entrecortado) los eventos de scroll
-   llegan en ráfagas separadas por pausas, así que la animación
-   arrancaba y se detenía una y otra vez en vez de correr seguida — se
-   leía como "trabada", justo lo contrario de lo buscado. Vuelta al
-   loop infinito de siempre: las 4 reglas de abajo ya no requieren
-   .is-swaying, y ese listener se quitó por completo de index.html.
-   Duraciones también de vuelta a 7-9s (en lugar de los 2.6-3.3s de la
-   versión reactiva a scroll, cortos a propósito porque antes solo se
-   veían durante una ráfaga breve) para que el vaivén se sienta como
-   una brisa lenta de fondo — no nervioso — ahora que corre siempre. */
-@keyframes tk-viento {
-  0%   { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
-  25%  { transform: rotate(calc(var(--hoja-rot) + 1.4deg))  translate(2px, -1px); }
-  50%  { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
-  75%  { transform: rotate(calc(var(--hoja-rot) - 1.6deg))  translate(-2px, 1px); }
-  100% { transform: rotate(var(--hoja-rot))                  translate(0, 0); }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .tk-hoja--hero-izq { animation: tk-viento 7s ease-in-out infinite; }
-  .tk-hoja--hero-der { animation: tk-viento 8s ease-in-out infinite .3s; }
-  .tk-hoja--menu-izq { animation: tk-viento 7.5s ease-in-out infinite .15s; }
-  .tk-hoja--menu-der { animation: tk-viento 9s ease-in-out infinite .45s; }
+/* Hero (sección 1) — el humo de las esquinas de abajo se oculta SOLO
+   en escritorio (7 sep 2026, pedido del dueño: sin humo entre la
+   sección 1 y 2 en la versión de PC). La versión de celular NO se
+   toca — sigue mostrando .tk-humo--hero exactamente igual que antes,
+   por eso esto es un display:none añadido dentro de un media query en
+   vez de tocar la regla base ni el marcado. */
+@media (min-width: 1024px) {
+  .tk-humo--hero { display: none; }
 }
 
-/* -------- Las hojas en celular (≤640px) --------
-   Las DOS del hero, chiquitas y metidas en las esquinas de abajo. Nada
-   en la sección 2. Cómo se llegó aquí (3 sep 2026, cuatro intentos en
-   el mismo día, todos con el dueño viendo la página):
-
-   1. Las dos del hero con los valores de escritorio tal cual → muy
-      encima del contenido centrado del hero. Se apagaron las dos.
-   2. Una sola, la derecha, cruzando el borde entre secciones ("solo
-      será una hoja debido al tamaño, y estará del lado derecho, y su
-      tamaño adaptado al tamaño de celular"): clamp(180px, 62vw, 360px)
-      y --hoja-rot -34deg (14.3° sobre la horizontal, "más recta, tipo
-      _", porque sin pareja abajo no tenía a qué apuntar).
-   3. Pareja en diagonal: esa hoja más chica (54vw) y más levantada
-      (-21deg → 29.0°), más una hoja NUEVA (.tk-hoja--carta-izq) en la
-      esquina superior izquierda de .tk-carta-seccion apuntando hacia
-      abajo con la misma inclinación (75deg → 29.5°). Medida y
-      verificada en 360/393/430/640px, y aun así: "quita las dos hojas
-      porque definitivamente se ve fatal".
-   4. Lo que quedó. Y salió de un accidente que vale la pena contar,
-      porque si no, alguien lo "arregla" de vuelta: al borrar el
-      intento 3 quedó una llave de más justo antes de este bloque, lo
-      que anulaba TODO este @media. O sea que en celular se colaron las
-      dos hojas del hero con las reglas de escritorio — chiquitas
-      (clamp topa en su mínimo de 170px a este ancho) y simétricas en
-      las dos esquinas de abajo. El dueño lo vio así, roto, y dijo
-      "uy bro, así se ve chido". Así que la llave se arregló y ese
-      render se volvió intencional.
-
-   Único cambio contra lo que él vio: --hoja-tam propio en vez de heredar
-   el de escritorio. El de escritorio, clamp(170px, 19.3vw, 460px), topa
-   siempre en su MÍNIMO a anchos de celular (a 393px, 19.3vw son 76px),
-   así que se quedaba FIJO en 170px: idéntico en un teléfono de 320px que
-   en uno de 430px. Este clamp deja mandar al vw en todo el rango y pasa
-   justo por los 170px a 393px, que es el ancho donde lo aprobó — o sea
-   se ve igual que en su captura, pero escala.
-
-   Los ángulos (±14deg) y los sangrados (-0.30 a lo ancho, -0.07 a lo
-   alto) NO se tocan: son los de escritorio, que es exactamente lo que
-   aprobó. Ojo con el sangrado vertical, es el que hace que las dos
-   muerdan un poco la sección 2 en vez de quedar cortadas en seco.
-
-   5. (4 sep 2026) Volvió a pedir hojas en la sección 2, esta vez DOS,
-      en las esquinas de arriba, "imitando la versión de PC". Se armaron
-      completas y verificadas (marcado nuevo .tk-hoja--carta-izq/der
-      dentro de .tk-carta-seccion, geometría de .tk-hoja--menu-izq/der
-      copiada tal cual, dos tamaños para que no le pegaran al "MENÚ" en
-      pantallas cortas) y, viéndolas en pantalla, pidió quitarlas:
-      "quita esas hojas de la sección 2". Se borraron por completo —
-      marcado, reglas, animación y el overflow-x:clip que hacía falta
-      solo por su sangrado. La sección 2 de celular vuelve a quedar sin
-      ninguna hoja, igual que después del intento 3.
-
-   >>> SI VUELVE A PEDIRLO (sería la tercera vez), lo que YA se sabe y no
-   hace falta redescubrir: (a) .tk-hoja--menu-izq/der no se pueden
-   reciclar, viven en el carrusel 3D que en celular está en display:none
-   — hay que agregar marcado nuevo dentro de .tk-carta-seccion; (b) el
-   pivote va en la esquina de ABAJO (left/right bottom), ahí cae el
-   nacimiento del tallo; con el pivote arriba, rotar 64deg barre la hoja
-   casi un alto completo hacia el lado y se sale de pantalla; (c) el top
-   sale de que el recorte mide 1.135×--hoja-tam de alto, así que -1.14
-   deja el pivote al ras del borde; (d) toda .tk-hoja nueva necesita
-   `width: var(--hoja-tam)` explícito o el div se encoge a los 273px del
-   PNG; (e) .tk-carta-seccion necesita position:relative para anclarlas y
-   .tk-carta-envoltura position:relative + z-index:2 para que no tapen la
-   foto; (f) el sangrado lateral obliga a overflow-x:clip (clip, NO
-   hidden) o crece el ancho del documento; (g) el estorbo con el "MENÚ"
-   depende del ALTO de la pantalla, no del ancho — a 360x640 la tinta de
-   la hoja se encimaba con el eyebrow (dx=-41, dy=-9) y hubo que achicarla
-   con un @media (max-height: 780px). Las dos veces que se han probado,
-   el dueño las ha mandado quitar; no las agregues por iniciativa
-   propia. <<< */
-@media (max-width: 640px) {
-  .tk-hoja--hero-izq,
-  .tk-hoja--hero-der { --hoja-tam: clamp(140px, 43vw, 210px); }
-}
+/* Nada que ajustar aparte para celular (≤640px): a diferencia de la
+   hoja (que necesitaba su propio --hoja-tam ahí, ver el historial
+   largo que este bloque tenía antes), el `left`/`right`/`top`/`bottom`
+   de cada mancha es un % de SU sección (se recoloca solo en cualquier
+   ancho) y el tamaño fijo en px, difuminado y a baja opacidad, no
+   compite con el contenido ni en la pantalla más angosta. */
 
 /* -------- El contenido de la sección 2 se recorre HACIA ABAJO (≤640px) --------
    4 sep 2026. Pedido del dueño: "abajo del botón 'Ver platillos' sobra

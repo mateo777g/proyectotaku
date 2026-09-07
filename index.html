@@ -37,9 +37,14 @@
       <a class="tk-nav-link" href="menu-bebidas.html">Bebidas</a>
       <a class="tk-nav-link" href="menu-postres.html">Postres</a>
     </div>
-    <button class="tk-menu-boton" id="tk-menu-boton" aria-label="Abrir menú">
-      <span></span><span></span><span></span>
-    </button>
+    <div class="tk-nav-acciones">
+      <a class="tk-nav-whatsapp" id="enlace-whatsapp-navbar" href="#" target="_blank" rel="noopener" aria-label="Pedir por WhatsApp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L4 20l1-4a8.5 8.5 0 1 1 15.5-4.5Z"/><path d="M8.7 9.8c.25-.6.5-.6.75-.6h.4c.15 0 .35 0 .5.35l.6 1.35c.1.2 0 .45-.1.55l-.4.5c-.1.15-.1.35 0 .5.25.5 1.25 1.6 2.2 1.95.2.1.35 0 .45-.1l.5-.5c.15-.2.35-.2.5-.1l1.3.65c.15.1.25.25.25.45 0 .65-.75 1.3-1.4 1.3-1.45 0-4.15-1.25-5.25-3.7-.4-.9-.4-1.85 0-2.5Z" fill="currentColor" stroke="none"/></svg>
+      </a>
+      <button class="tk-menu-boton" id="tk-menu-boton" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </nav>
 
@@ -72,8 +77,15 @@
     <div class="tk-hero-fondo-velo"></div>
   </div>
 
-  <div class="tk-hoja tk-hoja--hero-izq" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
-  <div class="tk-hoja tk-hoja--hero-der" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
+  <!-- Humo del asador — reemplaza las hojas decorativas de palmera que
+       vivían aquí (7 sep 2026, ver la nota grande junto a .tk-humo en
+       style.css para el porqué). -->
+  <div class="tk-humo tk-humo--hero" aria-hidden="true">
+    <span class="tk-humo-mancha tk-humo-mancha--izq-grande"></span>
+    <span class="tk-humo-mancha tk-humo-mancha--izq-chica"></span>
+    <span class="tk-humo-mancha tk-humo-mancha--der-grande"></span>
+    <span class="tk-humo-mancha tk-humo-mancha--der-chica"></span>
+  </div>
 
   <div class="tk-hero-contenido">
     <div class="tk-hero-eyebrow-fila">
@@ -139,8 +151,12 @@
      mientras se atraviesa. -->
 <div class="tk-carrusel-enganche">
 <section class="tk-carrusel-seccion" id="carrusel-menu" aria-label="Menú">
-  <div class="tk-hoja tk-hoja--menu-izq" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
-  <div class="tk-hoja tk-hoja--menu-der" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
+  <!-- El humo que llevaba esta sección (arriba) se quitó a pedido del
+       dueño (7 sep 2026) junto con el de la esquina inferior del hero
+       (ver .tk-humo--hero en style.css) — quería la sección 1 y 2 sin
+       humo en escritorio. La versión de celular no se toca: la carta
+       de celular (.tk-carta-seccion) nunca tuvo humo propio, así que
+       no hay nada que restaurar ahí. -->
   <div class="tk-carrusel-recorte">
     <div class="tk-cf-fondo">
       <div class="tk-cf-fondo-img" id="carrusel-fondo"></div>
@@ -356,14 +372,13 @@
   document.getElementById("enlace-whatsapp-hero").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-footer-movil").href = URL_WHATSAPP;
+  document.getElementById("enlace-whatsapp-navbar").href = URL_WHATSAPP;
   iniciarNavbar();
   iniciarIndex();
   iniciarCarrusel();
   iniciarCarta();
-  // Las hojas decorativas (.tk-hoja) ya no necesitan JS: el balanceo es
-  // un loop CSS infinito y siempre activo — ver @keyframes tk-viento y
-  // el AJUSTE 9 junto a él en style.css para el porqué (antes dependían
-  // de un listener de "scroll" de aquí, quitado a propósito).
+  // El humo decorativo (.tk-humo, ver style.css) es puro CSS — sin JS,
+  // ninguna clase que agregar/quitar ni listener de scroll.
 </script>
 </body>
 </html>
