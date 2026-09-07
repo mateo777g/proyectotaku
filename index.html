@@ -12,14 +12,16 @@
 <link rel="icon" type="image/png" href="assets/logomonky.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Oswald: la condensada que pidió el dueño para el título gigante del
-     hero (ver .tk-hero-titulo en style.css) — SOLO se usa ahí, por eso
-     este <link> se cargó únicamente en index.html, no en las 3 páginas
-     de categoría. Un solo peso (300/Light) porque es el único que se
-     usa — la maqueta del dueño es la Oswald delgada, no la bold; el
-     Regular (400) probado primero seguía leyéndose grueso a este
-     tamaño (feedback del dueño 28 ago 2026), de ahí bajar a Light. -->
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oswald:wght@300&family=Rock+Salt&display=swap" rel="stylesheet">
+<!-- Archivo (900): la tipografía del título gigante del hero desde el
+     remodelado de la sección 1 (6 sep 2026) sobre la opción 1a
+     ("Centrada · foto de fondo") del canvas de Claude Design "Taku
+     Monky Hero Options" — reemplaza a Oswald Light, que era la única
+     otra cosa que usaba este <link> y solo para el hero viejo, por eso
+     se quitó del todo en vez de dejarla cargando sin uso. Un solo peso
+     (900) porque es el único que se usa, igual que pasaba con Oswald.
+     SOLO se usa en el hero, por eso este <link> se queda cargándose
+     nada más en index.html, no en las 3 páginas de categoría. -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Archivo:wght@900&family=Rock+Salt&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -56,27 +58,64 @@
 </aside>
 
 <header class="tk-hero">
+  <!-- Velo/degradado del hero — remodelado 6 sep 2026 sobre la opción
+       1a ("Centrada · foto de fondo") del canvas de Claude Design
+       "Taku Monky Hero Options". Al principio esto llevaba una <img>
+       de fondo (assets/hero-fondo.png) con la idea de una foto real
+       de ambiente; el dueño la probó y pidió quitarla (7 sep 2026:
+       "se ve malisimo, mejor dejale el degradado... que ya no sea un
+       error sino parte del diseño"). El degradado café-a-negro de
+       .tk-hero + este velo (ver style.css) son ahora el fondo final a
+       propósito, no un respaldo temporal por falta de foto — por eso
+       ya no hay ninguna <img> ni onerror aquí. -->
+  <div class="tk-hero-fondo" aria-hidden="true">
+    <div class="tk-hero-fondo-velo"></div>
+  </div>
+
   <div class="tk-hoja tk-hoja--hero-izq" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
   <div class="tk-hoja tk-hoja--hero-der" aria-hidden="true"><img class="tk-hoja-img" src="assets/hoja.png" alt=""></div>
+
   <div class="tk-hero-contenido">
     <div class="tk-hero-eyebrow-fila">
       <span class="tk-hero-linea tk-hero-linea--izq"></span>
       <p class="tk-hero-eyebrow">Taquería</p>
       <span class="tk-hero-linea tk-hero-linea--der"></span>
     </div>
-    <h1 class="tk-hero-titulo">
-      <span>Taku</span>
-      <img class="tk-hero-logo" src="assets/logomonky.png" alt="Taku Monky">
-      <span>Monky</span>
-    </h1>
-    <p class="tk-tagline">Sabor casero, ambiente divertido — así comemos aquí.</p>
+
+    <h1 class="tk-hero-titulo">Taku <span class="tk-hero-punto">&middot;</span> Monky</h1>
+
+    <div class="tk-hero-info-fila">
+      <span class="tk-hero-info-pill">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        Abierto ahora &middot; cierra 11&nbsp;pm
+      </span>
+      <span class="tk-hero-info-pill">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="2"><path d="M12 21s7-6.4 7-11.5A7 7 0 0 0 5 9.5C5 14.6 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+        Col. Centro, a 5 min del Zócalo
+      </span>
+      <span class="tk-hero-info-pill">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L4 20l1-4a8.5 8.5 0 1 1 15.5-4.5Z"/><path d="M8.7 9.8c.25-.6.5-.6.75-.6h.4c.15 0 .35 0 .5.35l.6 1.35c.1.2 0 .45-.1.55l-.4.5c-.1.15-.1.35 0 .5.25.5 1.25 1.6 2.2 1.95.2.1.35 0 .45-.1l.5-.5c.15-.2.35-.2.5-.1l1.3.65c.15.1.25.25.25.45 0 .65-.75 1.3-1.4 1.3-1.45 0-4.15-1.25-5.25-3.7-.4-.9-.4-1.85 0-2.5Z" fill="#e8c98c" stroke="none"/></svg>
+        Pedidos por WhatsApp
+      </span>
+      <span class="tk-hero-info-pill">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="2"><path d="M20.6 12.9 12 21.5a1.6 1.6 0 0 1-2.3 0l-6.2-6.2a1.6 1.6 0 0 1 0-2.3L12.1 4.4H19a1.6 1.6 0 0 1 1.6 1.6v6.9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>
+        $$ &middot; $80&ndash;150 por persona
+      </span>
+    </div>
+
+    <p class="tk-tagline">Tacos al pastor cortados al momento, salsas hechas a diario y tortillas recién torteadas — para comer aquí o pedir a domicilio.</p>
+
     <div class="tk-hero-botones">
-      <a class="tk-btn tk-btn--primario" href="menu-platillos.html">Ver menú</a>
       <a class="tk-btn tk-btn--secundario" id="enlace-whatsapp-hero" href="#" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L4 20l1-4a8.5 8.5 0 1 1 15.5-4.5Z"/><path d="M8.7 9.8c.25-.6.5-.6.75-.6h.4c.15 0 .35 0 .5.35l.6 1.35c.1.2 0 .45-.1.55l-.4.5c-.1.15-.1.35 0 .5.25.5 1.25 1.6 2.2 1.95.2.1.35 0 .45-.1l.5-.5c.15-.2.35-.2.5-.1l1.3.65c.15.1.25.25.25.45 0 .65-.75 1.3-1.4 1.3-1.45 0-4.15-1.25-5.25-3.7-.4-.9-.4-1.85 0-2.5Z" fill="currentColor" stroke="none"/></svg>
         Pedir por WhatsApp
       </a>
+      <a class="tk-btn tk-btn--primario" href="menu-platillos.html">Ver menú</a>
     </div>
+  </div>
+
+  <div class="tk-hero-cue" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
   </div>
 </header>
 
