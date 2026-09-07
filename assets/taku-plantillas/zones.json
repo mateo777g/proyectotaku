@@ -146,23 +146,23 @@
         1920
       ],
       "safe_area": [
-        169,
+        279,
         0,
-        742,
+        522,
         1920
       ],
       "logo": {
-        "x": 226,
-        "y": 85,
-        "w": 629,
-        "h": 299,
+        "x": 319,
+        "y": 60,
+        "w": 442,
+        "h": 210,
         "anchor": "box"
       },
       "headline": {
         "cx": 540,
         "cy": 768,
-        "max_w": 657,
-        "size": 105,
+        "max_w": 462,
+        "size": 74,
         "color": "#FFFFFF",
         "anchor": "center"
       },
@@ -181,17 +181,17 @@
         1920
       ],
       "logo": {
-        "x": 276,
-        "y": 60,
-        "w": 528,
-        "h": 358,
+        "x": 354,
+        "y": 42,
+        "w": 371,
+        "h": 252,
         "anchor": "box"
       },
       "headline": {
         "cx": 540,
         "cy": 662,
         "max_w": 950,
-        "size": 148,
+        "size": 104,
         "color": "#FFFFFF",
         "anchor": "center"
       },
@@ -199,7 +199,7 @@
         "cx": 540,
         "cy": 874,
         "max_w": 842,
-        "size": 60,
+        "size": 42,
         "color": "#FFFFFF",
         "anchor": "center"
       },
@@ -217,17 +217,17 @@
         1920
       ],
       "logo": {
-        "x": 276,
-        "y": 60,
-        "w": 528,
-        "h": 358,
+        "x": 354,
+        "y": 42,
+        "w": 371,
+        "h": 252,
         "anchor": "box"
       },
       "headline": {
         "cx": 540,
         "cy": 662,
         "max_w": 950,
-        "size": 148,
+        "size": 104,
         "color": "#F4880A",
         "anchor": "center"
       },
@@ -235,7 +235,7 @@
         "cx": 540,
         "cy": 874,
         "max_w": 842,
-        "size": 60,
+        "size": 42,
         "color": "#F4880A",
         "anchor": "center"
       },
@@ -253,19 +253,19 @@
         1920
       ],
       "logo": {
-        "x": 276,
-        "y": 60,
-        "w": 528,
-        "h": 358,
+        "x": 354,
+        "y": 42,
+        "w": 371,
+        "h": 252,
         "anchor": "box"
       },
       "headline_stack": {
         "cx": 540,
         "y0": 605,
-        "line_h": 137,
+        "line_h": 96,
         "repeats": 7,
         "max_w": 994,
-        "size": 137,
+        "size": 96,
         "color": "#F4880A",
         "anchor": "center"
       },

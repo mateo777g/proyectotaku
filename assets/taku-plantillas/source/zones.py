@@ -9,14 +9,22 @@ Anchors:
   top     -> y is the top edge, x the horizontal centre
 """
 import json
-from templates import FORMATS, REF_H, BOX_W, BOX_H, STRIPE_W
+from templates import FORMATS, REF_W, BOX_W, BOX_H, STRIPE_W
 
-OUT = "/home/claude/taku/zones.json"
+OUT = "../zones.json"
 
 
 def build(fmt):
     w, h = FORMATS[fmt]
-    s = h / REF_H
+    # Ojo: tiene que ser el MISMO eje que templates.scaled() (ancho/REF_W),
+    # nunca alto/REF_H -- las dos plantillas son 1080 de ancho y el diseño
+    # es width-driven (ver el docstring de scaled() en templates.py). Usar
+    # el alto aqui fue el bug real de la Fase 7.0: en "story" (1920 de alto
+    # contra un REF_H de 1350) daba s=1.4222 mientras templates.py seguia
+    # usando s=1, y las zonas quedaban ~42% más grandes que los elementos
+    # reales -- medido: la placa del logo se salia 49px por lado y 92px por
+    # abajo, y el safe_area de 01-topografico invadia el fondo blanco.
+    s = w / REF_W
     bw, bh = BOX_W * s, BOX_H * s
     bx = (w - bw) / 2
 

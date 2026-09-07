@@ -153,7 +153,7 @@ BUILDERS = {
 
 
 def main():
-    out = "/home/claude/taku/svg"
+    out = "../svg"
     os.makedirs(out, exist_ok=True)
     n = 0
     for name, fn in BUILDERS.items():
