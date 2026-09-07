@@ -102,7 +102,13 @@ _SPARK_BORDE_TRAZO = 8.75
 # en el mismo lienzo de referencia de 1080.
 _MARGEN_LOGO_DESTELLO = 10
 
-_RUTA_BIBLIOTECA = "biblioteca"
+# Pública (no con guion bajo) desde la Fase 7.4: views/biblioteca_view.py
+# necesita saber dónde está esta carpeta para poder LISTARLA, no solo
+# generador_anuncios.py para escribir en ella -- mismo motivo por el que
+# generar y "guardar en la biblioteca" son el mismo acto (ver el docstring
+# del módulo): las dos pantallas tienen que estar de acuerdo en un solo
+# nombre de carpeta, nunca repetirlo como un string suelto en cada archivo.
+RUTA_BIBLIOTECA = "biblioteca"
 
 
 def _caja_logo_bajo_destello(id_plantilla: str, formato) -> ZonaCaja:
@@ -257,7 +263,7 @@ def _ruta_salida(platillo: dict, plantilla, formato) -> str:
     # pasa esta ruta directo a un ft.Image. Pillow (open()/save()) y
     # os.makedirs() aceptan "/" en Windows sin ningún problema, así que
     # esto no le cuesta nada al otro consumidor de esta ruta.
-    return f"{_RUTA_BIBLIOTECA}/{nombre}"
+    return f"{RUTA_BIBLIOTECA}/{nombre}"
 
 
 def _validar_textos(formato, textos: dict) -> None:
@@ -313,7 +319,7 @@ def generar_anuncio(id_plantilla: str, id_formato: str, platillo: dict,
     _pegar_textos(lienzo, formato, textos)
     _pegar_foto(lienzo, formato, _obtener_foto_recortada(url_foto))
 
-    os.makedirs(_RUTA_BIBLIOTECA, exist_ok=True)
+    os.makedirs(RUTA_BIBLIOTECA, exist_ok=True)
     ruta = _ruta_salida(platillo, plantilla, formato)
     # RGB, no RGBA: el fondo ya es opaco de punta a punta (alpha_composite
     # sobre una base opaca da alpha=255 en todos lados), así que el canal
