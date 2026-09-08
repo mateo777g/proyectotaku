@@ -96,20 +96,27 @@
 
     <h1 class="tk-hero-titulo">Taku <span class="tk-hero-punto">&middot;</span> Monky</h1>
 
-    <div class="tk-hero-info-fila">
-      <span class="tk-hero-info-pill">
+    <!-- tk-hero-info-fila--cuadricula / tk-hero-info-pill--tarjeta: clases
+         ADICIONALES agregadas 7 sep 2026 para la Opción B ("Cuadrícula 2×2")
+         del canvas "Hero Celular Taku Monky" — solo tienen reglas dentro de
+         @media (max-width:640px) en style.css, así que en PC/tablet ancho
+         (>640px) no hacen nada y esta fila se sigue viendo exactamente
+         igual que antes (flex-wrap, píldora horizontal). Ni el texto ni el
+         orden de las 4 píldoras cambió. -->
+    <div class="tk-hero-info-fila tk-hero-info-fila--cuadricula">
+      <span class="tk-hero-info-pill tk-hero-info-pill--tarjeta">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
         Abierto ahora &middot; cierra 11&nbsp;pm
       </span>
-      <span class="tk-hero-info-pill">
+      <span class="tk-hero-info-pill tk-hero-info-pill--tarjeta">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="2"><path d="M12 21s7-6.4 7-11.5A7 7 0 0 0 5 9.5C5 14.6 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
         Col. Centro, a 5 min del Zócalo
       </span>
-      <span class="tk-hero-info-pill">
+      <span class="tk-hero-info-pill tk-hero-info-pill--tarjeta">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L4 20l1-4a8.5 8.5 0 1 1 15.5-4.5Z"/><path d="M8.7 9.8c.25-.6.5-.6.75-.6h.4c.15 0 .35 0 .5.35l.6 1.35c.1.2 0 .45-.1.55l-.4.5c-.1.15-.1.35 0 .5.25.5 1.25 1.6 2.2 1.95.2.1.35 0 .45-.1l.5-.5c.15-.2.35-.2.5-.1l1.3.65c.15.1.25.25.25.45 0 .65-.75 1.3-1.4 1.3-1.45 0-4.15-1.25-5.25-3.7-.4-.9-.4-1.85 0-2.5Z" fill="#e8c98c" stroke="none"/></svg>
         Pedidos por WhatsApp
       </span>
-      <span class="tk-hero-info-pill">
+      <span class="tk-hero-info-pill tk-hero-info-pill--tarjeta">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8c98c" stroke-width="2"><path d="M20.6 12.9 12 21.5a1.6 1.6 0 0 1-2.3 0l-6.2-6.2a1.6 1.6 0 0 1 0-2.3L12.1 4.4H19a1.6 1.6 0 0 1 1.6 1.6v6.9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>
         $$ &middot; $80&ndash;150 por persona
       </span>
@@ -204,8 +211,29 @@
 
      Título/lista/puntitos empiezan vacíos a propósito: carta.js los
      llena en cuanto carga el catálogo (igual que #carrusel-dots arriba).
-     El botón "Ver platillos" SÍ es estático — no depende de qué platillo
-     esté activo, así que no hace falta generarlo por JS. -->
+     El botón "Ver menú" SÍ es estático — no depende de qué platillo
+     esté activo, así que no hace falta generarlo por JS. (Se llamaba "Ver
+     platillos" hasta el 7 sep 2026, mismo día del repintado de abajo — el
+     dueño pidió el nombre nuevo junto con bajarlo un poco; el href se
+     queda igual, sigue yendo a menu-platillos.html.)
+
+     Repintado 7 sep 2026 sobre una segunda maqueta en imagen: cada
+     renglón de la lista ganó su número, con el activo resaltado en un
+     recuadro naranja real (no solo con el cambio de color de antes) y en
+     negritas. Sigue siendo el mismo dato real (fotos recortadas de
+     verdad, mismo tope de 5) y la misma mecánica (autoplay + swipe, sin
+     flechas, renglones y puntitos clicables).
+
+     ⚠️ CORREGIDO el mismo día tras una TERCERA imagen del dueño: el
+     círculo con resplandor y su contador "01 / 05" NO viajan con el
+     swipe — son el FONDO FIJO de la ventanita (.tk-carta-aro-fijo /
+     #carta-contador, hermanos de #carta-fotos dentro de
+     .tk-carta-fotos-envoltura, ver style.css), y lo único que se mueve
+     al deslizar es la <img> de cada slide, por debajo del círculo. El
+     acento de toda esta sección también pasó del dorado del carrusel de
+     escritorio a un naranja (--carta-naranja en style.css), pedido
+     explícito con la imagen de referencia. Ver la nota grande al inicio
+     de carta.js para el detalle completo de la corrección. -->
 <section class="tk-carta-seccion" id="carta-menu">
   <div class="tk-carta-envoltura">
     <div class="tk-cf-eyebrow-fila">
@@ -214,8 +242,12 @@
       <span class="tk-cf-linea tk-cf-linea--der"></span>
     </div>
 
-    <div class="tk-carta-fotos" id="carta-fotos">
-      <div class="tk-cf-cargando"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
+    <div class="tk-carta-fotos-envoltura">
+      <div class="tk-carta-aro-fijo" aria-hidden="true"></div>
+      <div class="tk-carta-fotos" id="carta-fotos">
+        <div class="tk-cf-cargando"><div class="tk-spinner"></div><p>Cargando el menú...</p></div>
+      </div>
+      <span class="tk-carta-contador" id="carta-contador" aria-hidden="true"></span>
     </div>
 
     <div class="tk-cf-divisor"></div>
@@ -227,7 +259,7 @@
     <div class="tk-carta-lista" id="carta-lista"></div>
 
     <a class="tk-cf-cta tk-carta-cta" href="menu-platillos.html">
-      <span>Ver platillos</span>
+      <span>Ver menú</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
     </a>
   </div>

@@ -738,6 +738,47 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   .tk-hero-botones .tk-btn svg { width: 16px; height: 16px; }
 }
 
+/* Hero en celular — Opción B "Cuadrícula 2×2" (canvas de diseño "Hero
+   Celular Taku Monky", 7 sep 2026). Las 4 píldoras de datos rápidos
+   (horario / zona / WhatsApp / precio) pasan de una fila que se envuelve
+   a una cuadrícula fija de 2 columnas — mismo dato, mismo texto, la
+   mitad de alto que la versión envuelta de antes.
+
+   SOLO ≤640px, y con clases nuevas (--cuadricula / --tarjeta) en vez de
+   editar .tk-hero-info-fila / .tk-hero-info-pill directamente: esas dos
+   clases base se quedan intactas y siguen rigiendo tal cual en PC/tablet
+   ancho (flex-wrap, píldora horizontal), ya que estas reglas nuevas
+   viven solo dentro de este media query y nunca se declaran fuera de
+   él. No toca eyebrow, título, párrafo ni botones — nada más del hero
+   se movió. */
+@media (max-width: 640px) {
+  .tk-hero-info-fila--cuadricula {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    max-width: 340px;
+  }
+  .tk-hero-info-pill--tarjeta {
+    /* stretch (no el center heredado de la base) para que el nodo de
+       texto — un hijo anónimo del flex, ya que va suelto junto al
+       <svg> en el HTML, sin su propio <span> — pueda ocupar el ancho
+       completo de la tarjeta y envolver a 2 líneas centradas, como en
+       la referencia. El ícono no se estira porque trae width/height
+       propios en el HTML (ver la regla svg de abajo, que además lo
+       vuelve a centrar en la cruz). */
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 16px 10px;
+    border-radius: 16px;
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+  .tk-hero-info-pill--tarjeta svg { align-self: center; }
+}
+
 /* Flecha "sigue bajando" — nueva en este remodelado, rebota en loop
    suave. Se apaga con prefers-reduced-motion, mismo criterio que el
    resto de animaciones del sitio (ver @media (prefers-reduced-motion:
@@ -1183,7 +1224,26 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      Es min-height, no height: en un celular chico donde el contenido
      mida más que la pantalla la sección crece normal y NO se recorta
      (con height fijo + justify-content:center el contenido se desborda
-     por los dos lados y la foto se montaría encima del hero). */
+     por los dos lados y la foto se montaría encima del hero).
+
+     ⚠️ REGLA FIJA (agregada 7 sep 2026, pedido explícito del dueño para
+     que esto no se repita): la sección 1 (.tk-hero) y la sección 2
+     (esta) TIENEN que medir lo mismo — las dos son min-height:100vh, y
+     el contenido de ninguna de las dos debe superar esa altura, o la
+     "más alta" se ve más larga que la otra al hacer scroll (exactamente
+     el reporte del dueño del 3 sep 2026 de arriba). Ya pasó de verdad:
+     el mismo 7 sep 2026, para agrandar la foto del platillo (ver
+     .tk-carta-foto-slide img) se agrandó también --carta-aro (el
+     círculo) "para que la foto no lo tapara" — eso hizo crecer
+     .tk-carta-fotos-envoltura, y con ella el contenido total de ESTA
+     sección terminó midiendo más que un viewport, rompiendo la paridad
+     con la sección 1. Se revirtió el mismo día. Antes de volver a subir
+     --carta-aro, la altura de .tk-carta-fotos-envoltura, o cualquier
+     padding/margin de esta sección: súmalos a mano contra 100vh, o
+     mídelo con una captura real contra el alto de .tk-hero — no vale
+     "se ve bien" sin haber medido. Agrandar SOLO la foto (con overflow
+     visual, sin tocar el alto reservado en el flujo) sí es seguro — ver
+     la nota de .tk-carta-foto-slide img. */
   min-height: 100vh;
   min-height: 100svh;
   justify-content: center;
@@ -1592,6 +1652,21 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   z-index: 30;
 }
 .tk-cf-dot {
+  /* appearance:none + padding:0 (agregado 7 sep 2026, bug real reportado
+     por el dueño con captura): son <button>, y el reset global de la
+     línea 69 (`button { border:none; background:none; }`) nunca quitó
+     el `appearance` nativo del navegador ni el padding por default del
+     UA-stylesheet — sin esto Chrome sigue dibujando su cromado nativo de
+     botón (una píldora/rectángulo redondeado) por encima del
+     border-radius:9999px de aquí, así que los puntos inactivos se veían
+     como líneas/barritas en vez de círculos, y no por width/height (que
+     ya estaban en 8x8 desde antes). Comparte .tk-cf-dot el carrusel de
+     escritorio y la carta de celular, así que el fix aplica a los dos
+     por igual — ahí también eran círculos "de palabra" pero no en
+     pantalla. */
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0;
   height: 8px;
   width: 8px;
   border-radius: 9999px;
@@ -1610,17 +1685,32 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    Reemplaza las 3 secciones de categoría por debajo de 1024px (ver el
    bloque de arriba y el @media min-width:1024px de la sección del
    carrusel) — es el equivalente móvil de esa sección de escritorio, así
-   que reusa a propósito la MISMA paleta suelta (#0c0a09/#c5a880/#171311)
-   en vez de las variables del sitio: mismo "hazlo tal cual" que ya pidió
-   el dueño para el carrusel, para que celular y PC se sientan el mismo
-   sitio. Varias piezas de aquí abajo son literalmente las clases del
-   carrusel de escritorio reusadas sin cambio (eyebrow-fila, linea,
-   eyebrow, divisor, dots, dot, dot-activo, cta, cargando, error, todas
-   con el prefijo tk-cf-) — solo se definen aquí las piezas que sí son
-   nuevas de esta sección. La regla base de .tk-carta-seccion (display,
-   fondo, color, padding) vive arriba, justo antes del @media que oculta
-   las 3 secciones viejas — ver la nota grande junto a esa regla sobre
-   por qué el orden importa aquí. */
+   que reusa el fondo/negro (#0c0a09/#171311) y varias piezas literalmente
+   sin cambio (eyebrow-fila, linea, eyebrow, divisor, dots, dot, cargando,
+   error, todas con el prefijo tk-cf-) — solo se definen aquí las piezas
+   que sí son nuevas de esta sección. La regla base de .tk-carta-seccion
+   (display, fondo, color, padding) vive arriba, justo antes del @media
+   que oculta las 3 secciones viejas — ver la nota grande junto a esa
+   regla sobre por qué el orden importa aquí.
+
+   ⚠️ El ACENTO ya no es el dorado/tostado #c5a880 del carrusel de
+   escritorio — repintado 7 sep 2026 con una tercera imagen del dueño:
+   "el color naranja" tal cual la maqueta, no el tono que esta sección ya
+   traía. Vive en --carta-dorado (declarado en .tk-carta-envoltura, más
+   abajo) precisamente para poder acotarlo aquí sin tocar .tk-cf-* a
+   secas, que el carrusel de PC sigue usando en dorado.
+
+   ⚠️ REPINTADO OTRA VEZ el mismo día (7 sep 2026): el naranja de arriba
+   no convenció al dueño en pantalla real ("no quedo como pensaba"), y
+   pidió el amarillo/dorado de la sección 1 en vez de uno inventado —
+   "hay algunos elementos que usan amarillo, quiero ese exacto ya que asi
+   conservamos coherencia en toda la pagina". Ese es --dorado (#f4ca83,
+   declarado en :root), el mismo tono del eyebrow "TAQUERÍA" del hero. La
+   variable se queda llamada --carta-dorado (no --carta-naranja) y NO se
+   volvió a apuntar directo a var(--dorado) porque esta sección sigue
+   necesitando su propio --carta-dorado-rgb para los rgba() de sombra/
+   fondo — el :root no trae un --dorado-rgb. Si --dorado cambia alguna
+   vez, este valor hay que actualizarlo a mano junto con él. */
 
 .tk-carta-envoltura {
   width: 100%;
@@ -1628,7 +1718,74 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Una sola variable de la que cuelga todo el color de esta sección
+     (eyebrow, líneas, divisor, dots, círculo, contador, renglones, CTA) —
+     así cambiar el tono es tocar un solo lugar, no perseguir cada regla. */
+  --carta-dorado: #f4ca83;
+  --carta-dorado-rgb: 244, 202, 131;
 }
+
+/* ⚠️ REPINTADO 7 sep 2026 (mismo día, segunda entrega): el bloque completo
+   de arriba — eyebrow "Platillos", fotos, divisor, puntitos y título — se
+   bajó 42px COMO GRUPO (estilo Canva: seleccionar todo y arrastrarlo junto),
+   para cerrar el hueco enorme que quedaba entre el platillo 05 (el último
+   renglón de la lista) y el botón "Ver platillos". Pedido explícito del
+   dueño con capturas: el hueco item05→botón (antes 60px) tenía que quedar
+   EXACTAMENTE igual al hueco título→platillo01 (18px, medido, y ESE no se
+   tocó).
+
+   Cómo se hizo: cada uno de los 6 `top` de position:relative que ya vivían
+   en esta sección (eyebrow-fila, fotos-envoltura, divisor, dots, titulo,
+   lista — cada uno con su propio "por qué" documentado más abajo, junto a
+   su regla) subió 42px de golpe, o sea se volvió 42 MENOS negativo:
+   -48→-6, -42→0, -60→-18, -50→-8, -52→-10, -40→2. El botón (.tk-carta-cta)
+   NO se tocó — se quedó exactamente donde estaba, en top:0 (nunca tuvo
+   este truco).
+
+   Por qué +42 y no otro número: la RESTA entre cualquier par de esos 6 top
+   es lo único que define cada hueco visible entre ellos (hueco = margen de
+   flujo + top_de_abajo − top_de_arriba) — sumarle el mismo número a los 6
+   no mueve esa resta ni un píxel, así que TODOS los huecos internos
+   (eyebrow↔foto, foto↔divisor, divisor↔puntitos, puntitos↔título,
+   título↔lista) se quedan idénticos a como estaban. El único hueco que sí
+   cambia es el de más abajo (lista→botón), porque ahí el otro lado de la
+   resta es el botón, que se quedó fijo — y 42px era justo lo que hacía
+   falta para que ese hueco pasara de 60px a 18px.
+
+   Ningún margin/gap/padding real se tocó — sigue siendo puro desplazamiento
+   visual (position:relative + top), así que el alto reservado de
+   .tk-carta-envoltura no cambió ni un píxel: la regla de min-height:100vh
+   de .tk-carta-seccion (ver la ADVERTENCIA de más arriba en este archivo)
+   sigue exactamente igual de segura que antes — cero riesgo nuevo de
+   desbordar la pantalla. Los valores viejos siguen citados en los
+   comentarios de cada regla individual, más abajo: son la historia de POR
+   QUÉ se subió cada uno la primera vez, no el número vigente — el vigente
+   es este +42 aplicado encima de todos ellos por igual. */
+
+/* ⚠️ REPINTADO OTRA VEZ 7 sep 2026 (tercera entrega del mismo día): el
+   botón cambió de nombre — "Ver platillos" → "Ver menú" (ver index.html) —
+   y el dueño pidió bajarlo un poco. Con el hueco lista→botón ya igualado
+   arriba a los 18px del hueco título→platillo01 (párrafo anterior), "bajar
+   el botón" sin más habría vuelto a desigualarlos (el botón se aleja de la
+   lista, el hueco de arriba se queda igual) — así que aquí se agrandaron
+   los DOS a la vez, en la misma medida, para que sigan siendo el mismo
+   número entre sí: 18px → 30px los dos.
+
+   Cómo: la lista (.tk-carta-lista) bajó 12px más (top 2px→14px) — eso
+   agranda el hueco título→lista en esos mismos 12px (18→30) sin tocar el
+   título ni nada de arriba — y el botón (.tk-carta-cta) ganó su propio
+   position:relative + top:24px (antes no tenía ninguno, o sea top:0) — de
+   esos 24px, 12 compensan que la lista ya se le acercó 12px, y los otros
+   12 son el aumento real, así que el hueco lista→botón también termina en
+   30px. La lista se mueve COMO GRUPO otra vez (sus 5 renglones y el gap de
+   14px entre ellos no se tocan) — solo cambia dónde vive el bloque
+   completo dentro de la columna.
+
+   Sigue siendo puro desplazamiento visual, cero margin/padding real
+   tocado: el alto reservado de .tk-carta-envoltura no cambió, así que la
+   paridad de altura con la sección 1 (.tk-hero, min-height:100vh) tampoco
+   se tocó — verificado con Playwright después del cambio, ver el registro
+   de esa corrida si hace falta repetirla. */
 
 /* Pequeños ajustes de espaciado ADITIVOS sobre las clases reusadas del
    carrusel — nunca se redefine una propiedad que .tk-cf-dots/.tk-cf-cta ya
@@ -1655,20 +1812,72 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    2026: allá la línea volvió a ser la rayita de 34px sin desplazar, debajo
    del nombre, tal como estaba en la Fase 4). */
 .tk-carta-envoltura .tk-cf-divisor {
-  width: 260px;
+  /* Achicada y subida más 7 sep 2026 (era width:260px, top:-40px) a
+     pedido del dueño ("súbela" y "hazla pequeñita") — mismo truco de
+     position:relative + top que ya usaba: es un desplazamiento puramente
+     visual, no mueve el espacio que la línea reserva en el flujo, así
+     que esto no afecta el alto de la sección (ver la regla fija de
+     .tk-carta-seccion). Si el hueco línea→puntitos se ve desparejo con
+     este nuevo top, el ajuste de -8px en .tk-carta-dots (más abajo) es
+     el que lo compensaba para el -40px viejo y puede necesitar
+     retocarse. */
+  width: 60px;
   position: relative;
-  top: -40px;
+  top: -18px;
+  /* Forma distinta a la del carrusel de escritorio, pedido explícito del
+     dueño con la maqueta en imagen ("la forma de la línea que está
+     debajo del platillo"): allá es una barra sólida corta y de canto
+     recto; aquí se desvanece en los dos extremos en vez de cortar en
+     seco — mismo lenguaje que ya usan las líneas del eyebrow
+     (tk-cf-linea--izq/der) a los lados del texto "Platillos". */
+  background: linear-gradient(90deg, transparent, var(--carta-dorado), transparent);
+  box-shadow: 0 0 8px rgba(var(--carta-dorado-rgb), 0.55);
 }
 
-.tk-carta-dots { margin-bottom: 26px; position: relative; top: -8px; }
+/* top subido de -8px a -18px y luego a -50px el 7 sep 2026 (el dueño
+   pidió más: "un poco pegado a la línea de arriba", que ahora vive en
+   top:-60px — ver .tk-carta-envoltura .tk-cf-divisor) — mismo truco de
+   position:relative, no mueve el alto reservado en el flujo. */
+/* margin-bottom bajado de 26px a 16px el 7 sep 2026 para liberar presupuesto
+   real de alto y dárselo a la lista (ver la nota grande de
+   .tk-carta-renglon) — real, no truco visual: esto SÍ acorta el hueco que
+   .tk-carta-titulo reserva en el flujo antes de empezar a pintarse. */
+.tk-carta-dots { margin-bottom: 16px; position: relative; top: -8px; }
+/* Punto activo en naranja (no el dorado de .tk-cf-dot-activo base, que
+   sigue rigiendo el carrusel de PC) — acotado a .tk-carta-dots para no
+   tocar esa regla compartida. */
+.tk-carta-dots .tk-cf-dot.tk-cf-dot-activo {
+  background-color: var(--carta-dorado);
+  box-shadow: 0 0 10px rgba(var(--carta-dorado-rgb), 0.7);
+}
 /* Más grande que el CTA del carrusel de escritorio (pedido del dueño, 4 sep
    2026) — acotado a .tk-carta-cta (además de tk-cf-cta) para no tocar el
    botón del carrusel de PC, que se queda con su tamaño de siempre. */
 .tk-carta-cta {
   margin-top: 2px;
+  /* Bajado 7 sep 2026, pedido del dueño ("bájalo un poco") junto con el
+     cambio de nombre a "Ver menú" — mismo truco de position:relative + top
+     que rige toda esta sección, ver la nota grande junto a
+     .tk-carta-envoltura sobre el porqué del 24px exacto (y por qué la
+     lista, justo arriba, también se movió). */
+  position: relative;
+  top: 24px;
   padding: 13px 30px;
   font-size: 0.85rem;
   gap: 8px;
+  /* Contorno, NO relleno (repintado 7 sep 2026, misma maqueta) — el CTA
+     del carrusel de escritorio es una píldora rellena de dorado con
+     texto oscuro; esta maqueta pide el opuesto: fondo transparente,
+     borde y texto en naranja. Acotado a .tk-carta-cta, nunca a .tk-cf-cta
+     a secas, para que el botón de PC no se entere. */
+  background: transparent;
+  border: 1.5px solid var(--carta-dorado);
+  color: var(--carta-dorado);
+  box-shadow: none;
+}
+.tk-carta-cta:hover {
+  background: rgba(var(--carta-dorado-rgb), 0.08);
+  box-shadow: 0 0 16px rgba(var(--carta-dorado-rgb), 0.25);
 }
 .tk-carta-cta svg { width: 16px; height: 16px; }
 
@@ -1679,21 +1888,101 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    ≤640px). Acotado a .tk-carta-envoltura porque .tk-cf-eyebrow-fila también
    la usa el carrusel de escritorio (#carrusel-menu), que sigue diciendo
    "Menú" y no se toca aquí. */
-.tk-carta-envoltura .tk-cf-eyebrow-fila { position: relative; top: -48px; }
+.tk-carta-envoltura .tk-cf-eyebrow-fila { position: relative; top: -6px; }
+/* Eyebrow y sus líneas flanqueadoras en naranja, no en el dorado base. */
+.tk-carta-envoltura .tk-cf-eyebrow { color: var(--carta-dorado); }
+.tk-carta-envoltura .tk-cf-linea--izq {
+  background: linear-gradient(90deg, transparent, var(--carta-dorado));
+}
+.tk-carta-envoltura .tk-cf-linea--der {
+  background: linear-gradient(90deg, var(--carta-dorado), transparent);
+}
 
-/* Carrusel de 5 fotos también un poco más arriba (mismo pedido, 4 sep
-   2026) — nada más `top`, position:relative ya vive en la regla base de
-   .tk-carta-fotos (ahí es para que carta.js mida offsetLeft de cada slide
-   contra este contenedor, no para moverlo; un top aquí no afecta esa
-   cuenta porque offsetLeft de los hijos se mide contra la caja de este
-   contenedor, no contra el viewport). No es .tk-cf-* compartida con el
-   carrusel de escritorio, así que no hace falta acotar el selector. */
-.tk-carta-fotos { top: -42px; }
+/* -------- Envoltura fija: circulo + carril + contador -------- */
+/* ⚠️ CORREGIDO 7 sep 2026 (ver la nota grande al inicio de carta.js) tras
+   una tercera imagen del dueño: el círculo/resplandor y el contador NO
+   viajan con el swipe — son el FONDO fijo de la ventanita, y lo único
+   que se mueve es la foto de adentro. El intento anterior los metía
+   DENTRO de cada slide (.tk-carta-foto-aro, que _actualizarEfecto()
+   movía/apagaba/encogía igual que hoy hace con el <img>); el dueño lo
+   rechazó mandando dos capturas de su propia maqueta en dos estados
+   (01/05 y 04/05) donde el círculo y el contador son un solo elemento
+   idéntico en las dos, y solo el platillo cambia.
+
+   Por eso .tk-carta-aro-fijo y #carta-contador ya NO viven dentro de
+   .tk-carta-foto-slide: son hermanos del carril (#carta-fotos), los tres
+   dentro de esta envoltura, centrados una sola vez. `top:-42px` y
+   `margin-bottom:22px` (antes en .tk-carta-fotos, pedido del dueño 4 sep
+   2026) se mudan aquí para que el conjunto completo — círculo incluido —
+   se mueva junto, no solo el carril.
+
+   --carta-aro: el diámetro del círculo, en una sola variable — la usan
+   tanto .tk-carta-aro-fijo como #carta-contador (que se ancla a su
+   borde), así que un solo número decide el tamaño de los dos. clamp() y
+   no un % del carril: así el círculo no depende de cuánto mide el carril
+   para no verse gigante o diminuto en un viewport raro.
+
+   ⚠️ NO subas --carta-aro (ni el height de aquí abajo) para "que quepa
+   la foto" — ya se intentó el 7 sep 2026 y rompió la regla de arriba
+   (ver la ADVERTENCIA en .tk-carta-seccion, unas líneas arriba de este
+   archivo): esta envoltura SÍ empuja el alto del documento, así que
+   agrandarla agranda toda la sección 2 más allá de un viewport. Si la
+   foto necesita verse más grande, tócala solo a ella
+   (.tk-carta-foto-slide img) y déjala desbordar visualmente el círculo —
+   eso no mueve este height. */
+.tk-carta-fotos-envoltura {
+  position: relative;
+  width: 100%;
+  height: clamp(240px, 62vw, 320px);
+  margin-bottom: 22px;
+  top: 0;
+  --carta-aro: clamp(190px, 52vw, 232px);
+}
+
+/* Solo resplandor, SIN borde/aro (quitado 7 sep 2026 a pedido del dueño:
+   "elimina el círculo de atrás y deja únicamente el brillo") — el
+   `border` de 1px que dibujaba el aro se quitó; el nombre de la clase
+   se queda igual (.tk-carta-aro-fijo) aunque ya no dibuje ningún aro,
+   porque sigue siendo el mismo ancla fija de fondo que usan carta.js e
+   index.html, y renombrarla tocaría los dos sin necesidad. Sin contenido
+   propio (el contador es un elemento aparte, ver más abajo, para poder
+   ponerlo POR ENCIMA del carril de fotos sin que quede atrapado en el
+   nivel de apilamiento de este círculo). z-index:1, detrás del carril
+   (2) — así el resplandor se ve "detrás" del platillo, como en la
+   maqueta. pointer-events:none porque es pura decoración: el swipe lo
+   tiene que recibir el carril de abajo, no esto, que si no lo
+   interceptaría al estar encimado sobre él.
+
+   ⚠️ El brillo se agrandó SIN tocar --carta-aro/width (ver la
+   ADVERTENCIA de --carta-aro más arriba en este archivo, junto a
+   .tk-carta-fotos-envoltura) — pedido explícito del dueño de no volver a
+   afectar el alto de la sección 2. `background`/`box-shadow` no
+   participan del flujo del documento aunque se vean "más grandes" que
+   la caja: por eso ambos crecieron aquí (gradiente más lleno, blur del
+   box-shadow de 40px a 100px) en vez de agrandar el elemento. */
+.tk-carta-aro-fijo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--carta-aro);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--carta-dorado-rgb), 0.32) 0%,
+    rgba(var(--carta-dorado-rgb), 0.14) 60%,
+    rgba(var(--carta-dorado-rgb), 0) 100%
+  );
+  box-shadow: 0 0 100px rgba(var(--carta-dorado-rgb), 0.22);
+  z-index: 1;
+  pointer-events: none;
+}
 
 /* -------- Fotos: autoplay + swipe con scroll-snap nativo -------- */
 .tk-carta-fotos {
   width: 100%;
-  height: clamp(240px, 62vw, 320px);
+  height: 100%;
   display: flex;
   align-items: center;
   /* ⚠️ NUNCA volver a poner `justify-content: center` aquí (3 sep 2026:
@@ -1712,7 +2001,6 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  margin-bottom: 22px;
   /* Sin scrollbar visible: el swipe nativo ya se siente bien sin ella y
      una barra ahí desentonaría con una "carta" de restaurante. */
   scrollbar-width: none;
@@ -1724,6 +2012,8 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      el índice pintado no coincidía con la foto visible — el "presiono el
      puntito, llego, y me regresa" del reporte. */
   position: relative;
+  /* Por encima del círculo fijo (1), por debajo del contador (3). */
+  z-index: 2;
 }
 .tk-carta-fotos::-webkit-scrollbar { display: none; }
 
@@ -1745,37 +2035,64 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   scroll-snap-align: center;
 }
 .tk-carta-foto-slide img {
-  /* 84% y NO 100% (3 sep 2026, pedido del dueño: "no me gusta cómo se
-     corta la imagen por el fondo negro cuando se mueven los productos").
-     Antes la foto medía exactamente lo mismo que el carril, o sea 0px de
-     aire a los lados, así que en cuanto empezaba a moverse el borde de la
-     ventanita la rebanaba de golpe.
-
-     Este 84% es la mitad del arreglo; la otra mitad es el efecto de
-     salida en carta.js (_CARTA_DERIVA / _CARTA_ENCOGE), que la apaga y la
-     encoge antes de que llegue a la orilla.
-
-     ⚠️ LOS TRES NÚMEROS ESTÁN ATADOS — si cambias uno, rehaz la cuenta:
-       aire a cada lado = (1 - 0.84) / 2      = 0.08 · W
-       media foto       = 0.84 / 2            = 0.42 · W
-       borde más lejano = DERIVA + media foto * (1 - ENCOGE)
-                        = 0.12 + 0.42 * 0.86  = 0.481 · W
-       borde del carril =                       0.500 · W
-     0.481 < 0.500, así que la foto JAMÁS cruza la ventanita, en ningún
-     punto del recorrido (la fórmula es lineal en el desplazamiento, así
-     que el peor caso es el extremo, ya calculado arriba). Si subes el
-     max-width o la deriva sin bajar lo otro, vuelve el corte. */
-  max-width: 84%;
-  max-height: 100%;
+  /* Agrandada 7 sep 2026 a pedido del dueño ("la imagen está muy
+     pequeña") — SOLO la foto, con tamaño propio otra vez (no atado a
+     --carta-aro). ⚠️ Hubo un intento a medio camino ese mismo día de
+     agrandar también el círculo/--carta-aro para que la foto más grande
+     no lo tapara, y se revirtió: eso hacía crecer .tk-carta-fotos-
+     envoltura y con ella toda la sección 2, perdiendo la altura pareja
+     que tiene con la sección 1 (ver la nota grande de esa envoltura,
+     min-height:100vh). --carta-aro y la altura de la envoltura se
+     quedan en su tamaño original (clamp(190px,52vw,232px) /
+     clamp(240px,62vw,320px)) — la foto simplemente se pinta por encima,
+     tapando el brillo/línea del círculo y el contador, que es justo lo
+     que el dueño pidió desde el inicio ("no te preocupes si tapa"). Sin
+     `overflow` en ningún ancestro de aquí arriba (.tk-carta-foto-slide,
+     .tk-carta-fotos, .tk-carta-fotos-envoltura), así que este
+     desbordamiento es puro efecto visual — no cambia el alto reservado
+     en el flujo del documento, o sea que la sección no crece por esto. */
+  /* Achicada un poco 7 sep 2026 (era clamp(260px,84vw,340px) /
+     clamp(220px,66vw,300px) — el dueño la pidió un pelín más chica que
+     eso, "solo un poco"). Sigue siendo independiente de --carta-aro a
+     propósito — ver la ADVERTENCIA en .tk-carta-fotos-envoltura antes de
+     tocar cualquiera de los dos tamaños. */
+  max-width: clamp(240px, 76vw, 310px);
+  max-height: clamp(200px, 60vw, 275px);
   /* contain, NUNCA cover: el recorte ya viene sin fondo y de forma
      irregular (bounding box del canal alfa) — "cover" lo recortaría de
      más y rompería el efecto de "producto flotando" que pidió el dueño. */
   object-fit: contain;
-  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.6));
   /* Sin `transition`: opacidad y transform los maneja carta.js pegados al
      scroll, cuadro por cuadro. Una transición CSS aquí iría siempre un
      paso atrás del dedo y se sentiría elástica. */
   will-change: transform, opacity;
+}
+
+/* Contador "01 / 05" — mismo fondo FIJO que el círculo (ver la nota
+   grande de arriba): un solo elemento que carta.js actualiza por texto
+   en pintar(), igual que ya hace con el título, nunca uno por slide.
+   z-index:3, por ENCIMA del carril de fotos, para que nunca quede tapado
+   por una foto ancha. Se ancla al mismo --carta-aro que el círculo para
+   quedar siempre pegado a su borde inferior derecho sin importar en qué
+   viewport se calcule ese tamaño — montado a caballo sobre el borde,
+   mismo lenguaje que un badge de notificación. */
+.tk-carta-contador {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(calc(var(--carta-aro) * 0.22), calc(var(--carta-aro) * 0.3));
+  z-index: 3;
+  background-color: #171311;
+  border: 1px solid rgba(var(--carta-dorado-rgb), 0.45);
+  color: var(--carta-dorado);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 5px 11px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .tk-carta-titulo {
@@ -1793,10 +2110,19 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   color: #ffffff;
   text-align: center;
   line-height: 1.15;
-  margin: 2px 0 22px;
+  margin: 2px 0 6px;
   /* Reserva espacio aunque esté vacío (antes de que cargue JS) para que no
      haya un salto de layout cuando el nombre real aparece. */
   min-height: 1.3em;
+  /* Subido 7 sep 2026 (pedido del dueño) porque los puntitos de arriba
+     subieron mucho (.tk-carta-dots, top:-50px) y dejaron un hueco grande
+     debajo — pero a propósito NO tan arriba como los puntitos: el dueño
+     pidió explícitamente que este NO quede pegado ("OJO este no debe de
+     ir tan pegado"), así que se dejó un aire de sobra a diferencia del
+     ajuste anterior. Mismo truco de position:relative + top, no mueve el
+     alto reservado en el flujo. */
+  position: relative;
+  top: -10px;
 }
 
 /* -------- Lista de renglones: el "menú" de verdad -------- */
@@ -1804,16 +2130,93 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   width: 100%;
   display: flex;
   flex-direction: column;
+  /* 8px y NO los 14px de antes del repintado (7 sep 2026) — ver la nota
+     grande de .tk-carta-renglon, justo abajo, sobre por qué el
+     presupuesto de alto de esta sección es finito. */
   gap: 14px;
-  margin-bottom: 26px;
+  margin-bottom: 18px;
+  /* Subida 7 sep 2026 (el dueño vio el hueco muerto que dejó el título de
+     arriba al subirse con top:-52px — ver .tk-carta-titulo — y pidió sin
+     rodeos "sube la lista y hazla más grande"). Puro position:relative +
+     top, no mueve el alto reservado en el flujo. */
+  position: relative;
+  top: 14px;
 }
 .tk-carta-renglon {
   display: flex;
   align-items: baseline;
   gap: 8px;
   color: rgba(255, 255, 255, 0.68);
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   cursor: pointer;
+  /* Caja transparente por default (repintado 7 sep 2026, misma maqueta en
+     imagen que el aro de arriba): el renglón activo pasa de solo cambiar
+     de color a un recuadro dorado real, así que TODOS los renglones
+     necesitan ya el padding/radio de la caja — border y fondo
+     transparentes aquí para que los renglones normales se sigan viendo
+     como texto suelto, y solo .tk-carta-renglon-activo, más abajo, los
+     rellena de verdad.
+
+     ⚠️ El padding vertical aquí NO es cosmético libre — esta sección
+     entera vive de un presupuesto de alto fijo (min-height:100vh +
+     justify-content:center, pensado para caber en una sola pantalla; ver
+     la nota grande de .tk-carta-seccion sobre "758px contra los 845px
+     del viewport"). La primera versión de este recuadro (10px arriba/
+     abajo + el gap de 14px de la lista, sin tocar nada más) sumó ~114px
+     de alto nuevo entre las 5 filas — medido con Playwright en
+     393×852, la sección pasó de caber con 87px de sobra a DESBORDAR el
+     viewport por 20px. Con contenido más alto que la pantalla,
+     justify-content:center deja de tener espacio que repartir arriba, y
+     como el desborde se come primero lo que está más pegado al borde
+     superior de la sección, el eyebrow "Platillos" (que ya vive corrido
+     -48px hacia arriba, ver .tk-carta-envoltura .tk-cf-eyebrow-fila) es
+     literalmente lo primero que desaparece de la pantalla — el dueño lo
+     reportó así, con captura: se ve el círculo/lista/botón completos
+     pero ni rastro del eyebrow. 4px arriba/abajo (contra los 10px de la
+     primera versión) + el gap de 8px de arriba en vez de 14px recuperan
+     ~96px de esos ~114px — vuelve a caber con margen en 393×852 y
+     375×812 (los dos anchos medidos). Si necesitas agrandar este
+     padding otra vez, vuelve a medir con el mismo script antes de
+     darlo por bueno — no basta con verlo bien en un celular grande.
+
+     ⚠️ Vuelto a agrandar 7 sep 2026 (pedido del dueño: "gracias al
+     espacio liberado" arriba — ver el top:-52px de .tk-carta-titulo —
+     "haz más grande la cajita que selecciona al platillo en curso").
+     Subir SOLO el padding del renglón activo habría hecho que la lista
+     cambiara de alto según cuál platillo está activo (todos comparten
+     este mismo padding base) — cada vez que el carrusel avanza el
+     recuadro se habría "movido" de tamaño, un salto de layout constante.
+     Por eso se subió el padding/gap/font-size de TODOS los renglones por
+     igual: la caja del activo se ve más grande (que es lo único que se
+     nota, porque solo el activo tiene fondo/borde visibles) sin que la
+     lista cambie de alto entre platillos.
+     Medido igual que la vez pasada, 393×852 y 375×812 — el primer
+     intento (padding 4→8, gap 8→10, font-size 0.92rem→1rem) desbordó
+     375×812 por 27px, así que se recortó a padding 4→5, gap 8→9,
+     font-size 0.92rem→0.96rem: 393×852 da 852/852 y 375×812 da 812/812,
+     los dos exactos al límite, sin sobra pero sin desbordar tampoco. Si
+     hace falta más margen de sobra, hay que achicar aquí, no en otro
+     lado. ⚠️ 360×640 (una pantalla más corta, fuera de los dos anchos
+     que este bloque siempre ha medido) YA desbordaba antes de esta
+     sesión (758px contra 640px, sin tocar nada de la carta) y sigue
+     desbordando después (805px) — no es una regresión de este cambio,
+     es una limitación preexistente en pantallas muy bajas que nadie ha
+     resuelto todavía. */
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: color 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+.tk-carta-renglon-numero {
+  flex: 0 0 auto;
+  min-width: 18px;
+  font-size: 0.8rem;
+  /* 600 en reposo (no 700) — en la maqueta los números normales se ven
+     claramente más ligeros que el del renglón activo, que sí es bold
+     (ver .tk-carta-renglon-activo .tk-carta-renglon-numero, más abajo). */
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.35);
   transition: color 200ms ease;
 }
 .tk-carta-renglon-nombre {
@@ -1836,10 +2239,36 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   font-weight: 700;
 }
 .tk-carta-renglon.tk-carta-renglon-activo {
-  color: #c5a880;
+  color: var(--carta-dorado);
+  border-color: rgba(var(--carta-dorado-rgb), 0.55);
+  background-color: rgba(var(--carta-dorado-rgb), 0.1);
+  /* Brillo alrededor del borde (7 sep 2026, pedido del dueño con captura):
+     mismo box-shadow, mismo radio y misma opacidad que ya usa el puntito
+     activo (.tk-carta-dots .tk-cf-dot.tk-cf-dot-activo, más abajo) — no un
+     glow inventado — para que el recuadro del platillo en curso comparta
+     el mismo lenguaje visual que el resto de los acentos "activos" de esta
+     sección (puntito, línea del divisor). */
+  box-shadow: 0 0 10px rgba(var(--carta-dorado-rgb), 0.7);
+}
+.tk-carta-renglon.tk-carta-renglon-activo .tk-carta-renglon-numero {
+  color: var(--carta-dorado);
+  font-weight: 800;
+}
+/* Nombre en negritas cuando el renglón está activo (contra el 600 base
+   de .tk-carta-renglon-nombre) — la maqueta lo muestra notablemente más
+   pesado que el resto, no solo de otro color. El precio ya nace en 700
+   para todos los renglones y no necesita un salto extra aquí. */
+.tk-carta-renglon.tk-carta-renglon-activo .tk-carta-renglon-nombre {
+  font-weight: 800;
 }
 .tk-carta-renglon.tk-carta-renglon-activo .tk-carta-renglon-puntos {
-  border-bottom-color: rgba(197, 168, 128, 0.55);
+  /* Transparente y NO recoloreada (antes del repintado del 7 sep 2026
+     esta regla solo le cambiaba el color a la línea punteada). Ahora que
+     el renglón activo ya lleva su propio recuadro, la punteada de adentro
+     sobraba visualmente — el recuadro es el que marca el límite. Los
+     renglones normales la conservan sin cambios: sigue siendo un pedido
+     explícito del dueño desde la Fase 4.3 ("línea punteada + precio"). */
+  border-bottom-color: transparent;
 }
 
 /* ================================================================
@@ -1879,13 +2308,73 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    igual que antes. */
 .tk-hero-contenido { position: relative; z-index: 2; }
 
-.tk-humo { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+/* z-index:0, NO 1 (corregido 7 sep 2026 — ver la nota grande junto a
+   .tk-hero::after, más arriba, para el porqué del difuminado en sí).
+   Con z-index:1 el humo pintaba POR ENCIMA del difuminado negro del pie
+   (.tk-hero::after, sin z-index propio → nivel 0), así que la manchita
+   quedaba expuesta cuando su propio óvalo se recortaba en seco contra
+   el borde de abajo (overflow:hidden de este mismo contenedor) — el
+   dueño lo reportó con una captura con el brillo subido a mano: un
+   corte duro justo donde termina la sección 1, el resplandor cortado a
+   media curva en vez de apagarse. Confirmado con muestreo de píxel real
+   (Playwright + PIL): a 40px del borde el resplandor ya llegaba a
+   rgb(54,53,49) y 40px después caía en seco a rgb(12,10,9) — una caída
+   que el propio radial-gradient de la mancha (que se apaga solo al 70%
+   de su radio) no explica por sí sola.
+
+   En z-index:0 el humo cae en el MISMO nivel de apilado que
+   .tk-hero-fondo (también 0) y que .tk-hero::after (z-index:auto, que
+   se pinta junto con el nivel 0 de su mismo contexto) — dentro de ese
+   nivel, sin stacking context propio de por medio, el orden lo decide
+   el DOM, y ::after —contenido generado, el "último hijo" de .tk-hero—
+   siempre pinta después que estos tres. El difuminado ya llega a negro
+   sólido (rgba(12,10,9,1)) justo en el borde de la sección, así que
+   ahora tapa el recorte de la mancha ANTES de que se note, en vez de
+   dejarlo expuesto encima. No hace falta tocar la posición/tamaño de
+   ninguna mancha — el efecto se ve exactamente igual más arriba en la
+   sección, donde el difuminado todavía no pesa nada.
+
+   Sigue "por encima del fondo, por debajo del contenido" tal como decía
+   la nota original: .tk-hero-fondo también es 0 pero va primero en el
+   DOM, y .tk-hero-contenido/.tk-hero-cue siguen en su propio nivel 2,
+   muy por encima de todo esto. En escritorio (≥1024px) esto no cambia
+   nada visible: .tk-humo--hero ya se oculta por completo ahí (ver el
+   media query más abajo), que es donde vive el humo real de la
+   sección — no lo toca este ajuste, solo el orden de pintado de abajo,
+   que en desktop ni siquiera llega a pintarse. */
+.tk-humo { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .tk-humo-mancha {
   position: absolute;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 248, 238, .22) 0%, rgba(255, 248, 238, 0) 70%);
   filter: blur(6px);
-  animation: tk-humo-deriva var(--t) ease-in-out var(--d) infinite;
+  /* opacity base (7 sep 2026) — nunca se usa mientras la animación corre
+     normal (los keyframes de abajo mandan), pero sin ella el estado
+     "sin animación todavía" caía en el default de CSS, opacity:1 a
+     secas. Eso pasaba en dos casos reales: (1) el destello de arranque
+     que se arregla aquí mismo con `backwards` (ver la nota junto al
+     `animation`) y (2) @media (prefers-reduced-motion:reduce) más abajo,
+     que apaga la animación entera con `animation:none` y se quedaba sin
+     ningún opacity que la reemplazara — humo a brillo completo y fijo
+     para quien pidió MENOS movimiento, no más. .18 es el punto medio
+     del rango que ya recorre la animación (.14 a .24). */
+  opacity: .18;
+  /* `backwards` (7 sep 2026) — sin esto, cada mancha con --d > 0 (todas
+     menos izq-grande) se pintaba a pleno brillo (opacity:1, la regla de
+     arriba no existía y el default de CSS es 1) durante TODO su propio
+     retraso, y solo caía a su .14-.24 real cuando ese delay terminaba.
+     El dueño lo reportó con una captura de los primeros segundos de la
+     página: "un humo más brilloso que luego se va" — no se iba, estaba
+     recién ENTRANDO a su valor correcto. Medido con Playwright,
+     getComputedStyle a los 80ms de cargar: opacity 1/1/1 en las tres
+     manchas con delay, 0.14 en la única sin delay (izq-grande). `backwards`
+     hace que, MIENTRAS ESPERA su retraso, cada mancha ya tome el estado
+     del primer fotograma (0%: opacity .14) en vez del estilo sin animar
+     — así se ve igual desde el primer frame que a partir de los
+     primeros segundos, sin ningún salto. `both` no hace falta: esta
+     animación es infinite, nunca "termina", así que la mitad
+     `forwards` de `both` nunca llegaría a aplicar. */
+  animation: tk-humo-deriva var(--t) ease-in-out var(--d) infinite backwards;
 }
 /* Deriva lenta + respiración de opacidad — nada que se lea como
    "parpadeo", cada mancha corre con su propia duración/delay (ver las

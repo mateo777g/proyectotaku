@@ -22,6 +22,31 @@
 // Solo categoría Platillos. El tope de 5 lo aplica de verdad el panel al
 // generar el recorte (ver dialogo_platillo.py) — el `.slice()` de aquí
 // abajo es solo un respaldo, nunca la fuente de la verdad de ese límite.
+//
+// Repintado (2026-09-07, segunda maqueta en imagen): la lista ganó el
+// número de renglón (.tk-carta-renglon-numero) y el renglón activo pasó
+// de solo cambiar de color a un recuadro naranja real.
+//
+// ⚠️ CORREGIDO el mismo día, tras una TERCERA imagen del dueño: el primer
+// intento de este repintado metía la foto DENTRO de un círculo que viajaba
+// con ella (.tk-carta-foto-aro, movido/apagado/encogido por
+// _actualizarEfecto() igual que antes hacía el <img> suelto). El dueño lo
+// rechazó de inmediato mandando dos capturas de SU MISMA maqueta en dos
+// estados distintos (01/05 y 04/05): el círculo, su resplandor y su
+// contador NO se mueven ni un píxel entre una y otra — son el FONDO fijo
+// de la sección, no un elemento por slide. Lo único que cambia entre las
+// dos capturas es la foto de adentro. "no tiene sentido que se mueva el
+// círculo y su enumeración... lo único que se mueve es la imagen del
+// platillo."
+//
+// Por eso el círculo+resplandor (.tk-carta-aro-fijo) y el contador
+// (#carta-contador) ahora son UN SOLO elemento cada uno, fuera del carril
+// que se desliza — viven en .tk-carta-fotos-envoltura, ver index.html/
+// style.css — y lo único que _actualizarEfecto() mueve/apaga/encoge sigue
+// siendo el <img> de cada slide, exactamente como en la versión original
+// del 3 sep 2026. El contador ya no se arma por slide (idx/total en el
+// HTML): ahora es texto que pintar() actualiza cada vez que cambia
+// indiceActual, igual que ya hace con el título.
 // ================================================================
 
 // ⚠️ Mismo valor EXACTO que el "@media (min-width: 1024px)" de style.css y
@@ -48,11 +73,15 @@ const _CARTA_LIMITE = 5;
 //   y ese margen que gana es justo lo que evita que toque el borde.
 // _CARTA_ENCOGE: cuánto se encoge en ese mismo recorrido (14%).
 //
-// ⚠️ Van amarrados al `max-width: 84%` de .tk-carta-foto-slide img en
-// style.css — la cuenta completa está comentada ahí. Resumen: el borde
-// más lejano que alcanza la foto es 0.12 + 0.42*0.86 = 0.481·W, contra el
-// 0.5·W del carril. Si tocas uno de los tres números, rehaz esa cuenta o
-// vuelve el corte que se acaba de arreglar.
+// Sigue siendo el <img> suelto el que se mueve (ver la nota grande de
+// arriba, "CORREGIDO el mismo día" — el círculo NO participa de esto, es
+// fondo fijo). Su tamaño en reposo ya no es 84% del carril como en la
+// primera versión de este archivo: ahora tiene que caber DENTRO del
+// círculo fijo (.tk-carta-aro-fijo, clamp(190px,52vw,232px) — ver
+// style.css), así que mide bastante menos (clamp(124px,34vw,153px), ~66%
+// del círculo). Al ser tan chica frente al carril completo, el margen
+// contra el corte de borde es enorme — de sobra para no tener que repetir
+// aquella cuenta ajustadísima del 0.481·W contra 0.5·W.
 const _CARTA_DERIVA = 0.12;
 const _CARTA_ENCOGE = 0.14;
 
@@ -78,8 +107,10 @@ function _cartaFotoSlideHTML(platillo) {
 function _cartaRenglonHTML(platillo, idx) {
   const nombre = escapeHtml(platillo.nombre || "");
   const precio = formatearPrecio(platillo.precio);
+  const numero = String(idx + 1).padStart(2, "0");
   return `
     <div class="tk-carta-renglon" data-indice="${idx}">
+      <span class="tk-carta-renglon-numero">${numero}</span>
       <span class="tk-carta-renglon-nombre">${nombre}</span>
       <span class="tk-carta-renglon-puntos"></span>
       <span class="tk-carta-renglon-precio">${precio}</span>
@@ -106,7 +137,11 @@ async function iniciarCarta() {
   const titulo = document.getElementById("carta-titulo");
   const lista = document.getElementById("carta-lista");
   const dots = document.getElementById("carta-dots");
-  if (!seccion || !fotos || !titulo || !lista || !dots) return;
+  // El contador ("01 / 05") vive FUERA del carril — es parte del círculo
+  // fijo, no de cada slide — así que pintar() lo actualiza por texto, tal
+  // como ya hace con el título. Ver la nota grande al inicio del archivo.
+  const contador = document.getElementById("carta-contador");
+  if (!seccion || !fotos || !titulo || !lista || !dots || !contador) return;
 
   let items = [];
   let indiceActual = 0;
@@ -131,6 +166,9 @@ async function iniciarCarta() {
 
   function pintar() {
     titulo.textContent = items[indiceActual] ? items[indiceActual].nombre || "" : "";
+    contador.textContent = items.length
+      ? `${String(indiceActual + 1).padStart(2, "0")} / ${String(items.length).padStart(2, "0")}`
+      : "";
     lista.querySelectorAll(".tk-carta-renglon").forEach((renglon, i) => {
       renglon.classList.toggle("tk-carta-renglon-activo", i === indiceActual);
     });
@@ -184,6 +222,10 @@ async function iniciarCarta() {
     if (!ancho) return;
     const centro = fotos.scrollLeft + ancho / 2;
     for (const slide of fotos.children) {
+      // Solo el <img> — el círculo/resplandor/contador NO viven aquí
+      // dentro, son fondo fijo (.tk-carta-aro-fijo / #carta-contador en
+      // .tk-carta-fotos-envoltura). Ver la nota grande al inicio del
+      // archivo sobre por qué esto se revirtió el mismo día.
       const img = slide.querySelector("img");
       if (!img) continue; // los estados de carga/error no llevan <img>
       const p = (slide.offsetLeft + ancho / 2 - centro) / ancho;
@@ -295,6 +337,7 @@ async function iniciarCarta() {
       </div>
     `;
     titulo.textContent = "";
+    contador.textContent = "";
     lista.innerHTML = "";
     dots.innerHTML = "";
     detenerAutoplay();
