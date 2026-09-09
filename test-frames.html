@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Prueba de frames — despill de lila</title>
+<style>
+  /* Reset mínimo, nada de esto pertenece al sitio real. */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #eee;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 24px;
+  }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  p.nota { font-size: 13px; color: #aaa; margin: 0 0 16px; max-width: 820px; line-height: 1.5; }
+  p.hallazgo { font-size: 13px; color: #f4ca83; margin: 0 0 24px; max-width: 820px; line-height: 1.5; }
+  code { background: #222; padding: 1px 5px; border-radius: 4px; }
+
+  /* ================================================================
+     Fondo IDÉNTICO al del hero real (index.html / style.css), sacado
+     de ahí literalmente, no aproximado:
+       .tk-hero        → background: linear-gradient(160deg, #3f4e2a 0%, #1c2814 55%, #10160c 100%)
+       .tk-hero-fondo-velo → background: linear-gradient(180deg, rgba(122,156,74,.5) 0%, rgba(28,40,20,.35) 46%, rgba(10,14,8,.88) 100%)
+     ================================================================ */
+  .fondo-hero {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: linear-gradient(160deg, #3f4e2a 0%, #1c2814 55%, #10160c 100%);
+  }
+  .fondo-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+      rgba(122, 156, 74, .5) 0%,
+      rgba(28, 40, 20, .35) 46%,
+      rgba(10, 14, 8, .88) 100%);
+  }
+
+  .rejilla {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .celda {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 30px 16px 34px;
+    position: relative;
+    border-left: 1px dashed rgba(255,255,255,.2);
+  }
+  .celda:nth-child(3n+1) { border-left: none; }
+
+  .vista-completa { width: 260px; max-width: 90%; display: block; }
+
+  .etiqueta {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #f4ca83;
+    background: rgba(0,0,0,.45);
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* Caja de zoom: recorte real del borde, ampliado con transform en vez
+     de una captura aparte — es la MISMA imagen que ya está sobre el
+     fondo real, así que el suavizado/antialiasing que se ve es el
+     verdadero, no uno reconstruido. */
+  .zoom-caja {
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 4px;
+    background: transparent;
+  }
+  .zoom-caja img { position: absolute; max-width: none; }
+  .zoom-rotulo {
+    font-size: 9px;
+    color: rgba(255,255,255,.5);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .archivo {
+    font-size: 10px;
+    color: rgba(255,255,255,.55);
+    font-family: Consolas, monospace;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Prueba: despill de lila (geq → Python/numpy) sobre 0xDD9EEF</h1>
+  <p class="nota">
+    Cadena: <code>scale=1200px → colorkey=0xDD9EEF:0.10:0.03 → format=rgba</code>
+    (ffmpeg), luego despill en Python/numpy: donde <code>(R+B)/2 &gt; G</code>,
+    baja R y B hacia G — conserva el píxel y su suavizado, solo le quita el
+    tinte. Puesto sobre el fondo EXACTO del hero (<code>.tk-hero</code> +
+    <code>.tk-hero-fondo-velo</code> de <code>style.css</code>, copiado literal).
+  </p>
+  <p class="hallazgo">
+    ⚠️ El despill se intentó primero con el filtro <code>geq</code> de ffmpeg
+    (única forma de hacerlo a mano, ya que su filtro <code>despill</code> nativo
+    solo soporta verde/azul). Encontré un bug real ahí: con la MISMA fórmula y
+    el MISMO frame decodificado una sola vez (verificado con <code>split</code>
+    para descartar variación entre tomas), <code>geq</code> devolvía valores que
+    no seguían la resta — hasta un canal que subía en vez de bajar, y un canal
+    G que debía quedarse intacto y cambiaba solo. Se movió el despill a
+    Python/numpy sobre el PNG sin comprimir que entrega el colorkey, donde la
+    aritmética sí se pudo verificar píxel por píxel contra la fórmula. Erosion
+    del alfa (paso 2) no hizo falta — el despill solo ya dejó los 3 bordes
+    limpios, incluida la zona oscura de <code>frame_0133</code> donde el geq
+    roto había dejado motas azules.
+  </p>
+
+  <div class="fondo-hero">
+    <div class="rejilla">
+
+      <div class="celda">
+        <span class="etiqueta">frame_0001 · inicio</span>
+        <img class="vista-completa" src="assets/frames/frame_0001.webp" alt="Frame inicial completo">
+        <span class="zoom-rotulo">Zoom al borde superior (real, 2.86×)</span>
+        <div class="zoom-caja" style="width:400px;height:200px;">
+          <img src="assets/frames/frame_0001.webp" style="width:3428.6px;left:-1657.1px;top:-528.6px;" alt="Zoom al borde de frame_0001">
+        </div>
+        <span class="archivo">assets/frames/frame_0001.webp</span>
+      </div>
+
+      <div class="celda">
+        <span class="etiqueta">frame_0057 · carne cayendo</span>
+        <img class="vista-completa" src="assets/frames/frame_0057.webp" alt="Frame de la carne cayendo completo">
+        <span class="zoom-rotulo">Zoom al borde derecho (real, 4×)</span>
+        <div class="zoom-caja" style="width:400px;height:240px;">
+          <img src="assets/frames/frame_0057.webp" style="width:4800px;left:-3200px;top:-1220px;" alt="Zoom al borde de frame_0057">
+        </div>
+        <span class="archivo">assets/frames/frame_0057.webp</span>
+      </div>
+
+      <div class="celda">
+        <span class="etiqueta">frame_0133 · taco doblado</span>
+        <img class="vista-completa" src="assets/frames/frame_0133.webp" alt="Frame final completo">
+        <span class="zoom-rotulo">Zoom al borde + sombra oscura (real, 4×)</span>
+        <div class="zoom-caja" style="width:400px;height:240px;">
+          <img src="assets/frames/frame_0133.webp" style="width:4800px;left:-3000px;top:-1020px;" alt="Zoom al borde de frame_0133">
+        </div>
+        <span class="archivo">assets/frames/frame_0133.webp</span>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

@@ -334,6 +334,35 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
   padding-left: 6px;
 }
 
+/* Sidebar SOLO celular: repintada al claro del panel (8 sep 2026) —
+   pedido explícito del dueño, y explícito también que en escritorio
+   se quede intacta (ahí el hamburguesa/sidebar nunca aparecen, así
+   que las reglas de arriba — fondo --oscuro, texto --blanco/#cabfae —
+   siguen siendo las que se ven en cualquier ancho por encima de
+   640px). Gateado en el mismo 640px que ya usa el resto del navbar
+   móvil, no un breakpoint nuevo. Colores: --fondo es literalmente el
+   bgcolor="#fbf5e9" de cada vista del panel de Flet, y --naranja es
+   el acento ya usado para "activo/hover" sobre fondo claro en las
+   páginas de categoría — --dorado se descartó para el hover porque
+   sobre --fondo casi no se distingue (los dos son tonos claros muy
+   cercanos), al revés de como sí funciona sobre el --oscuro de
+   escritorio. */
+@media (max-width: 640px) {
+  .tk-sidebar {
+    background: var(--fondo);
+    box-shadow: -12px 0 30px rgba(0, 0, 0, .18);
+  }
+  .tk-sidebar-cerrar { color: var(--muted1); }
+  .tk-sidebar-cerrar:hover { color: var(--naranja); }
+  .tk-sidebar-encabezado { border-bottom-color: var(--borde); }
+  .tk-sidebar-encabezado span { color: var(--texto-fuerte); }
+  .tk-sidebar-links a { color: var(--muted1); }
+  .tk-sidebar-links a:hover,
+  .tk-sidebar-links a.tk-nav-link--activo {
+    color: var(--naranja);
+  }
+}
+
 @media (max-width: 640px) {
   .tk-nav-links { display: none; }
   .tk-menu-boton { display: flex; }
