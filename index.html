@@ -62,7 +62,16 @@
   </ul>
 </aside>
 
-<header class="tk-hero">
+<!-- Envoltura del scroll-jacking de la sección 1 (9 sep 2026) — el
+     <header> de abajo se queda fijo (sticky) mientras se recorre esta
+     caja, más alta que la pantalla; ese scroll "de más" es lo que
+     hero-animacion.js traduce en qué frame de los 132 pintar. Mismo
+     patrón que .tk-carrusel-enganche de la sección 2 (ver CLAUDE.md),
+     aplicado aquí por primera vez para controlar una animación en vez
+     de solo "atrapar" el scroll un momento — ver style.css para el
+     resto del mecanismo. -->
+<div class="tk-hero-enganche" id="tk-hero-enganche">
+<header class="tk-hero" id="tk-hero">
   <!-- Velo/degradado del hero — remodelado 6 sep 2026 sobre la opción
        1a ("Centrada · foto de fondo") del canvas de Claude Design
        "Taku Monky Hero Options". Al principio esto llevaba una <img>
@@ -88,6 +97,11 @@
   </div>
 
   <div class="tk-hero-contenido">
+    <!-- Bloque de texto — sin cambios de contenido, solo se metió
+         dentro de este wrapper nuevo (9 sep 2026) para poder acotarlo a
+         ~820px pegado a la izquierda del hero sin tocar el layout
+         centrado de celular (ver style.css). -->
+    <div class="tk-hero-texto">
     <div class="tk-hero-eyebrow-fila">
       <span class="tk-hero-linea tk-hero-linea--izq"></span>
       <p class="tk-hero-eyebrow">Taquería</p>
@@ -131,12 +145,38 @@
       </a>
       <a class="tk-btn tk-btn--primario" href="menu-platillos.html">Ver menú</a>
     </div>
+    </div>
+  </div>
+
+  <!-- Animación del taco — 132 frames en assets/frames/ (NO TOCAR esos
+       archivos, ver hero-animacion.js). El <img> de abajo es el
+       respaldo real, no un placeholder: se pinta con puro HTML/CSS, sin
+       esperar a ningún script, así que nunca hay un hueco vacío
+       mientras carga el resto — y es también TODO lo que ve un celular
+       o alguien con "reducir movimiento" activado (ver
+       hero-animacion.js para el porqué de esa decisión). El <canvas>
+       arranca oculto (hidden) y hero-animacion.js lo descubre —
+       escondiendo el <img>— solo cuando ya precargó los 132 frames y el
+       visitante sí califica para la animación completa.
+
+       ⚠️ Va como HERMANO de .tk-hero-contenido, no adentro (se movió el
+       9 sep 2026): de 641px para arriba es una CAPA DE FONDO
+       (position:absolute anclada a .tk-hero, ver style.css), no una
+       columna que se reparta el ancho con el texto — que era justo lo
+       que partía el título en dos renglones y apilaba las píldoras. En
+       celular sigue siendo un bloque en flujo debajo del texto, ahora
+       como segundo hijo de .tk-hero en columna (ver el @media de
+       ≤640px). -->
+  <div class="tk-hero-animacion" aria-hidden="true">
+    <img class="tk-hero-animacion-media" id="tk-hero-frame-estatico" src="assets/frames/frame_0001.webp" width="1200" height="675" alt="">
+    <canvas class="tk-hero-animacion-media" id="tk-hero-canvas" width="1200" height="675" hidden></canvas>
   </div>
 
   <div class="tk-hero-cue" aria-hidden="true">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
   </div>
 </header>
+</div>
 
 <!-- ================================================================
      Carrusel 3D del menú — SOLO escritorio (≥1024px, ver style.css y
@@ -400,12 +440,14 @@
 <script src="catalogo.js"></script>
 <script src="carrusel.js"></script>
 <script src="carta.js"></script>
+<script src="hero-animacion.js"></script>
 <script>
   document.getElementById("enlace-whatsapp-hero").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-footer").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-footer-movil").href = URL_WHATSAPP;
   document.getElementById("enlace-whatsapp-navbar").href = URL_WHATSAPP;
   iniciarNavbar();
+  iniciarHeroAnimacion();
   iniciarIndex();
   iniciarCarrusel();
   iniciarCarta();

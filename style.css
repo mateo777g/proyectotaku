@@ -47,6 +47,18 @@
      de 22px + ~68px de alto de cápsula (antes era una barra pegada al
      borde de 78px en total) — ver .tk-navbar más abajo. */
   --navbar-alto: 90px;
+
+  /* Cuánto scroll "de más" consume la animación del taco del hero (ver
+     .tk-hero-enganche y hero-animacion.js) antes de soltar el scroll
+     normal. hero-animacion.js NO trae este número duplicado — mide en
+     vivo cuánto mide realmente .tk-hero-enganche por encima de un
+     viewport, así que esta variable es la ÚNICA fuente de verdad; tocar
+     solo este valor re-calibra los dos lados a la vez.
+     2400px ≈ dos vueltas completas de una rueda de mouse típica (~100px
+     por muesca × ~12 muescas por vuelta) — ni tan corto que se sienta
+     atropellado ni tan largo que el usuario se sienta atrapado. Ajusta
+     este número y prueba en vivo si se siente distinto. */
+  --hero-scroll-extra: 2400px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -401,6 +413,14 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    verde #589f26 del mockup al principio (excepción de paleta
    deliberada) pero volvió al naranja var(--naranja) el 7 sep 2026 —
    ver la nota junto a .tk-btn--secundario más abajo para el porqué. */
+/* position:relative unconditional (igual que .tk-carrusel-enganche en
+   la sección 2) — en ≥641px con reduced-motion:no-preference gana un
+   alto extra y .tk-hero adentro pasa a sticky (ver ese @media más
+   abajo, junto al resto del layout de dos columnas); en cualquier otro
+   caso (celular, o "reducir movimiento" activado) esta caja no mide
+   más que su único hijo y el scroll de esa sección es el de siempre. */
+.tk-hero-enganche { position: relative; }
+
 .tk-hero {
   /* Ancla del difuminado del pie (.tk-hero::after, justo abajo), del
      velo de fondo (.tk-hero-fondo) y del humo decorativo
@@ -427,34 +447,32 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
      degradado aunque ya no haya ninguna <img> detrás — los dos juntos
      son el look que ya se verificó y aprobó. */
   background: linear-gradient(160deg, #3f4e2a 0%, #1c2814 55%, #10160c 100%);
-  /* Recorta SOLO a lo ancho, para que las hojas (que se salen a propósito por
-     el borde derecho con right: calc(--hoja-tam * -0.30)) no agranden el
-     documento. Sin esto, en celular el ancho scrolleable pasaba de 393 a 467px
-     — 74px de sobra, justo el bleed de la hoja — y el dueño lo vio el 3 sep
-     2026 como "valió v el ícono de hamburguesa": el contenido corrido a la
-     izquierda, una franja crema a la derecha y la hamburguesa suelta en ella.
-     Se explica solo: .tk-navbar es position:fixed, así que se queda pegada al
-     viewport mientras el resto de la página se recorre.
+  /* overflow:hidden en los DOS ejes desde el 9 sep 2026 — antes era
+     overflow-x:clip (dejaba el eje vertical en visible, a propósito,
+     para que las hojas decorativas de esquina que tenía esta sección
+     entonces sangraran hacia la sección 2). Esas hojas ya no existen
+     (las reemplazó el humo del asador, ver .tk-humo más abajo), así
+     que ese motivo para NO recortar a lo alto ya no aplica — y ahora
+     sí hace falta recortar a lo alto: es lo que esconde el "nacimiento"
+     de la animación del taco (ver .tk-hero-animacion, el bloque grande
+     de dos columnas más abajo) por encima del borde de esta sección,
+     para que los ingredientes entren ya cayendo en vez de aparecer de
+     golpe a medio aire. El motivo ORIGINAL de recortar a lo ancho
+     sigue vigente sin cambios (se explica abajo, sin tocar) — overflow:
+     hidden lo sigue cubriendo igual que overflow-x:clip lo cubría.
 
-     >>> Es `clip`, NO `hidden`, y la diferencia es la que hace que esto
-     funcione: con `overflow-x: hidden` el otro eje deja de poder ser `visible`
-     (se vuelve `auto`), o sea que la hoja también quedaría recortada por
-     ABAJO... y ese bleed vertical es justo lo que la hace cruzar a la sección
-     2, que era el punto de ponerla ahí. `clip` sí permite la pareja
-     clip/visible, así que corta a lo ancho y deja pasar a lo alto. <<<
-
-     Actualización (3 sep 2026, mismo día): en celular ya NO hay hojas
-     (ver el bloque "Las hojas en celular" al final del archivo), así que
-     ese síntoma exacto ya no puede pasar a ese ancho. La regla se queda
-     igual porque de 641px para arriba las dos hojas del hero siguen
-     sangrando por el borde derecho — es ahí donde hace el trabajo ahora.
-
-     Nota: el <body> ya trae overflow-x:hidden y en Chromium y WebKit sí
-     alcanza a tapar el síntoma (se midió: la página no se deja scrollear en
-     ninguno de los dos). Pero el documento seguía MIDIENDO de más, y cualquier
-     visor que renderice el tamaño del documento en vez del del viewport lo
-     saca a relucir. Esto lo arregla en el origen, en vez de taparlo. */
-  overflow-x: clip;
+     Por qué a lo ancho, motivo original (3 sep 2026): para que las
+     hojas —ya idas— no agrandaran el documento. Sin esto, en celular el
+     ancho scrolleable pasaba de 393 a 467px — 74px de sobra, justo el
+     bleed de la hoja — y el dueño lo vio como "valió v el ícono de
+     hamburguesa": el contenido corrido a la izquierda, una franja crema
+     a la derecha y la hamburguesa suelta en ella. Se explica solo:
+     .tk-navbar es position:fixed, así que se queda pegada al viewport
+     mientras el resto de la página se recorre. Ese síntoma ya no puede
+     pasar sin hojas, pero de 641px para arriba .tk-hero-animacion
+     también sangra a propósito por la derecha (ver ese bloque) — el
+     mismo overflow oculto sigue haciendo ese trabajo ahí. */
+  overflow: hidden;
 }
 
 /* Velo del hero — reemplaza el "amber glow" plano de antes. Ya no
@@ -781,6 +799,21 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
    él. No toca eyebrow, título, párrafo ni botones — nada más del hero
    se movió. */
 @media (max-width: 640px) {
+  /* .tk-hero-animacion pasó a ser hermano de .tk-hero-contenido el 9 sep
+     2026 (antes vivía adentro) para poder ser una capa absoluta en
+     escritorio — ver el bloque grande del hero de dos capas más abajo.
+     .tk-hero es flex en fila, así que sin esto el taco se pondría AL
+     LADO del texto en celular en vez de debajo. En columna vuelve a
+     quedar exactamente donde estaba: align-items:center sigue
+     centrándolo (ahora en el eje horizontal) y justify-content:center
+     sigue centrando el conjunto (ahora en el vertical), o sea el mismo
+     resultado que cuando era un bloque más dentro del texto. El
+     width:100% es porque un hijo de un flex en columna con
+     align-items:center se encoge a su contenido — sin él, el <img> de
+     adentro (width:100%) no tendría contra qué medir. max-width:420px lo
+     sigue acotando igual que antes. */
+  .tk-hero { flex-direction: column; }
+
   .tk-hero-info-fila--cuadricula {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -806,6 +839,27 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
     line-height: 1.35;
   }
   .tk-hero-info-pill--tarjeta svg { align-self: center; }
+
+  /* El <img> de respaldo de .tk-hero-animacion (ver hero-animacion.js)
+     es TODO lo que un celular llega a ver de la animación del taco —
+     nunca se precargan los 132 frames en datos móviles. Aparte del
+     freno de datos, es también la razón de fondo por la que aquí no
+     hay ningún scroll-jacking: .tk-hero-enganche solo gana su alto
+     extra en ≥641px (ver ese @media más abajo), así que en celular esta
+     sección scrollea exactamente igual que cualquier otra. Centrado con
+     margin:auto y acotado a 420px en vez de ir a ancho completo — a
+     ancho completo se ve como un banner suelto; así se lee como una
+     pieza propia, parecida en peso visual a los botones de arriba. */
+  .tk-hero-animacion {
+    margin: 28px auto 0;
+    width: 100%;
+    max-width: 420px;
+  }
+  .tk-hero-animacion-media {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
 }
 
 /* Flecha "sigue bajando" — nueva en este remodelado, rebota en loop
@@ -828,6 +882,247 @@ section[id] { scroll-margin-top: calc(var(--navbar-alto) + 12px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tk-hero-cue { animation: none; }
+}
+
+/* [hidden] con más especificidad que .tk-hero-animacion-media a secas
+   (0,2,0 contra 0,1,0) — sin esto, el display:block que le ponen los
+   dos @media de abajo (uno para el <img>/<canvas> de celular, otro
+   para el de escritorio) le ganaría en la cascada al display:none del
+   hoja de estilos por default del navegador para [hidden] (los estilos
+   de autor siempre le ganan a los del user-agent, sin importar el
+   orden), y el <canvas> se vería aunque hero-animacion.js todavía no
+   le haya quitado el atributo. Una sola regla, incondicional, cubre
+   los dos @media. */
+.tk-hero-animacion-media[hidden] { display: none; }
+
+/* z-index incondicional, no solo dentro del @media de escritorio, y por
+   un motivo que se vio en una captura: en celular .tk-hero-animacion es
+   un flex item de .tk-hero (un flex item respeta el z-index aunque su
+   position sea static, no hace falta position:relative), y sin esta
+   regla caía en el nivel 0 — el mismo que .tk-hero::after, que al ser
+   contenido generado es el último hijo y pinta DESPUÉS, así que el
+   difuminado negro del pie de la sección le pasaba por encima y el taco
+   se veía apagado. Antes no pasaba porque vivía dentro de
+   .tk-hero-contenido (z-index:2); al sacarlo de ahí el 9 sep 2026 hubo
+   que devolverle su propio nivel. Detectado comparando la captura de
+   celular píxel por píxel contra la de antes del cambio: la geometría
+   salió idéntica y lo único que cambiaba era el color del taco.
+
+   1 y no 2: por encima del fondo y del humo (los dos en 0) y por debajo
+   del texto (.tk-hero-contenido, z-index:2), porque el taco es una capa
+   de FONDO — si en una ventana angosta llegara a encimarse con el
+   texto, gana el texto. */
+.tk-hero-animacion { z-index: 1; }
+
+/* ================================================================
+   Hero de dos CAPAS — animación del taco (9 sep 2026, rehecho el mismo
+   día). Composición sobre una maqueta del desarrollador medida a
+   1920px: el bloque de texto a la izquierda y la secuencia animada de
+   132 frames grande a la derecha, ENCIMÁNDOSE, no repartiéndose el
+   ancho. No toca el degradado, el velo, el humo ni la navbar.
+
+   ⚠️ Esto reemplaza un primer intento de "dos columnas" (flex, el texto
+   y la animación como hermanos que se repartían el ancho de
+   .tk-hero-contenido) y el motivo de tirarlo es medible, no de gusto: a
+   1920px al bloque de texto le quedaban 354px de ancho, así que "TAKU ·
+   MONKY" se partía en dos renglones, las 4 píldoras se apilaban en
+   columna (4 renglones en vez de 2) y los dos botones envolvían su
+   propio texto (72px de alto en vez de 45). Nada de eso se arregla
+   bajándole a la letra ni con nowrap: mientras la animación sea una
+   columna, el texto no tiene el ancho que la maqueta le da. La
+   animación es una CAPA DE FONDO — sale del flujo por completo.
+
+   Estructura HTML: .tk-hero-animacion es HERMANO de .tk-hero-contenido
+   (los dos hijos directos de .tk-hero), no un hijo suyo — se movió en
+   index.html el mismo día. Eso es lo que deja que su position:absolute
+   se ancle a .tk-hero (position:relative, la sección completa) en vez
+   de a la caja del texto. Por debajo de 641px (mismo corte que
+   esMovil() en catalogo.js — no se inventó un número nuevo) nada de
+   este bloque aplica: el hero sigue en una sola columna centrada, con
+   el taco en flujo debajo del texto (ver el @media de ≤640px, que pone
+   .tk-hero en flex-direction:column justo para eso) y enseñando solo el
+   <img> estático de frame_0001, porque hero-animacion.js nunca llega a
+   tocar el <canvas> en celular (ver ese archivo para el porqué). */
+@media (min-width: 641px) {
+  /* El ancho de la caja de texto vive en una variable en .tk-hero, no
+     suelto en .tk-hero-texto, porque lo necesitan DOS reglas: la caja
+     de texto para acotarse y la capa del taco para saber hasta dónde
+     puede crecer sin metérsele encima (ver --anim-ancho más abajo).
+     Escrito como número en los dos sitios, el día que uno cambie el
+     otro se queda atrás y el título termina impreso sobre la tortilla —
+     que es justo lo que pasaba a 1024px antes de sacarlo a variable.
+
+     820px es el ancho que tiene en la maqueta a 1920. El 66vw es lo que
+     lo hace encoger en pantallas menores: por debajo de ~1189px el
+     título ya viene encogiendo solo (su font-size es clamp(...,7vw,...),
+     o sea que a partir de ahí manda el 7vw), y "TAKU · MONKY" en una
+     línea mide ~8.05 veces ese font-size = 56.4vw — así que 66vw deja
+     ~17% de aire de sobra sobre el ancho que el título necesita, margen
+     suficiente para que ni con la tipografía de respaldo (si Archivo no
+     cargara) el título se parta en dos. */
+  .tk-hero { --hero-texto-ancho: min(820px, 66vw); }
+
+  .tk-hero-contenido {
+    /* Ya no reparte el ancho con nadie ni necesita el height explícito
+       que tenía el intento anterior (existía para que la animación, que
+       entonces era un flex item, no estirara .tk-hero): ahora la
+       animación es absoluta, o sea que no aporta NADA al cálculo de
+       alto del hero, y esta caja vuelve a medir lo que mida su texto y
+       a centrarse sola con el align-items:center de .tk-hero.
+       width:100% para que .tk-hero-texto tenga contra qué medir su
+       max-width y le sobre sitio a la derecha; max-width:none para
+       soltar el 1400px del intento anterior — la caja de texto se
+       alinea con el borde IZQUIERDO del hero (como en la maqueta), no
+       con el de un contenedor centrado 260px adentro. */
+    width: 100%;
+    max-width: none;
+  }
+
+  /* La caja de texto: acotada a ~820px (el ancho que tiene en la
+     maqueta a 1920) y pegada a la izquierda — un bloque con max-width
+     y márgenes 0 ya se queda a la izquierda, no hace falta ningún
+     margin:auto. Su CONTENIDO va centrado adentro, que es como está en
+     la maqueta (eyebrow, título, las 4 píldoras, el párrafo y los dos
+     botones comparten el mismo eje) — eso lo hereda tal cual del
+     text-align:center de .tk-hero y de los justify-content:center que
+     ya traen .tk-hero-eyebrow-fila / .tk-hero-info-fila /
+     .tk-hero-botones en su regla base, así que aquí no hay que
+     re-centrar nada a mano: el intento anterior sí tenía 4 reglas
+     alineando esas filas a la izquierda y se fueron con él. */
+  .tk-hero-texto { max-width: var(--hero-texto-ancho); }
+
+  /* ---- La capa del taco ----------------------------------------
+     ⚠️ --anim-ancho es el ancho del ELEMENTO, que NO es el ancho del
+     taco que se ve. Los 132 archivos son lienzos de 1200×675 con mucho
+     transparente alrededor: medido con Pillow sobre los 132 reales, el
+     dibujo solo ocupa x 320..852 (44.3% del ancho) e y 63..566 (74.5%
+     del alto). O sea que para que el taco se vea del 45% del ancho de
+     la ventana que pide la maqueta, el elemento tiene que medir
+     ~101% — casi la ventana entera. Si algún día se re-exportan los
+     frames recortados, estos tres números (0.443, 0.29 y el 250vh de
+     abajo) hay que rehacerlos.
+
+     right: no se ancla el borde del elemento sino el borde VISIBLE del
+     taco. --anim-margen es el hueco real entre el taco y el borde
+     derecho de la ventana (130px en la maqueta a 1920); el
+     0.29 × --anim-ancho que se le resta es justo el transparente que
+     el frame trae a la derecha ((1200-852)/1200), o sea lo que hay que
+     sacar de la ventana para que el hueco que se ve sea el que se
+     pidió. Ese excedente lo recorta el overflow:hidden de .tk-hero.
+
+     --anim-ancho es el menor de TRES topes, y cada uno tapa un agujero
+     distinto (a 1920×1080 manda el primero; los otros dos ni se
+     asoman):
+       · 101% — el tamaño que pide la maqueta, el que deja el taco al
+         45% del ancho de la ventana.
+       · 200vh — el freno por ALTO, para ventanas anchas y bajitas: es
+         lo que evita que a frame_0132 (el que llega más abajo, hasta
+         y=566/675 = 0.839 del lienzo) se le corte la punta contra el
+         borde de abajo del hero. A 1920×1080 no muerde (101% = 1939px
+         contra 200vh = 2160px); a 1920×800 sí, y baja el elemento a
+         1600px para que frame_0132 termine en y≈728 de 800.
+       · el hueco que queda a la derecha del texto — el freno por
+         ANCHO, y el que de verdad trabaja entre 1024 y 1700px. La
+         maqueta necesita ~1680px para que la caja de texto y el taco
+         quepan lado a lado; por debajo de eso, sin este tope, el taco
+         se le montaba encima al título (medido a 1024×768: la
+         tortilla arrancaba en x=496 y "MONKY" terminaba en x=710 —
+         letra blanca sobre tortilla clara, ilegible). El 2.256 es
+         1/0.4433, o sea convertir "cuánto taco quiero que se vea" a
+         "cuánto tiene que medir el elemento", y los 20px que se
+         restan aparte son el padding izquierdo de .tk-hero. Encoger
+         el taco (y no dejarlo sangrar cortado por la derecha) es a
+         propósito: así frame_0001 y frame_0132 se siguen viendo
+         COMPLETOS a cualquier ancho, no solo a 1920.
+
+     ⚠️ top + transform NO centran verticalmente: anclan el NACIMIENTO
+     de la lluvia de ingredientes. El punto más alto que llega a tener
+     cualquiera de los 132 frames está en y=63 de 675 (9.33% del alto,
+     frames 55/57/80/84/85 — medido con Pillow sobre los archivos
+     reales), y ahí el dibujo se corta en seco porque así venía el video
+     original. top lleva ese 9.33% a --anim-nacimiento y el translateY
+     negativo lo sube de vuelta, así que el corte cae siempre en y=57:
+     dentro de la píldora de la navbar (que va de y=22 a y=92 y es
+     z-index:900, muy por encima de esta capa), así que la carne y el
+     queso entran por detrás de ella en vez de aparecer de la nada.
+
+     ⚠️ Ese 9.33% TIENE que ir en un translateY, no restado dentro del
+     top con un calc sobre --anim-ancho, y eso costó un bug real: un
+     porcentaje guardado en una custom property no se resuelve donde se
+     declara sino donde se USA, y en top los porcentajes miden contra el
+     ALTO del contenedor, no contra el ancho. El 101% de --anim-ancho
+     valía 1939px en width/right (correcto) y 1091px en top (el alto de
+     la ventana), así que el elemento acababa en y=0 en vez de y=-45 y
+     el nacimiento caía en y=102, justo por debajo de la navbar y a la
+     vista. En un translateY el porcentaje mide contra el alto del
+     PROPIO elemento, que es exactamente lo que hace falta aquí.
+
+     Y sí, centrar (top:50% + translateY(-50%)) daba exactamente lo
+     mismo a 1920×1080 — se probó, la diferencia era de 1px — pero solo
+     ahí: en cuanto el elemento se hace más chico que la ventana, el
+     centrado lo baja y el nacimiento queda a la vista. Medido: a
+     768×1024 centrado el corte caía en y=295, a media pantalla, que es
+     justo lo que este hero tenía que dejar de hacer. Anclado arriba, el
+     taco queda a 1920×1080 en y 145..880 — la maqueta lo pone en
+     155..875 — y en cualquier otro tamaño la lluvia sigue naciendo
+     escondida. */
+  .tk-hero-animacion {
+    --anim-margen: clamp(20px, 6.8vw, 130px);
+    --anim-hueco: 20px; /* aire mínimo entre la caja de texto y el taco */
+    --anim-ancho: min(
+      101%,
+      200vh,
+      (100% - 20px - var(--hero-texto-ancho) - var(--anim-hueco) - var(--anim-margen)) * 2.256
+    );
+    --anim-nacimiento: 57px;
+    position: absolute;
+    /* el z-index vive en la regla base de más arriba, que lo necesita
+       también en celular — ver esa nota */
+    pointer-events: none;
+    width: var(--anim-ancho);
+    right: calc(var(--anim-margen) - var(--anim-ancho) * 0.29);
+    top: var(--anim-nacimiento);
+    transform: translateY(-9.33%);
+  }
+  /* El alto sale solo de la relación de aspecto real del frame
+     (1200×675, los atributos width/height que traen el <img> y el
+     <canvas> en el HTML) — nunca object-fit:cover ni un height fijo,
+     que deformarían o recortarían la secuencia. */
+  .tk-hero-animacion-media {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* La mitad de "scroll-jacking" del truco — separada en su propio
+   @media (ancho Y prefers-reduced-motion:no-preference a la vez) para
+   que se apague sola cuando el visitante pide menos movimiento, sin
+   que hero-animacion.js tenga que desactivar nada por CSS a mano: con
+   .tk-hero-enganche sin alto extra y .tk-hero sin sticky, el scroll de
+   esta sección vuelve a ser el de siempre, sin nada que "soltar".
+   hero-animacion.js hace la misma comprobación por su lado
+   (prefiereMovimientoReducido()) antes de precargar un solo frame de
+   más — las dos mitades, CSS y JS, se apagan juntas a propósito.
+
+   .tk-hero pasa a sticky AQUÍ, no junto a su position:relative de
+   arriba — mismo motivo que .tk-carrusel-seccion en la sección 2 (ver
+   esa nota en este archivo): misma especificidad que la regla base,
+   así que tiene que ir DESPUÉS en la cascada para ganarle. */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  .tk-hero-enganche {
+    /* 100vh (lo que se ve fijo) + la distancia que hace falta para
+       barrer los 132 frames (var(--hero-scroll-extra), definida junto
+       al resto de la paleta arriba en este archivo — UNA sola fuente
+       de verdad, hero-animacion.js mide esto en vivo en vez de traer
+       el número duplicado). */
+    height: calc(100vh + var(--hero-scroll-extra));
+    height: calc(100svh + var(--hero-scroll-extra));
+  }
+  .tk-hero {
+    position: sticky;
+    top: 0;
+  }
 }
 
 /* ================= Secciones de categoría ================= */
