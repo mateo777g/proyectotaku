@@ -22,8 +22,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
-# .env vive en la raíz del repo, un nivel arriba de esta carpeta.
-_RUTA_ENV = Path(__file__).resolve().parent.parent / ".env"
+# .env vive en la raíz del repo, dos niveles arriba (panel/models/ -> raíz).
+_RUTA_ENV = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(_RUTA_ENV)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")

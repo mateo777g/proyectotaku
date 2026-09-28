@@ -54,7 +54,7 @@ class Sidebar(ft.Container):
                 # --- SECCIÓN INFERIOR: Tarjeta de Soporte ---
                 ft.Container(
                     bgcolor="#18120b",
-                    border=ft.border.all(1, "#2c2013"),
+                    border=ft.Border.all(1, "#2c2013"),
                     border_radius=16,
                     padding=18,
                     content=ft.Column(
@@ -78,7 +78,7 @@ class Sidebar(ft.Container):
                                 style=ft.ButtonStyle(
                                     side=ft.BorderSide(1, "#f4ca83"),
                                     shape=ft.RoundedRectangleBorder(radius=20),
-                                    padding=ft.padding.symmetric(vertical=12)
+                                    padding=ft.Padding.symmetric(vertical=12)
                                 ),
                                 width=float("inf"),
                                 on_click=lambda _: self.router.page.launch_url(url_wa)
@@ -107,7 +107,7 @@ class Sidebar(ft.Container):
                 ft.Container(
                     content=ft.Text("IA", color="#0d0905", size=10, weight="bold"),
                     bgcolor="#f4ca83",
-                    padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=3),
                     border_radius=10
                 )
             )
@@ -115,7 +115,7 @@ class Sidebar(ft.Container):
         return ft.Container(
             content=ft.Row(elementos, spacing=14),
             bgcolor=bg_color,
-            padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=12),
             border_radius=22,
             ink=True,
             on_click=lambda _: self.router.cambiar_vista(ruta)

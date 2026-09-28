@@ -66,9 +66,9 @@ class DialogoMesa:
             visible=False,
             width=_ANCHO_CAMPO,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -90,7 +90,7 @@ class DialogoMesa:
             bgcolor="#0d0905",
             border_radius=30,
             width=_ANCHO_CAMPO,
-            padding=ft.padding.symmetric(vertical=16),
+            padding=ft.Padding.symmetric(vertical=16),
             ink=True,
             on_click=self._on_guardar_click,
         )
@@ -112,7 +112,7 @@ class DialogoMesa:
             modal=True,
             bgcolor="#f8f1de",
             shape=ft.RoundedRectangleBorder(radius=16),
-            content_padding=ft.padding.symmetric(horizontal=36, vertical=36),
+            content_padding=ft.Padding.symmetric(horizontal=36, vertical=36),
             content=ft.Stack(
                 controls=[
                     ft.Container(

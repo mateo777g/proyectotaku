@@ -183,9 +183,9 @@ class DialogoPlatillo:
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
             bgcolor="#f8f1de",
-            border=ft.border.all(1, "#eadfca"),
+            border=ft.Border.all(1, "#eadfca"),
             border_radius=30,
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=10),
             ink=True,
             on_click=self._on_elegir_foto_click,
         )
@@ -283,9 +283,9 @@ class DialogoPlatillo:
             visible=False,
             width=_ANCHO_CAMPO,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -308,7 +308,7 @@ class DialogoPlatillo:
             bgcolor="#0d0905",
             border_radius=30,
             width=_ANCHO_CAMPO,
-            padding=ft.padding.symmetric(vertical=16),
+            padding=ft.Padding.symmetric(vertical=16),
             ink=True,
             on_click=self._on_guardar_click,
         )
@@ -360,10 +360,10 @@ class DialogoPlatillo:
                     alignment=ft.MainAxisAlignment.CENTER,
                 ),
                 bgcolor="#f7e4e3",
-                border=ft.border.all(1, "#d9534f"),
+                border=ft.Border.all(1, "#d9534f"),
                 border_radius=30,
                 width=_ANCHO_CAMPO,
-                padding=ft.padding.symmetric(vertical=14),
+                padding=ft.Padding.symmetric(vertical=14),
                 ink=True,
                 on_click=self._on_eliminar_click,
             )
@@ -391,7 +391,7 @@ class DialogoPlatillo:
             modal=True,
             bgcolor="#f8f1de",
             shape=ft.RoundedRectangleBorder(radius=16),
-            content_padding=ft.padding.symmetric(horizontal=36, vertical=36),
+            content_padding=ft.Padding.symmetric(horizontal=36, vertical=36),
             content=ft.Stack(
                 controls=[
                     ft.Container(
@@ -805,7 +805,7 @@ def _confirmar(page: ft.Page, *, titulo: str, mensaje: str, on_confirmar):
         modal=True,
         bgcolor="#f8f1de",
         shape=ft.RoundedRectangleBorder(radius=16),
-        content_padding=ft.padding.symmetric(horizontal=32, vertical=32),
+        content_padding=ft.Padding.symmetric(horizontal=32, vertical=32),
         content=ft.Container(
             width=340,
             content=ft.Column(
@@ -840,7 +840,7 @@ def _confirmar(page: ft.Page, *, titulo: str, mensaje: str, on_confirmar):
                         bgcolor="#d9534f",
                         border_radius=30,
                         width=268,
-                        padding=ft.padding.symmetric(vertical=14),
+                        padding=ft.Padding.symmetric(vertical=14),
                         ink=True,
                         on_click=_confirmar_click,
                     ),
@@ -851,10 +851,10 @@ def _confirmar(page: ft.Page, *, titulo: str, mensaje: str, on_confirmar):
                         ),
                         alignment=ft.Alignment(0, 0),
                         bgcolor=ft.Colors.TRANSPARENT,
-                        border=ft.border.all(1, "#eadfca"),
+                        border=ft.Border.all(1, "#eadfca"),
                         border_radius=30,
                         width=268,
-                        padding=ft.padding.symmetric(vertical=14),
+                        padding=ft.Padding.symmetric(vertical=14),
                         ink=True,
                         on_click=_cerrar,
                     ),

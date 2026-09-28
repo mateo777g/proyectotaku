@@ -30,7 +30,7 @@ class MesasView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         self._mesas: list[dict] = []
         self._banner_token = 0
@@ -42,9 +42,9 @@ class MesasView(ft.Container):
         self.banner_error = ft.Container(
             visible=False,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -92,7 +92,7 @@ class MesasView(ft.Container):
                                 spacing=8,
                             ),
                             bgcolor="#0d0905",
-                            padding=ft.padding.symmetric(horizontal=26, vertical=16),
+                            padding=ft.Padding.symmetric(horizontal=26, vertical=16),
                             border_radius=30,
                             shadow=ft.BoxShadow(
                                 blur_radius=12,
@@ -165,9 +165,9 @@ class MesasView(ft.Container):
         return [
             ft.Container(
                 bgcolor="#f7e4e3",
-                border=ft.border.all(1, "#d9534f"),
+                border=ft.Border.all(1, "#d9534f"),
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
                 content=ft.Row(
                     controls=[
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -190,7 +190,7 @@ class MesasView(ft.Container):
         return ft.Container(
             bgcolor="#f8f1de",
             border_radius=14,
-            padding=ft.padding.symmetric(vertical=48),
+            padding=ft.Padding.symmetric(vertical=48),
             alignment=ft.Alignment(0, 0),
             content=ft.Column(
                 tight=True,
@@ -204,8 +204,8 @@ class MesasView(ft.Container):
     def _crear_fila(self, mesa: dict):
         return ft.Container(
             bgcolor="#f8f1de",
-            padding=ft.padding.symmetric(horizontal=18, vertical=14),
-            border=ft.border.only(bottom=ft.BorderSide(1, "#eadfca")),
+            padding=ft.Padding.symmetric(horizontal=18, vertical=14),
+            border=ft.Border.only(bottom=ft.BorderSide(1, "#eadfca")),
             content=ft.Row(
                 controls=[
                     ft.Text(

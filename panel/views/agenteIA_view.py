@@ -458,16 +458,16 @@ def _estilo_markdown() -> ft.MarkdownStyleSheet:
         list_bullet_text_style=prosa(color="#8a7e72"),
         blockquote_text_style=prosa(size=15, color="#5e5449"),
         blockquote_decoration=ft.BoxDecoration(bgcolor="#f3ead4", border_radius=8),
-        blockquote_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        blockquote_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
         code_text_style=ft.TextStyle(size=14, font_family="Consolas", color="#bf571d"),
         codeblock_decoration=ft.BoxDecoration(bgcolor="#f3ead4", border_radius=8),
-        codeblock_padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        codeblock_padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         # Sin font_family: la sans por omisión, por los números (ver arriba).
         table_head_text_style=ft.TextStyle(
             size=14, weight=ft.FontWeight.BOLD, color="#18120d"
         ),
         table_body_text_style=ft.TextStyle(size=14, color="#1c1610"),
-        table_cells_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        table_cells_padding=ft.Padding.symmetric(horizontal=12, vertical=8),
         table_cells_decoration=ft.BoxDecoration(bgcolor="#f3ead4"),
         # Sube de 10 a 12 con el cuerpo más aireado: con párrafos de 16 y
         # interlineado 1.55, 10 los dejaba pegados entre si. Vive en una
@@ -501,7 +501,7 @@ class AgenteIAView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         # El controlador se crea en la primera llamada que lo necesite —
         # hoy es _cargar_saludo(), que corre al montar la vista, y si esa
@@ -546,7 +546,7 @@ class AgenteIAView(ft.Container):
             content=self.lista_mensajes,
             width=ANCHO_CHAT,
             expand=True,
-            padding=ft.padding.only(top=4, bottom=12),
+            padding=ft.Padding.only(top=4, bottom=12),
         )
 
         # --------------------------------------------------------------
@@ -595,7 +595,7 @@ class AgenteIAView(ft.Container):
             color="#1c1610",
             hint_style=ft.TextStyle(color="#8a7e72", size=15),
             text_size=15,
-            content_padding=ft.padding.symmetric(horizontal=24, vertical=20),
+            content_padding=ft.Padding.symmetric(horizontal=24, vertical=20),
             on_submit=self._enviar_mensaje,
             on_change=self._on_cambio_entrada,
             # Solo mueven el borde y la sombra de la caja en CONVERSACIÓN
@@ -640,7 +640,7 @@ class AgenteIAView(ft.Container):
             width=ANCHO_CHAT,
             bgcolor="#f8f1de",
             border_radius=35,
-            padding=ft.padding.only(right=12),
+            padding=ft.Padding.only(right=12),
             content=ft.Row(
                 controls=[self.entrada, self.boton_expandir, self.boton_enviar],
                 spacing=HUECO_BOTONES,
@@ -763,7 +763,7 @@ class AgenteIAView(ft.Container):
                 content=ft.Text(
                     "IDEAS PARA TI", size=11, weight="bold", color="#806f61"
                 ),
-                padding=ft.padding.only(left=12, bottom=6),
+                padding=ft.Padding.only(left=12, bottom=6),
             ),
         ]
         controles.extend(self._fila_idea(idea) for idea in IDEAS)
@@ -784,7 +784,7 @@ class AgenteIAView(ft.Container):
         sienta como una lista de verdad y no como tres enlaces."""
         return ft.Container(
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=9),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=9),
             content=ft.Row(
                 controls=[
                     # Mismo cuadro-con-icono que los atajos de home_view.py,
@@ -799,7 +799,7 @@ class AgenteIAView(ft.Container):
                         height=30,
                         alignment=ft.Alignment(0, 0),
                         bgcolor="#f8f1de",
-                        border=ft.border.all(1, "#eadfca"),
+                        border=ft.Border.all(1, "#eadfca"),
                         border_radius=9,
                     ),
                     ft.Text(idea["titulo"], size=14, color="#1c1610", expand=True),
@@ -888,9 +888,9 @@ class AgenteIAView(ft.Container):
             content=contenido,
             alignment=ft.Alignment(1, 0) if derecha else ft.Alignment(-1, 0),
             padding=(
-                ft.padding.only(left=HUECO_USUARIO)
+                ft.Padding.only(left=HUECO_USUARIO)
                 if derecha
-                else ft.padding.only(right=HUECO_IA)
+                else ft.Padding.only(right=HUECO_IA)
             ),
         )
 
@@ -907,8 +907,8 @@ class AgenteIAView(ft.Container):
         return ft.Container(
             content=ft.Text(texto, size=14, color="#1c1610"),
             bgcolor="#f8f1de",
-            border=ft.border.all(1, "#eadfca"),
-            padding=ft.padding.symmetric(horizontal=18, vertical=10),
+            border=ft.Border.all(1, "#eadfca"),
+            padding=ft.Padding.symmetric(horizontal=18, vertical=10),
             border_radius=20,
         )
 
@@ -966,7 +966,7 @@ class AgenteIAView(ft.Container):
             content=self._markdown_respuesta(trozo),
             # El hueco va de margen y no de spacing en la Column: es
             # distinto para cada renglón (ver _partir_en_renglones).
-            margin=ft.margin.only(top=hueco),
+            margin=ft.Margin.only(top=hueco),
             opacity=0,
             animate_opacity=animacion,
             offset=None if bloque else ft.Offset(0, SUBIDA_APARICION),
@@ -1007,7 +1007,7 @@ class AgenteIAView(ft.Container):
             # El vertical se queda en 12 a propósito: sumado al spacing=18
             # de lista_mensajes da exactamente el mismo aire entre
             # mensajes que había cuando la respuesta tenía burbuja.
-            padding=ft.padding.symmetric(horizontal=0, vertical=12),
+            padding=ft.Padding.symmetric(horizontal=0, vertical=12),
         )
         return contenedor, renglones
 
@@ -1088,9 +1088,9 @@ class AgenteIAView(ft.Container):
         # menu_view.py/sesion_view.py para errores.
         return ft.Container(
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -1148,7 +1148,7 @@ class AgenteIAView(ft.Container):
         a tocar: se tiene que notar solo cuando la buscas.
         """
         # El BORDE responde al foco en los dos estados por igual.
-        self.caja_entrada.border = ft.border.all(
+        self.caja_entrada.border = ft.Border.all(
             1, "#d8c3a4" if self._entrada_enfocada else "#eadfca"
         )
         # La SOMBRA no: en bienvenida está siempre, en chat solo con el foco.

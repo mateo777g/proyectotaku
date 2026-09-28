@@ -106,7 +106,7 @@ class ContenidoView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         # El catálogo de plantillas ya está en memoria desde que se
         # importó models/plantillas.py (Fase 7.1, se lee UNA vez al
@@ -145,9 +145,9 @@ class ContenidoView(ft.Container):
         self.banner_error = ft.Container(
             visible=False,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -168,7 +168,7 @@ class ContenidoView(ft.Container):
         self.tarjeta = ft.Container(
             bgcolor="#f8f1de",
             border_radius=24,
-            padding=ft.padding.only(left=28, right=28, top=26, bottom=24),
+            padding=ft.Padding.only(left=28, right=28, top=26, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=22,
                 spread_radius=1,
@@ -302,7 +302,7 @@ class ContenidoView(ft.Container):
             ),
             bgcolor="#fbf5e9",
             border_radius=28,
-            padding=ft.padding.symmetric(horizontal=14, vertical=9),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=9),
             shadow=ft.BoxShadow(
                 blur_radius=10 if activo else 6,
                 spread_radius=0,
@@ -350,7 +350,7 @@ class ContenidoView(ft.Container):
         return ft.Container(
             content=contenido,
             bgcolor="#0d0905" if (habilitado or cargando) else "#eadfca",
-            padding=ft.padding.symmetric(horizontal=24, vertical=13),
+            padding=ft.Padding.symmetric(horizontal=24, vertical=13),
             border_radius=28,
             shadow=(
                 ft.BoxShadow(
@@ -376,9 +376,9 @@ class ContenidoView(ft.Container):
             content=ft.Row(controls=controles, spacing=8, tight=True,
                             alignment=ft.MainAxisAlignment.CENTER),
             bgcolor=ft.Colors.TRANSPARENT,
-            border=ft.border.all(1, "#eadfca"),
+            border=ft.Border.all(1, "#eadfca"),
             border_radius=28,
-            padding=ft.padding.symmetric(horizontal=22, vertical=13),
+            padding=ft.Padding.symmetric(horizontal=22, vertical=13),
             ink=True,
             on_click=on_click,
         )
@@ -392,7 +392,7 @@ class ContenidoView(ft.Container):
                 ],
                 spacing=6,
             ),
-            padding=ft.padding.symmetric(horizontal=10, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
             border_radius=18,
             ink=True,
             on_click=on_click,
@@ -470,7 +470,7 @@ class ContenidoView(ft.Container):
                             border_radius=12,
                         ),
                         border_radius=14,
-                        border=ft.border.all(3, "#d9ad4e") if seleccionada else None,
+                        border=ft.Border.all(3, "#d9ad4e") if seleccionada else None,
                         shadow=ft.BoxShadow(
                             blur_radius=10,
                             color=ft.Colors.with_opacity(0.22, ft.Colors.BLACK),
@@ -489,7 +489,7 @@ class ContenidoView(ft.Container):
             height=24,
             border_radius=12,
             bgcolor="#d9ad4e" if seleccionada else "#fbf5e9",
-            border=ft.border.all(2, "#d9ad4e"),
+            border=ft.Border.all(2, "#d9ad4e"),
             alignment=ft.Alignment(0, 0),
             content=ft.Icon(ft.Icons.CHECK, size=14, color="#ffffff") if seleccionada else None,
         )
@@ -658,8 +658,8 @@ class ContenidoView(ft.Container):
                         border_radius=14,
                         bgcolor="#f3ead4",
                         padding=8,
-                        border=ft.border.all(3, "#d9ad4e") if seleccionado
-                        else ft.border.all(1, "#eadfca"),
+                        border=ft.Border.all(3, "#d9ad4e") if seleccionado
+                        else ft.Border.all(1, "#eadfca"),
                         content=ft.Image(
                             src=imagen,
                             width=160,
@@ -851,9 +851,9 @@ class ContenidoView(ft.Container):
                 ],
             ),
             bgcolor="#f8f1de" if activa else "#f4edde",
-            padding=ft.padding.symmetric(horizontal=26, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=26, vertical=14),
             border_radius=22,
-            border=ft.border.all(2, "#d9ad4e") if activa else None,
+            border=ft.Border.all(2, "#d9ad4e") if activa else None,
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 spread_radius=0,

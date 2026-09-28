@@ -47,7 +47,7 @@ class MenuView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         # Lista maestra tal cual vino de Supabase (obtener_todos()) y la
         # versión actualmente pintada (tras aplicar el buscador) — se
@@ -93,9 +93,9 @@ class MenuView(ft.Container):
         self.banner_error = ft.Container(
             visible=False,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -138,7 +138,7 @@ class MenuView(ft.Container):
                                 spacing=8,
                             ),
                             bgcolor="#0d0905",
-                            padding=ft.padding.symmetric(horizontal=26, vertical=16),
+                            padding=ft.Padding.symmetric(horizontal=26, vertical=16),
                             border_radius=30,
                             shadow=ft.BoxShadow(
                                 blur_radius=12,
@@ -160,7 +160,7 @@ class MenuView(ft.Container):
                 ft.Container(
                     bgcolor="#eee5cf",
                     border_radius=14,
-                    padding=ft.padding.symmetric(horizontal=18, vertical=14),
+                    padding=ft.Padding.symmetric(horizontal=18, vertical=14),
                     content=ft.Row(
                         controls=[
                             self._header("PLATILLO", 3),
@@ -261,7 +261,7 @@ class MenuView(ft.Container):
             ft.Container(
                 bgcolor="#f8f1de",
                 border_radius=14,
-                padding=ft.padding.symmetric(vertical=48),
+                padding=ft.Padding.symmetric(vertical=48),
                 alignment=ft.Alignment(0, 0),
                 content=ft.Column(
                     tight=True,
@@ -280,7 +280,7 @@ class MenuView(ft.Container):
             ft.Container(
                 bgcolor="#f8f1de",
                 border_radius=14,
-                padding=ft.padding.symmetric(vertical=48),
+                padding=ft.Padding.symmetric(vertical=48),
                 alignment=ft.Alignment(0, 0),
                 content=ft.Column(
                     tight=True,
@@ -311,7 +311,7 @@ class MenuView(ft.Container):
             ft.Container(
                 bgcolor="#f8f1de",
                 border_radius=14,
-                padding=ft.padding.symmetric(vertical=48),
+                padding=ft.Padding.symmetric(vertical=48),
                 alignment=ft.Alignment(0, 0),
                 content=ft.Column(
                     tight=True,
@@ -342,9 +342,9 @@ class MenuView(ft.Container):
         return [
             ft.Container(
                 bgcolor="#f7e4e3",
-                border=ft.border.all(1, "#d9534f"),
+                border=ft.Border.all(1, "#d9534f"),
                 border_radius=12,
-                padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
                 content=ft.Row(
                     controls=[
                         ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -373,8 +373,8 @@ class MenuView(ft.Container):
 
         return ft.Container(
             bgcolor="#f8f1de",
-            padding=ft.padding.symmetric(horizontal=18, vertical=12),
-            border=ft.border.only(bottom=ft.BorderSide(1, "#eadfca")),
+            padding=ft.Padding.symmetric(horizontal=18, vertical=12),
+            border=ft.Border.only(bottom=ft.BorderSide(1, "#eadfca")),
             content=ft.Row(
                 controls=[
                     ft.Row(
@@ -420,7 +420,7 @@ class MenuView(ft.Container):
                             # texto — único ajuste de layout que pidió la Fase 2.
                             content=ft.Text(categoria, size=10, weight="bold", color="#684c16"),
                             bgcolor="#f7b84d",
-                            padding=ft.padding.symmetric(horizontal=9, vertical=4),
+                            padding=ft.Padding.symmetric(horizontal=9, vertical=4),
                             border_radius=12,
                         ),
                     ),
@@ -476,10 +476,10 @@ class MenuView(ft.Container):
                 ],
                 spacing=5,
             ),
-            border=ft.border.all(1, color_borde),
+            border=ft.Border.all(1, color_borde),
             border_radius=12,
             width=80,
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
         )
 
     def _accion(self, icono: str, on_click=None, tooltip: str = None):

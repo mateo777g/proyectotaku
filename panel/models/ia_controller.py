@@ -47,9 +47,9 @@ from models.platillo_dao import PlatilloDAO
 from models.tiempo import momento_del_dia, saludo_por_hora
 from models.venta_dao import VentaDAO
 
-# .env vive en la raíz del repo, un nivel arriba de esta carpeta — mismo
+# .env vive en la raíz del repo, dos niveles arriba (panel/models/) — mismo
 # mecanismo que supabase_client.py.
-_RUTA_ENV = Path(__file__).resolve().parent.parent / ".env"
+_RUTA_ENV = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(_RUTA_ENV)
 
 _OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

@@ -78,7 +78,7 @@ class AjustesView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         # True mientras el selector de Tkinter está abierto, se está
         # guardando el ajuste, o se está cerrando sesión — las tres son
@@ -110,7 +110,7 @@ class AjustesView(ft.Container):
             bgcolor="#fbf5e9",
             color="#1c1610",
             text_size=14,
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+            content_padding=ft.Padding.symmetric(horizontal=16, vertical=14),
         )
 
         self.boton_carpeta = ft.Container(
@@ -132,9 +132,9 @@ class AjustesView(ft.Container):
         self.zona_error = ft.Container(
             visible=False,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -155,7 +155,7 @@ class AjustesView(ft.Container):
         self.boton_guardar = ft.Container(
             content=self._texto_boton_guardar,
             bgcolor="#0d0905",
-            padding=ft.padding.symmetric(horizontal=22, vertical=13),
+            padding=ft.Padding.symmetric(horizontal=22, vertical=13),
             border_radius=28,
             shadow=ft.BoxShadow(
                 blur_radius=10,
@@ -180,9 +180,9 @@ class AjustesView(ft.Container):
                 tight=True,
             ),
             bgcolor=ft.Colors.TRANSPARENT,
-            border=ft.border.all(1, "#eadfca"),
+            border=ft.Border.all(1, "#eadfca"),
             border_radius=28,
-            padding=ft.padding.symmetric(horizontal=20, vertical=13),
+            padding=ft.Padding.symmetric(horizontal=20, vertical=13),
             ink=True,
             on_click=self._on_cerrar_sesion_click,
         )
@@ -210,7 +210,7 @@ class AjustesView(ft.Container):
                 ft.Container(
                     bgcolor="#f8f1de",
                     border_radius=24,
-                    padding=ft.padding.only(left=28, right=28, top=28, bottom=28),
+                    padding=ft.Padding.only(left=28, right=28, top=28, bottom=28),
                     shadow=ft.BoxShadow(
                         blur_radius=18,
                         spread_radius=0,
@@ -293,7 +293,7 @@ class AjustesView(ft.Container):
                 ft.Container(
                     bgcolor="#f8f1de",
                     border_radius=24,
-                    padding=ft.padding.only(left=28, right=28, top=24, bottom=24),
+                    padding=ft.Padding.only(left=28, right=28, top=24, bottom=24),
                     shadow=ft.BoxShadow(
                         blur_radius=18,
                         spread_radius=0,

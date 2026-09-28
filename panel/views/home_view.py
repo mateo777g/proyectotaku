@@ -80,7 +80,7 @@ class HomeView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         # Lógica para la fecha dinámica
         dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
@@ -140,9 +140,9 @@ class HomeView(ft.Container):
                                 ],
                                 spacing=8
                             ),
-                            margin=ft.margin.only(top=78),
+                            margin=ft.Margin.only(top=78),
                             bgcolor="#0d0905",
-                            padding=ft.padding.symmetric(horizontal=26, vertical=16),
+                            padding=ft.Padding.symmetric(horizontal=26, vertical=16),
                             border_radius=30,
                             shadow=ft.BoxShadow(
                                 blur_radius=14,
@@ -249,7 +249,7 @@ class HomeView(ft.Container):
                                         ),
                                         width=210,
                                         bgcolor="#e8aa3a",
-                                        padding=ft.padding.symmetric(vertical=15, horizontal=16),
+                                        padding=ft.Padding.symmetric(vertical=15, horizontal=16),
                                         border_radius=24,
                                         ink=True,
                                         on_click=lambda _: self.router.cambiar_vista("contenido")
@@ -367,7 +367,7 @@ class HomeView(ft.Container):
         return ft.Container(
             expand=True,
             bgcolor="#f8f1de",
-            border=ft.border.all(1, "#f4ca83"),
+            border=ft.Border.all(1, "#f4ca83"),
             border_radius=30,
             padding=14,
             shadow=ft.BoxShadow(

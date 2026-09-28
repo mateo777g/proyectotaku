@@ -189,7 +189,7 @@ class DialogoEditar:
             bgcolor=OSCURO,
             border_radius=12,
             width=348,
-            padding=ft.padding.symmetric(vertical=15),
+            padding=ft.Padding.symmetric(vertical=15),
             ink=True,
             on_click=self._on_guardar,
         )
@@ -210,7 +210,7 @@ class DialogoEditar:
             modal=True,
             bgcolor=SUPERFICIE,
             shape=ft.RoundedRectangleBorder(radius=18),
-            content_padding=ft.padding.symmetric(horizontal=32, vertical=32),
+            content_padding=ft.Padding.symmetric(horizontal=32, vertical=32),
             content=ft.Stack(
                 controls=[
                     ft.Container(
@@ -331,8 +331,8 @@ class FilaCliente(ft.Container):
         self._montada = False
 
         self.bgcolor = SUPERFICIE
-        self.padding = ft.padding.symmetric(horizontal=18, vertical=12)
-        self.border = ft.border.only(bottom=ft.BorderSide(1, BORDE))
+        self.padding = ft.Padding.symmetric(horizontal=18, vertical=12)
+        self.border = ft.Border.only(bottom=ft.BorderSide(1, BORDE))
 
         self.texto_negocio = ft.Text(
             cliente["nombre"],
@@ -542,7 +542,7 @@ class PanelLicencias(ft.Container):
         self.page_ref = page
         self.expand = True
         self.bgcolor = FONDO
-        self.padding = ft.padding.only(left=32, right=32, top=28, bottom=28)
+        self.padding = ft.Padding.only(left=32, right=32, top=28, bottom=28)
         self._filas: list[FilaCliente] = []
 
         self.texto_titulo = ft.Text("Cargando clientes...", size=30, weight="bold", color=OSCURO)
@@ -556,7 +556,7 @@ class PanelLicencias(ft.Container):
                 ],
             ),
             bgcolor=OSCURO,
-            padding=ft.padding.symmetric(horizontal=20, vertical=13),
+            padding=ft.Padding.symmetric(horizontal=20, vertical=13),
             border_radius=12,
             ink=True,
             on_click=lambda e: self.page_ref.run_task(self._cargar_todo),
@@ -564,8 +564,8 @@ class PanelLicencias(ft.Container):
 
         self.encabezado_tabla = ft.Container(
             bgcolor=ENCABEZADO,
-            padding=ft.padding.symmetric(horizontal=18, vertical=11),
-            border_radius=ft.border_radius.only(top_left=12, top_right=12),
+            padding=ft.Padding.symmetric(horizontal=18, vertical=11),
+            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
             content=ft.Row(
                 controls=[
                     _celda("NEGOCIO", _W_NEGOCIO, size=11, weight="bold", color=TENUE),
@@ -674,10 +674,10 @@ class PanelLicencias(ft.Container):
     def _mostrar_avisos(self, avisos: list[str], color: str, fondo: str):
         self.caja_avisos.visible = True
         self.caja_avisos.bgcolor = fondo
-        self.caja_avisos.border = ft.border.all(1, color)
+        self.caja_avisos.border = ft.Border.all(1, color)
         self.caja_avisos.border_radius = 12
-        self.caja_avisos.padding = ft.padding.symmetric(horizontal=14, vertical=12)
-        self.caja_avisos.margin = ft.margin.only(bottom=18)
+        self.caja_avisos.padding = ft.Padding.symmetric(horizontal=14, vertical=12)
+        self.caja_avisos.margin = ft.Margin.only(bottom=18)
         self.caja_avisos.content = ft.Column(
             tight=True,
             spacing=6,
@@ -697,7 +697,7 @@ class PanelLicencias(ft.Container):
     def _caja(self, icono, texto: str):
         return ft.Container(
             bgcolor=SUPERFICIE,
-            padding=ft.padding.symmetric(vertical=44),
+            padding=ft.Padding.symmetric(vertical=44),
             alignment=ft.Alignment(0, 0),
             content=ft.Column(
                 tight=True,

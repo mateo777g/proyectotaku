@@ -97,7 +97,7 @@ class SesionView(ft.Container):
             # alta es el content_padding — sin esto los campos se ven
             # flacos al lado del botón, que fue justo una de las
             # diferencias contra la referencia.
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=16),
+            content_padding=ft.Padding.symmetric(horizontal=12, vertical=16),
             border_radius=16,
             border_color="#eadfca",
             focused_border_color="#f4ca83",
@@ -119,7 +119,7 @@ class SesionView(ft.Container):
             # alta es el content_padding — sin esto los campos se ven
             # flacos al lado del botón, que fue justo una de las
             # diferencias contra la referencia.
-            content_padding=ft.padding.symmetric(horizontal=12, vertical=16),
+            content_padding=ft.Padding.symmetric(horizontal=12, vertical=16),
             border_radius=16,
             border_color="#eadfca",
             focused_border_color="#f4ca83",
@@ -138,9 +138,9 @@ class SesionView(ft.Container):
             visible=False,
             width=_ANCHO_CAMPO,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=14, vertical=12),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=12),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=17, color="#d9534f"),
@@ -161,7 +161,7 @@ class SesionView(ft.Container):
             bgcolor="#0d0905",
             border_radius=30,
             width=_ANCHO_CAMPO,
-            padding=ft.padding.symmetric(vertical=23),
+            padding=ft.Padding.symmetric(vertical=23),
             ink=True,
             on_click=self._on_entrar_click,
         )
@@ -232,9 +232,9 @@ class SesionView(ft.Container):
             return ft.Container(
                 expand=True,
                 bgcolor="#18120b",
-                border=ft.border.all(1, "#2c2013"),
+                border=ft.Border.all(1, "#2c2013"),
                 border_radius=16,
-                padding=ft.padding.all(22),
+                padding=ft.Padding.all(22),
                 content=ft.Column(
                     spacing=4,
                     controls=[
@@ -335,7 +335,7 @@ class SesionView(ft.Container):
             expand=True,
             height=float("inf"),
             bgcolor="#0d0905",
-            padding=ft.padding.only(left=56, right=56, top=52, bottom=60),
+            padding=ft.Padding.only(left=56, right=56, top=52, bottom=60),
             content=ft.Column(
                 expand=True,
                 # Solo DOS hijos: marca arriba, todo lo demás abajo. Con los

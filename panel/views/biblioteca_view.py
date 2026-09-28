@@ -144,7 +144,7 @@ def _ver_imagen(page: ft.Page, ruta: str, nombre_archivo: str):
         modal=True,
         bgcolor="#f8f1de",
         shape=ft.RoundedRectangleBorder(radius=16),
-        content_padding=ft.padding.symmetric(horizontal=20, vertical=20),
+        content_padding=ft.Padding.symmetric(horizontal=20, vertical=20),
         content=ft.Stack(
             controls=[
                 ft.Column(
@@ -189,7 +189,7 @@ class BibliotecaView(ft.Container):
         self.expand = True
         self.height = float("inf")
         self.bgcolor = "#fbf5e9"
-        self.padding = ft.padding.only(left=36, right=36, top=42, bottom=36)
+        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
         meses = [
@@ -207,9 +207,9 @@ class BibliotecaView(ft.Container):
         self.banner_error = ft.Container(
             visible=False,
             bgcolor="#f7e4e3",
-            border=ft.border.all(1, "#d9534f"),
+            border=ft.Border.all(1, "#d9534f"),
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
@@ -353,7 +353,7 @@ class BibliotecaView(ft.Container):
                             spacing=8,
                         ),
                         bgcolor="#0d0905",
-                        padding=ft.padding.symmetric(horizontal=18, vertical=11),
+                        padding=ft.Padding.symmetric(horizontal=18, vertical=11),
                         border_radius=26,
                         shadow=ft.BoxShadow(
                             blur_radius=10,
@@ -374,7 +374,7 @@ class BibliotecaView(ft.Container):
             child_aspect_ratio=0.72,
             spacing=18,
             run_spacing=18,
-            padding=ft.padding.only(top=4, bottom=12),
+            padding=ft.Padding.only(top=4, bottom=12),
             controls=[self._tarjeta_anuncio(a) for a in self._anuncios],
         )
 
