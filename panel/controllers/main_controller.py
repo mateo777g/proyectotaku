@@ -70,12 +70,26 @@ class MainController:
         # contraseña ya está listo (models/saludo_ia.py).
         self.page.run_task(self.precargar_saludo)
 
-        self.page.window.maximized = True
-        self.page.update()
-        self.page.run_task(self._maximizar_ventana)
+    # La ventana cambia de tamaño según la pantalla: el login va en una ventana chica y
+    # centrada; al entrar al panel se maximiza, y al cerrar sesión vuelve a la chica.
+    ANCHO_LOGIN = 1265
+    ALTO_LOGIN = 712
 
-    async def _maximizar_ventana(self):
+    async def _ventana_login(self):
+        # La espera corta es porque recién arrancada la ventana nativa ignora los cambios
+        # de tamaño (por eso el maximizado de antes también esperaba).
         await asyncio.sleep(0.2)
+        ventana = self.page.window
+        ventana.maximized = False
+        ventana.width = self.ANCHO_LOGIN
+        ventana.height = self.ALTO_LOGIN
+        self.page.update()
+        try:
+            await ventana.center()
+        except Exception:
+            traceback.print_exc()
+
+    async def _ventana_panel(self):
         self.page.window.maximized = True
         self.page.update()
 
@@ -97,6 +111,7 @@ class MainController:
         al llegar ("Cerraste sesión."), si lo hay."""
         self.vista_actual = None
         self._poner_vista(SesionView(self))
+        self.page.run_task(self._ventana_login)
         if motivo:
             aviso(self.page, motivo, barra=0)
 
@@ -104,6 +119,7 @@ class MainController:
         """Entra a Inicio. Solo se llama con una sesión activa en `client.auth` (desde
         SesionView tras un login exitoso y con la licencia activa)."""
         self.cambiar_vista("home")
+        self.page.run_task(self._ventana_panel)
         # Por si el de la pantalla de entrar falló o ya no corresponde (otro
         # apodo, otro momento del día); si sigue sirviendo, no pide nada.
         self.page.run_task(self.precargar_saludo)

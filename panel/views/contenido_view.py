@@ -72,7 +72,7 @@ import traceback
 
 import flet as ft
 
-from views.piezas import fondo_pagina
+from views.piezas import fondo_pagina, tarjeta_iphone
 from views.tema import C
 import httpx
 
@@ -169,18 +169,13 @@ class ContenidoView(ft.Container):
             run_spacing=10,
             alignment=ft.MainAxisAlignment.START,
         )
-        self.tarjeta = ft.Container(
-            bgcolor=C.cara,
-            border_radius=24,
-            padding=ft.Padding.only(left=28, right=28, top=26, bottom=24),
-            shadow=ft.BoxShadow(
-                blur_radius=22,
-                spread_radius=1,
-                color=C.sombra,
-                offset=ft.Offset(0, 7),
-            ),
-            content=self._construir_paso(),
+        # La tarjeta de Inicio (tarjeta_iphone). Su contenido cambia por paso: se cambia el
+        # `content` del contenedor de dentro del todo (self._cuerpo_tarjeta).
+        self.tarjeta = tarjeta_iphone(
+            self._construir_paso(), expand=None,
+            padding=ft.Padding.only(left=27, right=27, top=25, bottom=23),
         )
+        self._cuerpo_tarjeta = self.tarjeta.content.content
 
         self.content = ft.Column(
             expand=True,
@@ -236,7 +231,7 @@ class ContenidoView(ft.Container):
     def _repintar(self):
         """Repinta pills + tarjeta + subtítulo — para cambios de PASO."""
         self.fila_pasos.controls = self._construir_pasos()
-        self.tarjeta.content = self._construir_paso()
+        self._cuerpo_tarjeta.content = self._construir_paso()
         self.texto_subtitulo.value = (
             "Tu anuncio ya está listo." if self._mostrando_resultado
             else _SUBTITULOS.get(self._paso_actual, "")
@@ -247,7 +242,7 @@ class ContenidoView(ft.Container):
         """Repinta solo la tarjeta — para cambios DENTRO del mismo paso
         (elegir una plantilla/platillo/formato, o el estado de carga del
         paso 2), sin tocar los pills ni el subtítulo."""
-        self.tarjeta.content = self._construir_paso()
+        self._cuerpo_tarjeta.content = self._construir_paso()
         self._actualizar_seguro(self.tarjeta)
 
     def _ir_a(self, numero: int):
@@ -306,12 +301,6 @@ class ContenidoView(ft.Container):
             bgcolor=C.fondo,
             border_radius=28,
             padding=ft.Padding.symmetric(horizontal=14, vertical=9),
-            shadow=ft.BoxShadow(
-                blur_radius=10 if activo else 6,
-                spread_radius=0,
-                color=C.sombra,
-                offset=ft.Offset(0, 3),
-            ),
         )
 
     def _on_click_paso(self, numero: int):
@@ -355,15 +344,6 @@ class ContenidoView(ft.Container):
             bgcolor=C.cara_encendida if (habilitado or cargando) else C.linea,
             padding=ft.Padding.symmetric(horizontal=24, vertical=13),
             border_radius=28,
-            shadow=(
-                ft.BoxShadow(
-                    blur_radius=10,
-                    color=C.sombra,
-                    offset=ft.Offset(0, 4),
-                )
-                if (habilitado or cargando)
-                else None
-            ),
             ink=activo,
             on_click=(on_click if activo else None),
         )
@@ -848,12 +828,6 @@ class ContenidoView(ft.Container):
             padding=ft.Padding.symmetric(horizontal=26, vertical=14),
             border_radius=22,
             border=ft.Border.all(2, C.texto) if activa else None,
-            shadow=ft.BoxShadow(
-                blur_radius=8,
-                spread_radius=0,
-                color=C.sombra,
-                offset=ft.Offset(0, 3),
-            ),
         )
 
     def _on_elegir_formato(self, id_formato: str):
@@ -941,11 +915,6 @@ class ContenidoView(ft.Container):
                     bgcolor=C.cara,
                     border_radius=14,
                     padding=8,
-                    shadow=ft.BoxShadow(
-                        blur_radius=14,
-                        color=C.sombra,
-                        offset=ft.Offset(0, 5),
-                    ),
                     content=ft.Image(
                         src=self._ruta_generada,
                         width=ancho_preview,

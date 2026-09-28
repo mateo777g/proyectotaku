@@ -439,10 +439,10 @@ def interruptor(opciones, elegida, al_cambiar):
     return pista
 
 
-def aviso(page, texto, abajo=40, barra=250):
+def aviso(page, texto, abajo=40, barra=330):
     # Los avisos de una vista ("Eliminada.", "¡Exportada con éxito!"): una píldora flotante
     # abajo, con la letra y los colores del panel, centrada sobre el contenido (a la derecha
-    # de la barra lateral, que mide 250) y no sobre la ventana entera.
+    # de la barra lateral, que mide 330: ANCHO_BARRA de barra_lateral.py) y no sobre la ventana entera.
     # `abajo` es lo que queda entre la píldora (49 de alto) y el borde de abajo: 40, el margen
     # de las vistas. En los generadores la tarjeta de la derecha baja hasta ese margen y a 40
     # la píldora tapaba medio botón "Generar"; allí va a 9, centrada en los 66 px que quedan

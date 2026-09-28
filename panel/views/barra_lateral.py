@@ -44,7 +44,8 @@ INSIGNIAS = {"agente_financiero": "IA"}
 # que no puedan quedar distintos (regla 9).
 PLAN = "Básico"
 
-ANCHO = 210           # la barra (250) menos su margen de 20 por lado
+ANCHO_BARRA = 330     # como la barra del panel viejo; en 250 se veía chica en pantalla grande
+ANCHO = ANCHO_BARRA - 40   # la barra menos su margen de 20 por lado
 ALTO = 44             # cada opción: padding 12 + icono 20 + padding 12
 PASO = ALTO + 10      # una opción cada 54 px
 # Un título de grupo: lo que ocupa entre la opción de arriba y la de abajo, además del PASO. La
@@ -61,10 +62,10 @@ def crear_barra_lateral(router, activa):
     encendida = getattr(router, "menu_encendido", False)
     router.menu_encendido = False
     return ft.Container(
-        width=250,
+        width=ANCHO_BARRA,
         bgcolor=C.barra,
         # Línea fina en el borde derecho. El borde cuenta como padding, por eso el margen derecho
-        # de cada parte es 19: así el menú sigue midiendo 210.
+        # de cada parte es 19: así el menú sigue midiendo ANCHO.
         border=ft.Border(right=ft.BorderSide(1, C.linea)),
         padding=ft.Padding(left=0, top=25, right=0, bottom=20),
         content=ft.Column([
@@ -86,7 +87,7 @@ def crear_barra_lateral(router, activa):
 
 def _con_margen(contenido, arriba=0):
     # El margen de la barra: 20 por lado (19 a la derecha, porque el borde de 1 cuenta como
-    # padding), así lo de dentro sigue midiendo 210.
+    # padding), así lo de dentro sigue midiendo ANCHO.
     return ft.Container(padding=ft.Padding(left=20, top=arriba, right=19, bottom=0), content=contenido)
 
 

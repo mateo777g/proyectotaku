@@ -1143,7 +1143,9 @@ class AgenteIAView(ft.Container):
         self.caja_entrada.shadow = ft.BoxShadow(
             blur_radius=10,
             spread_radius=0,
-            color=C.sombra,
+            # El 7 % de negro aprobado, NO C.sombra (54 %, la de debajo de las tarjetas opacas):
+            # la caja es translúcida y esa sombra se veía a través de ella como una nube.
+            color="#12000000",
             offset=ft.Offset(0, 2),
         )
 

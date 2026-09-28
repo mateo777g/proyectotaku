@@ -161,7 +161,7 @@ class HomeView(ft.Container):
                             lambda _: self.router.cambiar_vista("contenido"), ancho=200),
             ], vertical_alignment=ft.CrossAxisAlignment.END),
 
-            ft.Container(height=25),
+            ft.Container(height=30),
 
             # --- FILA DE 4 TARJETAS DE ESTADÍSTICAS ---
             ft.Row([
@@ -173,9 +173,9 @@ class HomeView(ft.Container):
                     _texto("0 Posts", 25, titulo=True), _texto("Este mes", 13, suave=True)], spacing=6)),
                 self._tarjeta_stat("PRODUCTOS EN VENTA", ft.Icons.LIST_ALT_OUTLINED,
                                    self.cuerpo_stat_productos),
-            ], spacing=10, height=150, vertical_alignment=ft.CrossAxisAlignment.STRETCH),
+            ], spacing=20, height=190, vertical_alignment=ft.CrossAxisAlignment.STRETCH),
 
-            ft.Container(height=10),
+            ft.Container(height=20),
 
             # --- FILA CENTRAL: ¿Qué hacemos hoy? + Sugerencia de hoy ---
             ft.Row([
@@ -210,9 +210,9 @@ class HomeView(ft.Container):
                     ft.Row([boton_atajo(ft.Icons.AUTO_AWESOME_OUTLINED, "Generar post",
                                         lambda _: self.router.cambiar_vista("contenido"), ancho=200)]),
                 ], spacing=0), expand=2),
-            ], spacing=10, height=270, vertical_alignment=ft.CrossAxisAlignment.STRETCH),
+            ], spacing=20, height=330, vertical_alignment=ft.CrossAxisAlignment.STRETCH),
 
-            ft.Container(height=10),
+            ft.Container(height=20),
 
             # --- FILA INFERIOR: Lo último de tu menú ---
             ft.Row([

@@ -44,7 +44,7 @@ from tkinter import filedialog
 import flet as ft
 
 from views import tema
-from views.piezas import fondo_pagina, interruptor
+from views.piezas import fondo_pagina, interruptor, tarjeta_iphone
 from views.tema import C
 
 from models.config_usuario import guardar_ruta_exportacion, obtener_ruta_exportacion
@@ -165,11 +165,6 @@ class AjustesView(ft.Container):
             bgcolor=C.cara_encendida,
             padding=ft.Padding.symmetric(horizontal=22, vertical=13),
             border_radius=28,
-            shadow=ft.BoxShadow(
-                blur_radius=10,
-                color=C.sombra,
-                offset=ft.Offset(0, 4),
-            ),
             ink=True,
             on_click=self._on_guardar_click,
         )
@@ -201,17 +196,11 @@ class AjustesView(ft.Container):
                     color=C.texto_suave,
                 ),
                 ft.Container(height=30),
-                ft.Container(
-                    bgcolor=C.cara,
-                    border_radius=24,
-                    padding=ft.Padding.only(left=28, right=28, top=28, bottom=28),
-                    shadow=ft.BoxShadow(
-                        blur_radius=18,
-                        spread_radius=0,
-                        color=C.sombra,
-                        offset=ft.Offset(0, 6),
-                    ),
-                    content=ft.Column(
+                # La tarjeta de Inicio (tarjeta_iphone): relleno opaco y sombra solo hacia abajo.
+                # Con la cara translúcida de antes, la sombra se veía a través del relleno.
+                ft.Row([tarjeta_iphone(
+                    padding=27,
+                    contenido=ft.Column(
                         spacing=0,
                         controls=[
                             ft.Row(
@@ -279,19 +268,11 @@ class AjustesView(ft.Container):
                             ),
                         ],
                     ),
-                ),
+                )]),
                 ft.Container(height=24),
-                ft.Container(
-                    bgcolor=C.cara,
-                    border_radius=24,
-                    padding=ft.Padding.only(left=28, right=28, top=24, bottom=24),
-                    shadow=ft.BoxShadow(
-                        blur_radius=18,
-                        spread_radius=0,
-                        color=C.sombra,
-                        offset=ft.Offset(0, 4),
-                    ),
-                    content=ft.Row(
+                ft.Row([tarjeta_iphone(
+                    padding=ft.Padding.only(left=27, right=27, top=23, bottom=23),
+                    contenido=ft.Row(
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
                             ft.Container(
@@ -323,7 +304,7 @@ class AjustesView(ft.Container):
                             self.selector_tema,
                         ],
                     ),
-                ),
+                )]),
                 ft.Container(height=24),
             ],
         )

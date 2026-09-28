@@ -45,7 +45,7 @@ import traceback
 
 import flet as ft
 
-from views.piezas import fondo_pagina
+from views.piezas import fondo_pagina, tarjeta_iphone
 from views.tema import C
 
 from models.config_usuario import obtener_ruta_exportacion
@@ -314,18 +314,10 @@ class BibliotecaView(ft.Container):
                 pass
 
     def _estado_vacio(self):
-        return ft.Container(
+        # La tarjeta de Inicio (tarjeta_iphone), no una cara translúcida con sombra.
+        return tarjeta_iphone(
             expand=True,
-            bgcolor=C.cara,
-            border_radius=24,
-            shadow=ft.BoxShadow(
-                blur_radius=20,
-                spread_radius=0,
-                color=C.sombra,
-                offset=ft.Offset(0, 6),
-            ),
-            alignment=ft.Alignment(0, 0),
-            content=ft.Column(
+            contenido=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=12,
@@ -356,11 +348,6 @@ class BibliotecaView(ft.Container):
                         bgcolor=C.cara_encendida,
                         padding=ft.Padding.symmetric(horizontal=18, vertical=11),
                         border_radius=26,
-                        shadow=ft.BoxShadow(
-                            blur_radius=10,
-                            color=C.sombra,
-                            offset=ft.Offset(0, 4),
-                        ),
                         ink=True,
                         on_click=lambda _: self.router.cambiar_vista("contenido"),
                     ),
@@ -385,17 +372,10 @@ class BibliotecaView(ft.Container):
     def _tarjeta_anuncio(self, anuncio: dict):
         ruta = anuncio["ruta"]
         nombre_archivo = anuncio["nombre_archivo"]
-        return ft.Container(
-            bgcolor=C.cara,
-            border_radius=16,
-            padding=10,
-            shadow=ft.BoxShadow(
-                blur_radius=10,
-                spread_radius=0,
-                color=C.sombra,
-                offset=ft.Offset(0, 3),
-            ),
-            content=ft.Column(
+        return tarjeta_iphone(
+            expand=None,
+            padding=9,
+            contenido=ft.Column(
                 spacing=8,
                 controls=[
                     ft.Container(
