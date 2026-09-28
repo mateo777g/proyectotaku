@@ -45,6 +45,9 @@ import traceback
 
 import flet as ft
 
+from views.piezas import fondo_pagina
+from views.tema import C
+
 from models.config_usuario import obtener_ruta_exportacion
 from models.generador_anuncios import RUTA_BIBLIOTECA
 from views.components.dialogo_platillo import _confirmar
@@ -128,7 +131,7 @@ def _ver_imagen(page: ft.Page, ruta: str, nombre_archivo: str):
         page.pop_dialog()
 
     boton_cerrar = ft.Container(
-        content=ft.Icon(ft.Icons.CLOSE, size=16, color="#756b5e"),
+        content=ft.Icon(ft.Icons.CLOSE, size=16, color=C.texto_suave),
         width=30,
         height=30,
         border_radius=15,
@@ -142,7 +145,7 @@ def _ver_imagen(page: ft.Page, ruta: str, nombre_archivo: str):
 
     dialogo = ft.AlertDialog(
         modal=True,
-        bgcolor="#f8f1de",
+        bgcolor=C.cara,
         shape=ft.RoundedRectangleBorder(radius=16),
         content_padding=ft.Padding.symmetric(horizontal=20, vertical=20),
         content=ft.Stack(
@@ -153,7 +156,7 @@ def _ver_imagen(page: ft.Page, ruta: str, nombre_archivo: str):
                     spacing=10,
                     controls=[
                         ft.Container(
-                            bgcolor="#eee5cf",
+                            bgcolor=C.cara,
                             border_radius=10,
                             padding=8,
                             content=ft.Image(
@@ -167,7 +170,7 @@ def _ver_imagen(page: ft.Page, ruta: str, nombre_archivo: str):
                         ft.Text(
                             nombre_archivo,
                             size=12,
-                            color="#8a7e72",
+                            color=C.texto_suave,
                             max_lines=1,
                             overflow=ft.TextOverflow.ELLIPSIS,
                             width=456,
@@ -188,7 +191,8 @@ class BibliotecaView(ft.Container):
         self.router = router
         self.expand = True
         self.height = float("inf")
-        self.bgcolor = "#fbf5e9"
+        self.bgcolor = C.fondo
+        self.gradient = fondo_pagina()
         self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
@@ -203,23 +207,23 @@ class BibliotecaView(ft.Container):
         # (_mostrar_error_temporal): exportar/borrar no tienen un diálogo
         # propio donde pintar la caja de error.
         self._banner_token = 0
-        self.texto_banner_error = ft.Text("", size=12, color="#a33c39", expand=True)
+        self.texto_banner_error = ft.Text("", size=12, color=C.texto_suave, expand=True)
         self.banner_error = ft.Container(
             visible=False,
-            bgcolor="#f7e4e3",
-            border=ft.Border.all(1, "#d9534f"),
+            bgcolor=C.pozo,
+            border=ft.Border.all(1, C.texto_suave),
             border_radius=12,
             padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color=C.texto_suave),
                     self.texto_banner_error,
                 ],
                 spacing=8,
             ),
         )
 
-        self.texto_subtitulo = ft.Text("", size=15, color="#7c7267")
+        self.texto_subtitulo = ft.Text("", size=15, color=C.texto_suave)
 
         # Se lee del disco AQUÍ, en __init__ -- ver el docstring del
         # módulo sobre por qué did_mount() no hace falta en este proyecto.
@@ -238,13 +242,12 @@ class BibliotecaView(ft.Container):
             height=float("inf"),
             spacing=0,
             controls=[
-                ft.Text(fecha_texto, size=13, weight="bold", color="#b58a6d"),
+                ft.Text(fecha_texto, size=13, font_family="LetraTitulo", color=C.texto_suave),
                 ft.Text(
                     "Mi biblioteca",
                     size=42,
-                    font_family="Georgia",
-                    italic=True,
-                    color="#18120d",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                 ),
                 self.texto_subtitulo,
                 ft.Container(height=18),
@@ -276,7 +279,7 @@ class BibliotecaView(ft.Container):
         self.cuerpo.controls = [
             ft.Container(
                 expand=True,
-                bgcolor="#f8f1de",
+                bgcolor=C.cara,
                 border_radius=24,
                 alignment=ft.Alignment(0, 0),
                 content=ft.Column(
@@ -284,14 +287,14 @@ class BibliotecaView(ft.Container):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
                     controls=[
-                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=30, color="#d9534f"),
+                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=30, color=C.texto_suave),
                         ft.Text(
                             "No se pudo abrir la carpeta de tu biblioteca.",
-                            size=14, weight="bold", color="#5e5449",
+                            size=14, font_family="LetraTitulo", color=C.texto_suave,
                         ),
                         ft.Text(
                             "Revisa los permisos de la carpeta \"biblioteca\" e intenta de nuevo.",
-                            size=12, color="#8a7e72",
+                            size=12, color=C.texto_suave,
                         ),
                     ],
                 ),
@@ -313,12 +316,12 @@ class BibliotecaView(ft.Container):
     def _estado_vacio(self):
         return ft.Container(
             expand=True,
-            bgcolor="#f8f1de",
+            bgcolor=C.cara,
             border_radius=24,
             shadow=ft.BoxShadow(
                 blur_radius=20,
                 spread_radius=0,
-                color=ft.Colors.with_opacity(0.20, "#f4ca83"),
+                color=C.sombra,
                 offset=ft.Offset(0, 6),
             ),
             alignment=ft.Alignment(0, 0),
@@ -330,15 +333,13 @@ class BibliotecaView(ft.Container):
                     ft.Text(
                         "Tu biblioteca está vacía",
                         size=25,
-                        font_family="Georgia",
-                        weight="bold",
-                        italic=True,
-                        color="#1c1610",
+                        font_family="LetraTitulo",
+                        color=C.texto,
                     ),
                     ft.Text(
                         "Aquí aparecerán tus publicaciones y materiales generados.",
                         size=14,
-                        color="#7c7267",
+                        color=C.texto_suave,
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=8),
@@ -346,18 +347,18 @@ class BibliotecaView(ft.Container):
                         width=230,
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.AUTO_AWESOME, color="#f4ca83", size=18),
-                                ft.Text("Crear contenido", color="#ffffff", size=14, weight="bold"),
+                                ft.Icon(ft.Icons.AUTO_AWESOME, color=C.texto, size=18),
+                                ft.Text("Crear contenido", color=C.texto, size=14, font_family="LetraTitulo"),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=8,
                         ),
-                        bgcolor="#0d0905",
+                        bgcolor=C.cara_encendida,
                         padding=ft.Padding.symmetric(horizontal=18, vertical=11),
                         border_radius=26,
                         shadow=ft.BoxShadow(
                             blur_radius=10,
-                            color=ft.Colors.with_opacity(0.28, ft.Colors.BLACK),
+                            color=C.sombra,
                             offset=ft.Offset(0, 4),
                         ),
                         ink=True,
@@ -385,13 +386,13 @@ class BibliotecaView(ft.Container):
         ruta = anuncio["ruta"]
         nombre_archivo = anuncio["nombre_archivo"]
         return ft.Container(
-            bgcolor="#f8f1de",
+            bgcolor=C.cara,
             border_radius=16,
             padding=10,
             shadow=ft.BoxShadow(
                 blur_radius=10,
                 spread_radius=0,
-                color=ft.Colors.with_opacity(0.14, "#030303"),
+                color=C.sombra,
                 offset=ft.Offset(0, 3),
             ),
             content=ft.Column(
@@ -399,7 +400,7 @@ class BibliotecaView(ft.Container):
                 controls=[
                     ft.Container(
                         expand=True,
-                        bgcolor="#eee5cf",
+                        bgcolor=C.cara,
                         border_radius=12,
                         padding=6,
                         ink=True,
@@ -411,7 +412,7 @@ class BibliotecaView(ft.Container):
                             fit=ft.BoxFit.CONTAIN,
                             border_radius=8,
                             error_content=ft.Icon(
-                                ft.Icons.BROKEN_IMAGE_OUTLINED, size=30, color="#c9bda3"
+                                ft.Icons.BROKEN_IMAGE_OUTLINED, size=30, color=C.tenue
                             ),
                         ),
                         tooltip="Ver en grande",
@@ -419,7 +420,7 @@ class BibliotecaView(ft.Container):
                     ft.Text(
                         _tiempo_relativo_local(anuncio["mtime"]),
                         size=11,
-                        color="#8a7e72",
+                        color=C.texto_suave,
                     ),
                     ft.Row(
                         controls=[
@@ -439,7 +440,7 @@ class BibliotecaView(ft.Container):
                                 ft.Icons.DELETE_OUTLINE,
                                 on_click=lambda e, a=anuncio: self._on_eliminar_click(a),
                                 tooltip="Eliminar",
-                                color="#a33c39",
+                                color=C.texto_suave,
                             ),
                         ],
                         spacing=4,
@@ -449,7 +450,7 @@ class BibliotecaView(ft.Container):
             ),
         )
 
-    def _accion(self, icono: str, on_click=None, tooltip: str = None, color: str = "#756b5e"):
+    def _accion(self, icono: str, on_click=None, tooltip: str = None, color: str = C.texto_suave):
         # Mismo botón de acción 30x30/border_radius=15/ink=True que ya
         # usan menu_view.py y mesas_view.py -- el único color que cambia
         # es el de "Eliminar", igual que su lápiz/ojo/basura.
@@ -510,7 +511,7 @@ class BibliotecaView(ft.Container):
         for indice, a in enumerate(self._anuncios):
             if a["ruta"] == anuncio["ruta"] and indice < len(grid.controls):
                 boton_exportar = grid.controls[indice].content.controls[-1].controls[1]
-                boton_exportar.content = ft.Icon(ft.Icons.CHECK, size=16, color="#7d8545")
+                boton_exportar.content = ft.Icon(ft.Icons.CHECK, size=16, color=C.texto)
                 self._actualizar_seguro(boton_exportar)
                 self.router.page.run_task(self._restaurar_icono_exportar, anuncio["ruta"])
                 return
@@ -523,7 +524,7 @@ class BibliotecaView(ft.Container):
         for indice, a in enumerate(self._anuncios):
             if a["ruta"] == ruta and indice < len(grid.controls):
                 boton_exportar = grid.controls[indice].content.controls[-1].controls[1]
-                boton_exportar.content = ft.Icon(ft.Icons.IOS_SHARE, size=16, color="#756b5e")
+                boton_exportar.content = ft.Icon(ft.Icons.IOS_SHARE, size=16, color=C.texto_suave)
                 self._actualizar_seguro(boton_exportar)
                 return
 

@@ -1,47 +1,14 @@
-﻿"""
+"""
 views/sesion_view.py
-Pantalla de login del panel (Fase 2.0; layout de dos columnas 2026-09-05,
-reajustado el mismo día contra una referencia visual que mandó el dueño del
-código — la primera pasada quedó "parecida pero no igual"). Ocupa toda la
-ventana, sin Sidebar — NO pasa por router.cambiar_vista(), la mete directo
-MainController.mostrar_login().
+La pantalla de entrar del panel, con el diseño oscuro de la guía (A4.7). Ocupa toda la ventana,
+sin barra lateral, y siempre es lo primero al abrir: la sesión NUNCA se guarda en disco
+(decisión de negocio, ver "POR QUÉ EL LOGIN NO SE GUARDA" del roadmap).
 
-LAYOUT DE DOS COLUMNAS:
-  · Izquierda: una sección de marca/bienvenida, fondo oscuro con los MISMOS
-    tokens que ya usa views/components/sidebar.py (#0d0905 de fondo, #f4ca83
-    dorado, #999288 texto muted, #18120b/#2c2013 para las tarjetas) — no se
-    inventó paleta nueva, se reusó la que ya existe para "superficie oscura"
-    en este mismo proyecto. Incluye estadísticas reales del menú
-    (PlatilloDAO.obtener_estadisticas(), mismo dato que la tarjeta
-    "PRODUCTOS EN VENTA" de home_view.py), legibles sin sesión porque esa
-    consulta solo cuenta visible=true, que es justo lo que anon puede leer.
-  · Derecha: el formulario de acceso de siempre. El rediseño es puramente
-    visual — sign_in_with_password, el candado de licencia y los mensajes
-    de error NO se tocaron.
+Dos mitades del mismo alto: a la izquierda una tarjeta con correo + contraseña y a la derecha
+las manchas azules con grano, la frase y la etiqueta de la marca.
 
-LO QUE CAMBIÓ AL CUADRAR CON LA REFERENCIA (por si alguien la compara otra
-vez y cree que son detalles al azar — todos salieron de medir la imagen
-contra una captura real de la app a 1920x1080, no de gusto propio):
-  · La partición dejó de ser 50/50: el panel oscuro se queda con todo lo que
-    sobre y el formulario tiene ANCHO FIJO (_ANCHO_FORMULARIO). A 1920 eso
-    da ~70/30, que es la proporción de la referencia. Es fijo y no un
-    expand=3 a propósito: con proporciones, en una ventana angosta el panel
-    derecho se encoge por debajo del ancho de los campos y el formulario se
-    corta; así el que se encoge es el panel oscuro, que aguanta.
-  · El eyebrow "PANEL DEL DUEÑO" se bajó: ya no cuelga del logo, ahora
-    encabeza el bloque de bienvenida.
-  · El título lleva el nombre del dueño en dorado ("...de vuelta, Ary."), y
-    por eso se arma con spans en vez de un Text plano — es un solo párrafo
-    con dos colores, no dos controles pegados. "Ary" va escrito duro, igual
-    que el saludo de home_view.py.
-  · Toda la tipografía de esta pantalla subió de tamaño y el bloque de
-    bienvenida se pegó al fondo del panel (antes los tres bloques se
-    repartían el alto parejo con SPACE_BETWEEN entre 3 hijos; ahora son 2 —
-    marca arriba, todo lo demás abajo).
-
-Sin sesión iniciada el panel no tiene permisos para leer ni escribir en
-platillos (las políticas RLS están amarradas al UID del admin), así que esta
-pantalla va antes que cualquier otra cosa.
+Lo que NO cambió con el rediseño: sign_in_with_password, el candado de licencia justo después
+del login (fail closed) y los mensajes. Los errores salen como aviso (la píldora de piezas.py).
 """
 import asyncio
 
@@ -50,337 +17,84 @@ import httpx
 from supabase_auth.errors import AuthApiError
 
 from models.configuracion_negocio_dao import ConfiguracionNegocioDAO
-from models.platillo_dao import PlatilloDAO
 from models.supabase_client import SUPABASE_ADMIN_EMAIL, client
+from views.piezas import apagar_boton, aviso, boton_atajo, campo, sin_auto_update, tarjeta_iphone
+from views.tema import C
 
-# Anchos de la pantalla. _ANCHO_FORMULARIO es el ancho FIJO de la mitad
-# crema (ver la nota de arriba sobre por qué es fijo y no proporcional);
-# _ANCHO_CAMPO deja ~59px de aire a cada lado dentro de ella.
-_ANCHO_FORMULARIO = 568
-_ANCHO_CAMPO = 450
-# Bloque de bienvenida del panel oscuro: el ancho de las dos tarjetas de
-# stats. El subtítulo va más angosto a propósito, para que caiga en dos
-# renglones como en la referencia en vez de estirarse en uno solo.
-_ANCHO_BLOQUE = 545
-_ANCHO_SUBTITULO = 370
+# Todo a 48 del borde de su mitad, 56 arriba: el título de la tarjeta y la frase de las manchas
+# empiezan a la misma altura y a la misma distancia de su borde.
+MARGEN, MARGEN_ARRIBA = 48, 56
+RADIO = 16
+# Los campos: 56 de alto (relleno 18 arriba y abajo).
+RELLENO_CAMPO = ft.Padding(left=12, top=18, right=12, bottom=18)
+
+
+def encabezado(titulo, subtitulo):
+    return [
+        ft.Text(titulo, size=56, color=C.texto, font_family="LetraTitulo",
+                style=ft.TextStyle(height=1.0)),
+        ft.Container(height=14),
+        ft.Text(subtitulo, size=22, color=C.texto_suave, font_family="LetraTexto"),
+    ]
 
 
 class SesionView(ft.Container):
     def __init__(self, router):
         super().__init__()
         self.router = router
-        # expand + height=inf: mismo patrón que layout_principal en
-        # main_controller.py (Sidebar + content_container) — un Row de dos
-        # columnas a todo lo alto de la ventana. Antes esta pantalla dejaba
-        # height sin poner a propósito, porque necesitaba alignment para
-        # centrar UNA tarjeta; ya no hay una sola tarjeta que centrar, hay
-        # dos columnas que deben llenar la ventana completa.
+        self.page_ref = router.page
         self.expand = True
-        self.height = float("inf")
-        self.bgcolor = "#fbf5e9"
+        # Liso, sin degradado: que solo brillen las manchas.
+        self.bgcolor = C.fondo_entrar
+        self.padding = 12
 
-        # ------------------------------------------------------------
-        # Controles del formulario (columna derecha) — sin cambios de
-        # lógica respecto a la versión anterior, solo cambia dónde viven
-        # dentro del árbol de controles.
-        # ------------------------------------------------------------
-        self.campo_correo = ft.TextField(
-            value=SUPABASE_ADMIN_EMAIL,
-            hint_text="Tu correo",
-            prefix_icon=ft.Icons.MAIL_OUTLINE,
-            keyboard_type=ft.KeyboardType.EMAIL,
-            autofocus=True,
-            width=_ANCHO_CAMPO,
-            height=58,
-            # OJO: en Flet el `height` del TextField NO engorda la cajita
-            # con borde, solo reserva alto alrededor. Lo que la hace más
-            # alta es el content_padding — sin esto los campos se ven
-            # flacos al lado del botón, que fue justo una de las
-            # diferencias contra la referencia.
-            content_padding=ft.Padding.symmetric(horizontal=12, vertical=16),
-            border_radius=16,
-            border_color="#eadfca",
-            focused_border_color="#f4ca83",
-            bgcolor="#f8f1de",
-            color="#5e5449",
-            hint_style=ft.TextStyle(color="#9b8f7e"),
-            text_size=15,
-        )
+        self.campo_correo = campo(pista="Tu correo", icono=ft.Icons.MAIL_OUTLINE, tamano=15,
+                                  valor=SUPABASE_ADMIN_EMAIL, relleno=RELLENO_CAMPO)
+        self.campo_correo.keyboard_type = ft.KeyboardType.EMAIL
+        # El correo ya viene puesto (el del .env): el foco empieza en la contraseña.
+        self.campo_password = campo(pista="Tu contraseña", icono=ft.Icons.LOCK_OUTLINE,
+                                    contrasena=True, tamano=15, autofoco=True,
+                                    relleno=RELLENO_CAMPO,
+                                    al_enviar=sin_auto_update(self._on_entrar_click))
+        # "Entrar", el único botón destacado del panel: la forma de los campos, en blanco.
+        self.boton_entrar = boton_atajo(ft.Icons.LOGIN, "Entrar al panel", self._on_entrar_click,
+                                        claro=True, alto=51, radio=10)
 
-        self.campo_password = ft.TextField(
-            hint_text="Tu contraseña",
-            prefix_icon=ft.Icons.LOCK_OUTLINE,
-            password=True,
-            can_reveal_password=True,
-            width=_ANCHO_CAMPO,
-            height=58,
-            # OJO: en Flet el `height` del TextField NO engorda la cajita
-            # con borde, solo reserva alto alrededor. Lo que la hace más
-            # alta es el content_padding — sin esto los campos se ven
-            # flacos al lado del botón, que fue justo una de las
-            # diferencias contra la referencia.
-            content_padding=ft.Padding.symmetric(horizontal=12, vertical=16),
-            border_radius=16,
-            border_color="#eadfca",
-            focused_border_color="#f4ca83",
-            bgcolor="#f8f1de",
-            color="#5e5449",
-            hint_style=ft.TextStyle(color="#9b8f7e"),
-            text_size=15,
-            on_submit=self._on_entrar_click,
-        )
-
-        # size=14 (no 12 como en el resto del proyecto): esta pantalla
-        # quedó a una escala más grande que las demás y con 12 el error se
-        # veía como una nota al pie. Los colores son los de siempre.
-        self.texto_error = ft.Text("", size=14, color="#a33c39", expand=True)
-        self.zona_error = ft.Container(
-            visible=False,
-            width=_ANCHO_CAMPO,
-            bgcolor="#f7e4e3",
-            border=ft.Border.all(1, "#d9534f"),
-            border_radius=12,
-            padding=ft.Padding.symmetric(horizontal=14, vertical=12),
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=17, color="#d9534f"),
-                    self.texto_error,
-                ],
-                spacing=8,
-            ),
-        )
-
-        # Contenido normal del botón; se guarda aparte para poder volver a
-        # ponerlo cuando termina de validar (ver _set_cargando).
-        self._contenido_boton = ft.Text(
-            "Entrar al panel", color="#ffffff", weight="bold", size=19
-        )
-        self.boton_entrar = ft.Container(
-            content=self._contenido_boton,
-            alignment=ft.Alignment(0, 0),
-            bgcolor="#0d0905",
-            border_radius=30,
-            width=_ANCHO_CAMPO,
-            padding=ft.Padding.symmetric(vertical=23),
-            ink=True,
-            on_click=self._on_entrar_click,
-        )
-
-        formulario = ft.Container(
-            width=_ANCHO_CAMPO,
-            content=ft.Column(
-                # tight=True: por default un Column reclama TODO el alto
-                # disponible; con tight=True usa solo el mínimo que pide su
-                # contenido, que es lo que necesita un bloque que se va a
-                # centrar verticalmente en la mitad derecha de la pantalla.
-                tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.START,
-                spacing=0,
-                controls=[
-                    ft.Text(
-                        "Inicia sesión",
-                        size=38,
-                        font_family="Georgia",
-                        italic=True,
-                        color="#18120d",
-                    ),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "Ingresa tus datos para administrar tu menú.",
-                        size=15,
-                        color="#7c7267",
-                    ),
-                    ft.Container(height=40),
-                    self.campo_correo,
-                    ft.Container(height=20),
-                    self.campo_password,
-                    self.zona_error,
-                    ft.Container(height=30),
-                    self.boton_entrar,
-                ],
-            ),
-        )
-
-        panel_derecho = ft.Container(
-            # Ancho fijo, no expand: ver la nota del encabezado del archivo.
-            width=_ANCHO_FORMULARIO,
-            height=float("inf"),
-            bgcolor="#fbf5e9",
-            alignment=ft.Alignment(0, 0),
-            content=formulario,
-        )
-
-        # ------------------------------------------------------------
-        # Columna izquierda — sección de marca/bienvenida. Los números de
-        # las tarjetas de abajo arrancan en "–" y _cargar_estadisticas() (al
-        # final de este __init__) los reemplaza cuando responde Supabase;
-        # si esa consulta falla, se quedan en "–" — no es motivo para
-        # bloquear ni ensuciar el login con un error (ver el método).
-        # ------------------------------------------------------------
-        self.texto_stat_platillos = ft.Text(
-            "–", size=36, weight="bold", color="#f4ca83"
-        )
-        self.texto_stat_categorias = ft.Text(
-            "–", size=36, weight="bold", color="#f4ca83"
-        )
-
-        def _tarjeta_stat(control_numero: ft.Text, etiqueta: str) -> ft.Container:
-            # Mismos tokens que la tarjeta de ayuda de sidebar.py
-            # (#18120b/#2c2013): es la "tarjeta sobre fondo oscuro" que ya
-            # existe en este proyecto, reusada tal cual en vez de inventar
-            # una nueva.
-            return ft.Container(
-                expand=True,
-                bgcolor="#18120b",
-                border=ft.Border.all(1, "#2c2013"),
-                border_radius=16,
-                padding=ft.Padding.all(22),
-                content=ft.Column(
-                    spacing=4,
-                    controls=[
-                        control_numero,
-                        ft.Text(etiqueta, size=16, color="#999288"),
-                    ],
-                ),
-            )
-
-        # Lockup de marca — mismo patrón que la parte de arriba de
-        # sidebar.py, pero SIN el eyebrow debajo del nombre: en la
-        # referencia "PANEL DEL DUEÑO" encabeza el bloque de bienvenida de
-        # abajo, no la marca.
-        marca = ft.Row(
-            spacing=16,
-            controls=[
-                ft.CircleAvatar(
-                    foreground_image_src="assets/logomonky.png",
-                    radius=22,
-                    bgcolor=ft.Colors.TRANSPARENT,
-                ),
-                ft.Text(
-                    "Taku monky",
-                    color=ft.Colors.WHITE,
-                    weight="bold",
-                    size=30,
-                    font_family="Georgia",
-                    italic=True,
-                ),
-            ],
-        )
-
-        bienvenida = ft.Column(
-            tight=True,
-            spacing=0,
-            horizontal_alignment=ft.CrossAxisAlignment.START,
-            controls=[
-                ft.Text(
-                    "PANEL DEL DUEÑO",
-                    color="#f4ca83",
-                    size=14,
-                    weight="bold",
-                    # El único letter_spacing del proyecto. La referencia
-                    # trae el eyebrow claramente espaciado y a este tamaño
-                    # se nota; el resto de los eyebrows (menu_view, etc.)
-                    # son más chicos y se quedan como están.
-                    style=ft.TextStyle(letter_spacing=3),
-                ),
+        tarjeta = tarjeta_iphone(
+            ft.Column([
+                *encabezado("Inicia sesión", "Ingresa tus datos para administrar tu menú."),
+                ft.Container(height=48),
+                ft.Row([self.campo_correo]),
+                ft.Container(height=12),
+                ft.Row([self.campo_password]),
                 ft.Container(height=16),
-                ft.Text(
-                    # Dos colores en un mismo párrafo => spans. El size/
-                    # font_family/italic/color del Text son el estilo base y
-                    # el span dorado solo pisa el color.
-                    spans=[
-                        ft.TextSpan("Bienvenido\nde vuelta, "),
-                        ft.TextSpan("Ary.", ft.TextStyle(color="#f4ca83")),
-                    ],
-                    size=66,
-                    font_family="Georgia",
-                    italic=True,
-                    color=ft.Colors.WHITE,
-                    # 1.32 en vez del interlineado por default de Georgia
-                    # (~1.15): con dos renglones tan grandes, apretados se
-                    # ven como un bloque; la referencia los trae aireados.
-                    style=ft.TextStyle(height=1.32),
-                ),
-                ft.Container(height=22),
-                ft.Container(
-                    width=_ANCHO_SUBTITULO,
-                    content=ft.Text(
-                        "Administra tu menú, tus ventas y tus "
-                        "mesas desde un solo lugar.",
-                        size=24,
-                        color="#999288",
-                        style=ft.TextStyle(height=1.45),
-                    ),
-                ),
-                ft.Container(height=62),
-                # Estadísticas reales del menú
-                ft.Container(
-                    width=_ANCHO_BLOQUE,
-                    content=ft.Row(
-                        spacing=22,
-                        controls=[
-                            _tarjeta_stat(
-                                self.texto_stat_platillos, "platillos en tu menú"
-                            ),
-                            _tarjeta_stat(
-                                self.texto_stat_categorias, "categorías activas"
-                            ),
-                        ],
-                    ),
-                ),
-            ],
-        )
+                ft.Row([self.boton_entrar]),
+            ], spacing=0),
+            radio=RADIO, expand=94, colores=C.tarjeta_entrar,
+            padding=ft.Padding(left=MARGEN - 1, top=MARGEN_ARRIBA - 1, right=MARGEN - 1, bottom=MARGEN - 1))
 
-        panel_izquierdo = ft.Container(
-            expand=True,
-            height=float("inf"),
-            bgcolor="#0d0905",
-            padding=ft.Padding.only(left=56, right=56, top=52, bottom=60),
-            content=ft.Column(
-                expand=True,
-                # Solo DOS hijos: marca arriba, todo lo demás abajo. Con los
-                # tres bloques de antes, SPACE_BETWEEN los repartía parejo y
-                # el título quedaba flotando a media altura.
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                horizontal_alignment=ft.CrossAxisAlignment.START,
-                controls=[marca, bienvenida],
-            ),
-        )
-
-        self.content = ft.Row(
-            expand=True,
-            height=float("inf"),
-            spacing=0,
-            controls=[panel_izquierdo, panel_derecho],
-        )
-
-        # Estadísticas del panel izquierdo: se piden aparte del login (no
-        # requieren sesión, PlatilloDAO.obtener_estadisticas() solo cuenta
-        # visible=true) — mismo patrón que home_view.py, que llama a sus
-        # cargas async al final de __init__ vía page.run_task().
-        self.router.page.run_task(self._cargar_estadisticas)
-
-    async def _cargar_estadisticas(self):
-        """Llena los dos números de la columna izquierda con datos reales
-        del menú. Es un detalle de "bienvenida", no parte del flujo de
-        login: si falla (sin internet, Supabase caído, etc.) los números se
-        quedan en "–" y no se le muestra ningún error al usuario — el login
-        en sí no depende de esto para nada."""
-        try:
-            stats = await asyncio.to_thread(PlatilloDAO.obtener_estadisticas)
-        except Exception as e:
-            print(f"[login] no se pudieron cargar las estadísticas del menú: {e}")
-            return
-
-        self.texto_stat_platillos.value = str(stats["total"])
-        self.texto_stat_categorias.value = str(stats["categorias_en_uso"])
-        self.texto_stat_platillos.update()
-        self.texto_stat_categorias.update()
+        # A la derecha, las manchas azules con grano (WebP animado: Flutter lo reproduce solo),
+        # la frase y la etiqueta de la marca. Oscuras en los dos temas.
+        grano = ft.Container(
+            expand=106, border_radius=RADIO, bgcolor="#000000", border=ft.Border.all(1, "#1FFFFFFF"),
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+            content=ft.Stack([
+                ft.Image(src="assets/login-grano.webp", fit=ft.BoxFit.COVER,
+                         width=float("inf"), height=float("inf")),
+                ft.Container(left=MARGEN, top=MARGEN_ARRIBA, content=ft.Text(
+                    "Moderniza\nTu Negocio", size=56, color=ft.Colors.WHITE,
+                    font_family="LetraTitulo", style=ft.TextStyle(height=1.0))),
+                ft.Container(left=MARGEN, right=MARGEN, bottom=MARGEN, content=etiqueta_marca()),
+            ]))
+        self.content = ft.Row([tarjeta, grano], spacing=12,
+                              vertical_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def _on_entrar_click(self, e):
-        self.router.page.run_task(self._iniciar_sesion)
+        self.page_ref.run_task(self._iniciar_sesion)
 
     async def _iniciar_sesion(self):
+        if self.boton_entrar.disabled:
+            return
         correo = (self.campo_correo.value or "").strip()
         password = self.campo_password.value or ""
 
@@ -390,8 +104,7 @@ class SesionView(ft.Container):
 
         self._set_cargando(True)
         try:
-            # sign_in_with_password es una llamada de red bloqueante (SDK
-            # sync) — se manda a un hilo aparte para no congelar la ventana.
+            # sign_in_with_password es red bloqueante (SDK sync): a un hilo aparte.
             respuesta = await asyncio.to_thread(
                 client.auth.sign_in_with_password,
                 {"email": correo, "password": password},
@@ -401,18 +114,7 @@ class SesionView(ft.Container):
                 self._set_cargando(False)
                 return
 
-            # NO se guarda nada en disco (2026-09-05, antes aquí iba
-            # sesion.guardar()): la sesión vive solo en la memoria del
-            # cliente de Supabase y muere al cerrar la app, así que el panel
-            # pide contraseña en CADA arranque. Ver el bloque "POR QUÉ EL
-            # LOGIN NO SE GUARDA" del roadmap — es una decisión de negocio,
-            # no de seguridad: es lo que hace que cortarle la licencia a un
-            # local surta efecto de inmediato.
-
-            # EL CANDADO DE LICENCIA. Va aquí, DESPUÉS del login y ANTES de
-            # mostrar_panel(): leer configuracion_negocio necesita sesión
-            # (anon no tiene ninguna política sobre esa tabla), así que
-            # autenticar primero es obligado, no un descuido.
+            # EL CANDADO DE LICENCIA: después del login y antes de entrar.
             if not await self._licencia_ok():
                 return
             self.router.mostrar_panel()
@@ -422,9 +124,7 @@ class SesionView(ft.Container):
             self._mostrar_error("Correo o contraseña incorrectos.")
         except httpx.RequestError as e:
             print(f"[login] error de red: {e}")
-            self._mostrar_error(
-                "No hay conexión con el servidor. Revisa tu internet."
-            )
+            self._mostrar_error("No hay conexión con el servidor. Revisa tu internet.")
         except Exception as e:
             print(f"[login] error inesperado: {e}")
             self._mostrar_error("Algo salió mal al iniciar sesión. Intenta de nuevo.")
@@ -432,65 +132,49 @@ class SesionView(ft.Container):
         self._set_cargando(False)
 
     async def _licencia_ok(self) -> bool:
-        """Revisa el interruptor de licencia del negocio (configuracion_
-        negocio.activo). Si no está activo —o si no se pudo averiguar—
-        cierra la sesión recién abierta y deja al usuario en el login.
-
-        POR QUÉ EXISTE: este software se renta por semestre. Cuando se
-        acaba el pago, la idea es justamente esta: que ya no puedan entrar
-        ni al panel ni a mesas.html, y solo les quede la página pública del
-        menú, que sola no les sirve. Ver el bloque "POR QUÉ EL LOGIN NO SE
-        GUARDA" del roadmap.
-
-        SI NO SE PUDO AVERIGUAR, NO DEJA PASAR. No es paranoia: si dejara
-        pasar ante un error, saltarse el candado sería tan fácil como
-        tumbar esa consulta. Y no le quita nada al cliente legítimo — si
-        Supabase no contesta, el panel no sirve igual, porque el menú, las
-        ventas y las mesas viven ahí.
-        """
+        """Revisa configuracion_negocio.activo. Si no está activo —o si no se pudo averiguar—
+        cierra la sesión recién abierta y se queda aquí. Si no se pudo averiguar, NO deja pasar."""
         try:
             activa = await asyncio.to_thread(ConfiguracionNegocioDAO.licencia_activa)
         except Exception as e:
             print(f"[licencia] no se pudo verificar la licencia: {e}")
             await self._cerrar_sesion_silenciosa()
-            self._mostrar_error(
-                "No se pudo verificar la licencia. Revisa tu internet e "
-                "intenta de nuevo."
-            )
+            self._mostrar_error("No se pudo verificar la licencia. Revisa tu internet e intenta de nuevo.")
             self._set_cargando(False)
             return False
 
         if not activa:
             print("[licencia] activo = False: se bloquea la entrada al panel.")
             await self._cerrar_sesion_silenciosa()
-            self._mostrar_error(
-                "Este sistema está desactivado. Comunícate con el proveedor "
-                "del software para reactivarlo."
-            )
+            self._mostrar_error("Este sistema está desactivado. Comunícate con el proveedor "
+                                "del software para reactivarlo.")
             self._set_cargando(False)
             return False
 
         return True
 
     async def _cerrar_sesion_silenciosa(self):
-        """Tira la sesión que se acaba de abrir, para que no quede viva en
-        `client.auth` después de un rechazo. Si el sign_out falla da igual:
-        la sesión no se guarda en ningún lado y muere al cerrar la app."""
         try:
-            await asyncio.to_thread(client.auth.sign_out)
+            await asyncio.to_thread(client.auth.sign_out, {"scope": "local"})
         except Exception as e:
             print(f"[licencia] sign_out tras el rechazo falló, se ignora: {e}")
 
     def _mostrar_error(self, mensaje: str):
-        self.texto_error.value = mensaje
-        self.zona_error.visible = True
-        self.zona_error.update()
+        aviso(self.page_ref, mensaje, barra=0)
 
     def _set_cargando(self, cargando: bool):
-        self.boton_entrar.disabled = cargando
-        self.boton_entrar.content = (
-            ft.ProgressRing(width=18, height=18, stroke_width=2, color="#f4ca83")
-            if cargando
-            else self._contenido_boton
-        )
+        # Apagado mientras entra: no hay rueda de carga, el apagado ya lo dice.
+        apagar_boton(self.boton_entrar, cargando)
         self.boton_entrar.update()
+
+
+def etiqueta_marca():
+    # La etiqueta de abajo de las manchas: translúcida, borde parejo, el logo en blanco y
+    # "Fragmentless · Panel de escritorio" al 85 %. No se pulsa.
+    fila = ft.Row([
+        ft.Image(src="assets/fragmentless-blanco.png", height=22, fit=ft.BoxFit.CONTAIN),
+        ft.Text("Fragmentless · Panel de escritorio", size=15, color=ft.Colors.WHITE, font_family="LetraTitulo"),
+    ], spacing=10, tight=True, opacity=0.85)
+    return ft.Container(height=48, border_radius=10, bgcolor="#0DFFFFFF", blur=ft.Blur(8, 8),
+                        border=ft.Border.all(1, "#40FFFFFF"), alignment=ft.Alignment.CENTER_LEFT,
+                        padding=ft.Padding(left=18, top=0, right=22, bottom=0), content=fila)

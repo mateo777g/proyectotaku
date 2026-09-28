@@ -5,7 +5,11 @@ import traceback
 
 import flet as ft
 
-from models.ia_controller import IAController, saludo_de_respaldo
+from views.piezas import fondo_pagina
+from views.tema import C
+
+from models import perfil, saludo_ia
+from models.ia_controller import IAController
 
 # La conversación y la caja de texto miden lo mismo a propósito: así las
 # burbujas quedan alineadas con los bordes de la caja en vez de flotar a su
@@ -118,7 +122,7 @@ HINT_ENTRADA = "Escribe una pregunta sobre tu negocio..."
 # (la superficie de la burbuja y la caja) porque sobre el crema de la vista
 # ese apenas se distingue —3, 4 y 11 puntos de diferencia por canal— y un
 # realce de hover que no se ve no sirve de nada; #f3ead4 va 8, 11 y 21.
-COLOR_IDEA_HOVER = "#f3ead4"
+COLOR_IDEA_HOVER = C.cara
 
 # Los tres atajos. La estructura es la de cualquier chat de IA grande: un
 # rótulo corto que se lee de un vistazo, y detrás un prompt largo y preciso
@@ -216,7 +220,7 @@ def _icono(nombre, tamano: int, color: str) -> ft.Icon:
 # en la ventana real, con la de Claude como referencia. 16 con interlineado
 # 1.55 es lo que hace que un párrafo largo se lea descansado en vez de
 # apretado — que era el punto.
-FUENTE_RESPUESTA = "Georgia"
+FUENTE_RESPUESTA = "LetraTexto"
 TAMANO_RESPUESTA = 16
 INTERLINEADO_RESPUESTA = 1.55
 
@@ -429,9 +433,11 @@ def _estilo_markdown() -> ft.MarkdownStyleSheet:
     def prosa(**extra) -> ft.TextStyle:
         """Un estilo de párrafo: Georgia, 16, aireado."""
         extra.setdefault("size", TAMANO_RESPUESTA)
-        extra.setdefault("color", "#1c1610")
+        extra.setdefault("color", C.texto)
+        # setdefault y no font_family= fijo: la negrita pasa su propia letra
+        # (LetraTitulo) y un argumento repetido rompe el TextStyle.
+        extra.setdefault("font_family", FUENTE_RESPUESTA)
         return ft.TextStyle(
-            font_family=FUENTE_RESPUESTA,
             height=INTERLINEADO_RESPUESTA,
             **extra,
         )
@@ -440,35 +446,34 @@ def _estilo_markdown() -> ft.MarkdownStyleSheet:
         """Un encabezado: Georgia también, pero más junto — el interlineado
         del cuerpo aquí solo abriría huecos."""
         return ft.TextStyle(
-            font_family=FUENTE_RESPUESTA,
             size=tam,
-            weight=ft.FontWeight.BOLD,
+            font_family="LetraTitulo",
             color=color,
             height=1.3,
         )
 
     return ft.MarkdownStyleSheet(
         p_text_style=prosa(),
-        strong_text_style=prosa(weight=ft.FontWeight.BOLD, color="#18120d"),
-        em_text_style=prosa(italic=True),
-        h1_text_style=titulo(21, "#18120d"),
-        h2_text_style=titulo(19, "#18120d"),
-        h3_text_style=titulo(17, "#806f61"),
-        h4_text_style=titulo(16, "#806f61"),
-        list_bullet_text_style=prosa(color="#8a7e72"),
-        blockquote_text_style=prosa(size=15, color="#5e5449"),
-        blockquote_decoration=ft.BoxDecoration(bgcolor="#f3ead4", border_radius=8),
+        strong_text_style=prosa(font_family="LetraTitulo", color=C.texto),
+        em_text_style=prosa(),
+        h1_text_style=titulo(21, C.texto),
+        h2_text_style=titulo(19, C.texto),
+        h3_text_style=titulo(17, C.texto_suave),
+        h4_text_style=titulo(16, C.texto_suave),
+        list_bullet_text_style=prosa(color=C.texto_suave),
+        blockquote_text_style=prosa(size=15, color=C.texto_suave),
+        blockquote_decoration=ft.BoxDecoration(bgcolor=C.cara, border_radius=8),
         blockquote_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
-        code_text_style=ft.TextStyle(size=14, font_family="Consolas", color="#bf571d"),
-        codeblock_decoration=ft.BoxDecoration(bgcolor="#f3ead4", border_radius=8),
+        code_text_style=ft.TextStyle(size=14, font_family="Consolas", color=C.texto),
+        codeblock_decoration=ft.BoxDecoration(bgcolor=C.cara, border_radius=8),
         codeblock_padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         # Sin font_family: la sans por omisión, por los números (ver arriba).
         table_head_text_style=ft.TextStyle(
-            size=14, weight=ft.FontWeight.BOLD, color="#18120d"
+            size=14, font_family="LetraTitulo", color=C.texto
         ),
-        table_body_text_style=ft.TextStyle(size=14, color="#1c1610"),
+        table_body_text_style=ft.TextStyle(size=14, color=C.texto),
         table_cells_padding=ft.Padding.symmetric(horizontal=12, vertical=8),
-        table_cells_decoration=ft.BoxDecoration(bgcolor="#f3ead4"),
+        table_cells_decoration=ft.BoxDecoration(bgcolor=C.cara),
         # Sube de 10 a 12 con el cuerpo más aireado: con párrafos de 16 y
         # interlineado 1.55, 10 los dejaba pegados entre si. Vive en una
         # constante porque _partir_en_renglones() tiene que reproducir este
@@ -500,12 +505,13 @@ class AgenteIAView(ft.Container):
         self.router = router
         self.expand = True
         self.height = float("inf")
-        self.bgcolor = "#fbf5e9"
+        self.bgcolor = C.fondo
+        self.gradient = fondo_pagina()
         self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
-        # El controlador se crea en la primera llamada que lo necesite —
-        # hoy es _cargar_saludo(), que corre al montar la vista, y si esa
-        # falla lo vuelve a intentar _responder— en vez de aquí, para que un
+        # El controlador se crea en la primera pregunta (_responder; el
+        # saludo usa el suyo, en models/saludo_ia.py) en vez de aquí,
+        # para que un
         # OPENAI_API_KEY faltante en el .env no reviente la vista al abrir
         # Agente IA — se muestra como
         # una burbuja de error normal, igual que cualquier otro fallo de
@@ -592,8 +598,8 @@ class AgenteIAView(ft.Container):
             # relleno no hay nada que oscurecer, así que el problema no existe
             # y esas dos propiedades ya no hacen falta.
             filled=False,
-            color="#1c1610",
-            hint_style=ft.TextStyle(color="#8a7e72", size=15),
+            color=C.texto,
+            hint_style=ft.TextStyle(color=C.texto_suave, size=15),
             text_size=15,
             content_padding=ft.Padding.symmetric(horizontal=24, vertical=20),
             on_submit=self._enviar_mensaje,
@@ -608,7 +614,7 @@ class AgenteIAView(ft.Container):
         # cabe en la caja. Mismo formato de botón-icono que menu_view.py
         # (30x30, radio 15, ink) para que no se sienta de otra app.
         self.boton_expandir = ft.Container(
-            content=_icono(ft.Icons.UNFOLD_MORE, 16, "#756b5e"),
+            content=_icono(ft.Icons.UNFOLD_MORE, 16, C.texto_suave),
             width=ANCHO_BOTON_EXPANDIR,
             height=ANCHO_BOTON_EXPANDIR,
             alignment=ft.Alignment(0, 0),
@@ -638,7 +644,7 @@ class AgenteIAView(ft.Container):
         # decide segun el estado de la pantalla y el foco.
         self.caja_entrada = ft.Container(
             width=ANCHO_CHAT,
-            bgcolor="#f8f1de",
+            bgcolor=C.cara,
             border_radius=35,
             padding=ft.Padding.only(right=12),
             content=ft.Row(
@@ -660,17 +666,19 @@ class AgenteIAView(ft.Container):
         # --------------------------------------------------------------
         # Saludo (solo en el estado de bienvenida)
         # --------------------------------------------------------------
-        # El texto arranca VACÍO y lo llena _cargar_saludo() cuando el
-        # modelo contesta (~1 s). Se hace así, y no mostrando una frase de
-        # relleno que después se reemplaza, porque ver cambiar el saludo
-        # solo se lee como un parpadeo. El bloque no se descuadra mientras
-        # tanto: el logo ya le da altura a la fila.
+        # El saludo ya viene redactado de antes (models/saludo_ia.py) y sale
+        # desde el primer cuadro. Si todavía no llega (se abrió la vista
+        # justo al arrancar la app), entra al instante la frase local en vez
+        # de dejar el hueco: el que se estaba redactando se queda para la
+        # próxima visita. Nunca se cambia un saludo ya puesto por otro —
+        # verlo cambiar se lee como un parpadeo.
+        nombre = perfil.como_llamarte()
+        saludo = saludo_ia.tomar(nombre) or saludo_ia.saludo_de_respaldo(nombre)
         self.texto_saludo = ft.Text(
-            "",
+            saludo,
             size=TAMANO_SALUDO,
-            font_family="Georgia",
-            italic=True,
-            color="#18120d",
+            font_family="LetraTitulo",
+            color=C.texto,
             text_align=ft.TextAlign.CENTER,
         )
         self.bloque_saludo = ft.Row(
@@ -697,9 +705,8 @@ class AgenteIAView(ft.Container):
         self._montar_bienvenida()
         self.content = self.raiz
 
-        # Mismo patrón que home_view.py con sus dos tarjetas: la vista se
-        # arma completa y lo que depende de la red se llena después.
-        self.router.page.run_task(self._cargar_saludo)
+        # El saludo de la próxima visita, en segundo plano.
+        self.router.page.run_task(self.router.precargar_saludo)
 
     # ------------------------------------------------------------------
     # Los dos estados de la pantalla
@@ -761,7 +768,7 @@ class AgenteIAView(ft.Container):
             # trabajo que los otros tres.
             ft.Container(
                 content=ft.Text(
-                    "IDEAS PARA TI", size=11, weight="bold", color="#806f61"
+                    "IDEAS PARA TI", size=11, font_family="LetraTitulo", color=C.texto_suave
                 ),
                 padding=ft.Padding.only(left=12, bottom=6),
             ),
@@ -794,15 +801,15 @@ class AgenteIAView(ft.Container):
                     # claro cuando la fila se oscurece al pasar el cursor, y
                     # eso es lo que lo hace resaltar.
                     ft.Container(
-                        content=ft.Icon(idea["icono"], size=16, color="#8a7e72"),
+                        content=ft.Icon(idea["icono"], size=16, color=C.texto_suave),
                         width=30,
                         height=30,
                         alignment=ft.Alignment(0, 0),
-                        bgcolor="#f8f1de",
-                        border=ft.Border.all(1, "#eadfca"),
+                        bgcolor=C.cara,
+                        border=ft.Border.all(1, C.linea),
                         border_radius=9,
                     ),
-                    ft.Text(idea["titulo"], size=14, color="#1c1610", expand=True),
+                    ft.Text(idea["titulo"], size=14, color=C.texto, expand=True),
                 ],
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -854,28 +861,6 @@ class AgenteIAView(ft.Container):
         # _enviar_mensaje ya repinta al final, así que no hace falta otro.
         self._enviar_mensaje(evento)
 
-    async def _cargar_saludo(self):
-        """Trae el saludo de bienvenida y lo pinta.
-
-        El saludo lo redacta el modelo (ver IAController.saludo), así que
-        cambia en cada visita. Si algo falla —no hay OPENAI_API_KEY, no hay
-        internet— entra una frase local y el dueño nunca se entera: un
-        saludo es decorativo, y sacarle un aviso rojo por eso sería alarmar
-        de a gratis. El aviso rojo se queda para cuando falle una pregunta
-        de verdad, que es lo que sí le importa.
-        """
-        try:
-            if self._ia is None:
-                self._ia = IAController()
-            texto = await asyncio.to_thread(self._ia.saludo)
-        except Exception:
-            # Incluye el RuntimeError de la llave faltante. self._ia se
-            # queda en None a propósito: así _responder lo vuelve a
-            # intentar y ahí sí enseña el error, que es donde importa.
-            texto = saludo_de_respaldo()
-        self.texto_saludo.value = texto
-        self._refrescar()
-
     # ------------------------------------------------------------------
     # Piezas de la conversación
     # ------------------------------------------------------------------
@@ -905,9 +890,9 @@ class AgenteIAView(ft.Container):
         # maximo (HUECO_USUARIO vs HUECO_IA) y, desde que la IA perdio la
         # suya, tener burbuja o no tenerla.
         return ft.Container(
-            content=ft.Text(texto, size=14, color="#1c1610"),
-            bgcolor="#f8f1de",
-            border=ft.Border.all(1, "#eadfca"),
+            content=ft.Text(texto, size=14, color=C.texto),
+            bgcolor=C.cara,
+            border=ft.Border.all(1, C.linea),
             padding=ft.Padding.symmetric(horizontal=18, vertical=10),
             border_radius=20,
         )
@@ -981,7 +966,7 @@ class AgenteIAView(ft.Container):
         conserva la suya (#f8f1de + borde #eadfca), y esa diferencia es
         ahora una tercera señal de quién habla, junto al lado y al ancho
         máximo (ver _burbuja_usuario).
-        No se pinta bgcolor="#fbf5e9" a mano: un Container sin bgcolor ya
+        No se pinta bgcolor=C.fondo a mano: un Container sin bgcolor ya
         deja ver el fondo de la vista, y así sigue siendo correcto si ese
         fondo cambia algún día. border_radius también se fue: sin
         superficie ni borde no redondeaba nada.
@@ -1076,7 +1061,7 @@ class AgenteIAView(ft.Container):
                 ft.Text(
                     "Pensando...",
                     size=TAMANO_TEXTO_PENSANDO,
-                    color="#8a7e72",
+                    color=C.texto_suave,
                 ),
             ],
             spacing=8,
@@ -1087,14 +1072,14 @@ class AgenteIAView(ft.Container):
         # Mismo banner rojo #f7e4e3/#d9534f/#a33c39 que ya usan
         # menu_view.py/sesion_view.py para errores.
         return ft.Container(
-            bgcolor="#f7e4e3",
-            border=ft.Border.all(1, "#d9534f"),
+            bgcolor=C.pozo,
+            border=ft.Border.all(1, C.texto_suave),
             border_radius=12,
             padding=ft.Padding.symmetric(horizontal=16, vertical=10),
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
-                    ft.Text(mensaje, size=13, color="#a33c39", expand=True),
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color=C.texto_suave),
+                    ft.Text(mensaje, size=13, color=C.texto_suave, expand=True),
                 ],
                 spacing=8,
             ),
@@ -1149,7 +1134,7 @@ class AgenteIAView(ft.Container):
         """
         # El BORDE responde al foco en los dos estados por igual.
         self.caja_entrada.border = ft.Border.all(
-            1, "#d8c3a4" if self._entrada_enfocada else "#eadfca"
+            1, C.texto_suave if self._entrada_enfocada else C.linea
         )
         # La SOMBRA no: en bienvenida está siempre, en chat solo con el foco.
         if self._modo_chat and not self._entrada_enfocada:
@@ -1158,7 +1143,7 @@ class AgenteIAView(ft.Container):
         self.caja_entrada.shadow = ft.BoxShadow(
             blur_radius=10,
             spread_radius=0,
-            color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK),
+            color=C.sombra,
             offset=ft.Offset(0, 2),
         )
 
@@ -1185,11 +1170,11 @@ class AgenteIAView(ft.Container):
         if self._modo_chat:
             self.boton_enviar.border_radius = ANCHO_BOTON_ENVIAR / 2
             self.boton_enviar.bgcolor = None
-            self.boton_enviar.content = _icono(ft.Icons.KEYBOARD_RETURN, 17, "#756b5e")
+            self.boton_enviar.content = _icono(ft.Icons.KEYBOARD_RETURN, 17, C.texto_suave)
         else:
             self.boton_enviar.border_radius = 12
-            self.boton_enviar.bgcolor = "#bf571d"
-            self.boton_enviar.content = _icono(ft.Icons.ARROW_UPWARD, 18, "#fbf5e9")
+            self.boton_enviar.bgcolor = C.texto
+            self.boton_enviar.content = _icono(ft.Icons.ARROW_UPWARD, 18, C.fondo)
 
     def _lineas_estimadas(self, texto: str) -> int:
         """Cuántos renglones ocupa el texto dentro de la caja.
@@ -1230,7 +1215,7 @@ class AgenteIAView(ft.Container):
         decide cuándo hacerlo."""
         self._entrada_expandida = False
         self.entrada.max_lines = LINEAS_COLAPSADA
-        self.boton_expandir.content = _icono(ft.Icons.UNFOLD_MORE, 16, "#756b5e")
+        self.boton_expandir.content = _icono(ft.Icons.UNFOLD_MORE, 16, C.texto_suave)
         self.boton_expandir.tooltip = "Ver todo el mensaje"
 
     def _on_cambio_entrada(self, evento):
@@ -1263,7 +1248,7 @@ class AgenteIAView(ft.Container):
         else:
             self._entrada_expandida = True
             self.entrada.max_lines = LINEAS_EXPANDIDA
-            self.boton_expandir.content = _icono(ft.Icons.UNFOLD_LESS, 16, "#756b5e")
+            self.boton_expandir.content = _icono(ft.Icons.UNFOLD_LESS, 16, C.texto_suave)
             self.boton_expandir.tooltip = "Contraer"
         self._refrescar()
 

@@ -3,15 +3,11 @@ views/mesas_view.py
 Pantalla del panel para administrar el catálogo de mesas (Fase 5.1) — el
 dueño agrega/renombra/borra mesas aquí, y esa misma lista (tabla
 public.mesas) es la que mesas.html usa para mostrar "Mesa 1: disponible",
-"Mesa 2: ocupada, $340, hace 12 min", etc. en vez del campo de texto libre
-que tenía antes.
+"Mesa 2: ocupada, $340, hace 12 min", etc.
 
-Mismo patrón de página que menu_view.py, recortado: sin buscador (una
-lista de mesas es corta, no hace falta filtrarla) y sin columnas de
-categoría/precio/foto — una mesa solo tiene un nombre. El diálogo de alta/
-edición (views/components/dialogo_mesa.py) y la confirmación de borrado
-(_confirmar, reusada tal cual de dialogo_platillo.py en vez de duplicarla)
-sí siguen el mismo lenguaje visual que el resto del panel.
+Mismo patrón de página que menu_view.py, recortado: sin buscador y sin
+columnas de categoría/precio/foto — una mesa solo tiene un nombre. Pintada
+con el diseño oscuro del panel (views/tema.py + views/piezas.py).
 """
 import asyncio
 
@@ -21,6 +17,9 @@ import httpx
 from models.mesa_dao import MesaDAO
 from views.components.dialogo_mesa import DialogoMesa
 from views.components.dialogo_platillo import _confirmar
+from views.piezas import (aviso, boton_atajo, boton_icono, fondo_pagina, tarjeta_iphone, texto,
+                          titulo_vista)
+from views.tema import C
 
 
 class MesasView(ft.Container):
@@ -28,39 +27,13 @@ class MesasView(ft.Container):
         super().__init__()
         self.router = router
         self.expand = True
-        self.height = float("inf")
-        self.bgcolor = "#fbf5e9"
-        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
+        self.bgcolor = C.fondo
+        self.gradient = fondo_pagina()
+        self.padding = 40
 
         self._mesas: list[dict] = []
-        self._banner_token = 0
 
-        # Banner temporal para el error de eliminar (no tiene diálogo propio
-        # donde mostrarlo, a diferencia de agregar/editar) — mismo patrón
-        # que menu_view.py._mostrar_error_temporal().
-        self.texto_banner_error = ft.Text("", size=12, color="#a33c39", expand=True)
-        self.banner_error = ft.Container(
-            visible=False,
-            bgcolor="#f7e4e3",
-            border=ft.Border.all(1, "#d9534f"),
-            border_radius=12,
-            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
-                    self.texto_banner_error,
-                ],
-                spacing=8,
-            ),
-        )
-
-        self.texto_titulo = ft.Text(
-            "Cargando tus mesas...",
-            size=40,
-            font_family="Georgia",
-            italic=True,
-            color="#18120d",
-        )
+        self.texto_titulo = titulo_vista("Cargando tus mesas...")
 
         self.cuerpo_lista = ft.Column(
             spacing=0,
@@ -69,7 +42,6 @@ class MesasView(ft.Container):
 
         self.content = ft.Column(
             expand=True,
-            height=float("inf"),
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
             controls=[
@@ -79,44 +51,20 @@ class MesasView(ft.Container):
                             expand=True,
                             spacing=2,
                             controls=[
-                                ft.Text("MESAS", size=13, weight="bold", color="#b58a6d"),
+                                texto("MESAS", 14),
                                 self.texto_titulo,
                             ],
                         ),
-                        ft.Container(
-                            content=ft.Row(
-                                controls=[
-                                    ft.Icon(ft.Icons.ADD, color="#ffa200", size=22),
-                                    ft.Text("Agregar mesa", color="#ffffff", weight="bold", size=16),
-                                ],
-                                spacing=8,
-                            ),
-                            bgcolor="#0d0905",
-                            padding=ft.Padding.symmetric(horizontal=26, vertical=16),
-                            border_radius=30,
-                            shadow=ft.BoxShadow(
-                                blur_radius=12,
-                                color=ft.Colors.with_opacity(0.28, ft.Colors.BLACK),
-                                offset=ft.Offset(0, 4),
-                            ),
-                            ink=True,
-                            on_click=self._on_agregar_click,
-                        ),
+                        boton_atajo(ft.Icons.ADD, "Agregar mesa", self._on_agregar_click, ancho=200),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Container(height=8),
-                ft.Text(
-                    "Estas son las mesas que aparecen para elegir en mesas.html — "
-                    "el sistema de registro de ventas.",
-                    size=13,
-                    color="#7c7267",
-                ),
-                ft.Container(height=18),
-                self.banner_error,
-                ft.Container(height=6),
-                self.cuerpo_lista,
+                texto("Estas son las mesas que aparecen para elegir en mesas.html — "
+                      "el sistema de registro de ventas.", 13, suave=True),
+                ft.Container(height=25),
+                ft.Row([tarjeta_iphone(self.cuerpo_lista)]),
             ],
         )
 
@@ -140,62 +88,40 @@ class MesasView(ft.Container):
             return
 
         filas = [self._crear_fila(m) for m in self._mesas]
-        texto = "1 mesa" if len(self._mesas) == 1 else f"{len(self._mesas)} mesas"
-        self._mostrar_estado(filas, texto)
+        titulo = "1 mesa" if len(self._mesas) == 1 else f"{len(self._mesas)} mesas"
+        self._mostrar_estado(filas, titulo)
 
     def _mostrar_estado(self, controles: list, texto_titulo: str):
         self.cuerpo_lista.controls = controles
         self.texto_titulo.value = texto_titulo
-        self.cuerpo_lista.update()
-        self.texto_titulo.update()
+        try:
+            self.cuerpo_lista.update()
+            self.texto_titulo.update()
+        except RuntimeError:
+            pass    # se salió de la vista antes de que llegaran los datos
 
     def _estado_cargando(self):
-        return [self._caja_centrada(ft.ProgressRing(width=28, height=28, stroke_width=3, color="#f4ca83"), "Cargando tus mesas...")]
+        return [self._caja_centrada("Cargando tus mesas...", "Un momento…")]
 
     def _estado_vacio(self):
-        return [
-            self._caja_centrada(
-                ft.Icon(ft.Icons.TABLE_RESTAURANT_OUTLINED, size=30, color="#c9bda3"),
-                "Todavía no hay ninguna mesa.",
-                "Agrega la primera con el botón de arriba.",
-            )
-        ]
+        return [self._caja_centrada("Todavía no hay ninguna mesa.",
+                                    "Agrega la primera con el botón de arriba.")]
 
     def _estado_error(self):
-        return [
-            ft.Container(
-                bgcolor="#f7e4e3",
-                border=ft.Border.all(1, "#d9534f"),
-                border_radius=12,
-                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
-                        ft.Text(
-                            "No hay conexión con el servidor. Revisa tu internet.",
-                            size=12,
-                            color="#a33c39",
-                            expand=True,
-                        ),
-                    ],
-                    spacing=8,
-                ),
-            )
-        ]
+        return [self._caja_centrada("Sin conexión.",
+                                    "No hay conexión con el servidor. Revisa tu internet.")]
 
-    def _caja_centrada(self, icono_o_spinner, titulo: str, subtitulo: str | None = None):
-        controles = [icono_o_spinner, ft.Text(titulo, size=14, weight="bold", color="#5e5449")]
+    def _caja_centrada(self, titulo: str, subtitulo: str | None = None):
+        controles = [texto(titulo, 14)]
         if subtitulo:
-            controles.append(ft.Text(subtitulo, size=12, color="#8a7e72"))
+            controles.append(texto(subtitulo, 12, suave=True))
         return ft.Container(
-            bgcolor="#f8f1de",
-            border_radius=14,
-            padding=ft.Padding.symmetric(vertical=48),
+            padding=ft.Padding.symmetric(vertical=40),
             alignment=ft.Alignment(0, 0),
             content=ft.Column(
                 tight=True,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=8,
+                spacing=6,
                 controls=controles,
             ),
         )
@@ -203,50 +129,28 @@ class MesasView(ft.Container):
     # ------------------------------------------------------------------
     def _crear_fila(self, mesa: dict):
         return ft.Container(
-            bgcolor="#f8f1de",
-            padding=ft.Padding.symmetric(horizontal=18, vertical=14),
-            border=ft.Border.only(bottom=ft.BorderSide(1, "#eadfca")),
+            height=60,
+            border=ft.Border.only(bottom=ft.BorderSide(1, C.linea)),
             content=ft.Row(
                 controls=[
-                    ft.Text(
-                        mesa.get("nombre") or "",
-                        size=15,
-                        font_family="Georgia",
-                        italic=True,
-                        weight="bold",
-                        color="#1c1610",
-                        expand=True,
-                    ),
+                    ft.Icon(ft.Icons.TABLE_RESTAURANT_OUTLINED, color=C.texto_suave, size=20),
+                    texto(mesa.get("nombre") or "", 14, titulo=True, expand=True,
+                          max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                     ft.Row(
                         controls=[
-                            self._accion(
-                                ft.Icons.EDIT_OUTLINED,
-                                on_click=lambda e, m=mesa: self._on_editar_click(m),
-                                tooltip="Renombrar mesa",
-                            ),
-                            self._accion(
-                                ft.Icons.DELETE_OUTLINE,
-                                on_click=lambda e, m=mesa: self._on_eliminar_click(m),
-                                tooltip="Eliminar mesa",
-                            ),
+                            boton_icono(ft.Icons.EDIT_OUTLINED,
+                                        lambda e, m=mesa: self._on_editar_click(m),
+                                        "Renombrar mesa"),
+                            boton_icono(ft.Icons.DELETE_OUTLINE,
+                                        lambda e, m=mesa: self._on_eliminar_click(m),
+                                        "Eliminar mesa"),
                         ],
-                        spacing=4,
+                        spacing=8,
                     ),
                 ],
+                spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-        )
-
-    def _accion(self, icono: str, on_click=None, tooltip: str = None):
-        return ft.Container(
-            content=ft.Icon(icono, size=16, color="#756b5e"),
-            width=30,
-            height=30,
-            alignment=ft.Alignment(0, 0),
-            border_radius=15,
-            ink=True,
-            on_click=on_click,
-            tooltip=tooltip,
         )
 
     # ------------------------------------------------------------------
@@ -281,20 +185,8 @@ class MesasView(ft.Container):
             return
         self.router.page.run_task(self._cargar_mesas)
 
-    def _mostrar_error_temporal(self, mensaje: str, duracion_seg: int = 4):
-        self._banner_token += 1
-        token = self._banner_token
-        self.texto_banner_error.value = mensaje
-        self.banner_error.visible = True
-        self.banner_error.update()
-        self.router.page.run_task(self._ocultar_banner_luego, token, duracion_seg)
-
-    async def _ocultar_banner_luego(self, token: int, duracion_seg: int):
-        await asyncio.sleep(duracion_seg)
-        if token != self._banner_token:
-            return
-        self.banner_error.visible = False
-        self.banner_error.update()
+    def _mostrar_error_temporal(self, mensaje: str):
+        aviso(self.router.page, mensaje)
 
     def _on_guardado(self):
         self.router.page.run_task(self._cargar_mesas)

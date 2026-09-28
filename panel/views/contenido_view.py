@@ -71,6 +71,9 @@ import asyncio
 import traceback
 
 import flet as ft
+
+from views.piezas import fondo_pagina
+from views.tema import C
 import httpx
 
 from models.generador_anuncios import generar_anuncio
@@ -105,7 +108,8 @@ class ContenidoView(ft.Container):
         self.router = router
         self.expand = True
         self.height = float("inf")
-        self.bgcolor = "#fbf5e9"
+        self.bgcolor = C.fondo
+        self.gradient = fondo_pagina()
         self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
 
         # El catálogo de plantillas ya está en memoria desde que se
@@ -141,23 +145,23 @@ class ContenidoView(ft.Container):
         # bien), este se queda visible hasta que el dueño lo resuelve o
         # avanza — es un bloqueo real para seguir en el asistente (texto
         # incompleto, sin conexión al generar), no un aviso de cortesía.
-        self.texto_banner_error = ft.Text("", size=12, color="#a33c39", expand=True)
+        self.texto_banner_error = ft.Text("", size=12, color=C.texto_suave, expand=True)
         self.banner_error = ft.Container(
             visible=False,
-            bgcolor="#f7e4e3",
-            border=ft.Border.all(1, "#d9534f"),
+            bgcolor=C.pozo,
+            border=ft.Border.all(1, C.texto_suave),
             border_radius=12,
             padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color="#d9534f"),
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color=C.texto_suave),
                     self.texto_banner_error,
                 ],
                 spacing=8,
             ),
         )
 
-        self.texto_subtitulo = ft.Text(_SUBTITULOS[1], size=15, color="#7c7267")
+        self.texto_subtitulo = ft.Text(_SUBTITULOS[1], size=15, color=C.texto_suave)
         self.fila_pasos = ft.Row(
             controls=self._construir_pasos(),
             spacing=14,
@@ -166,13 +170,13 @@ class ContenidoView(ft.Container):
             alignment=ft.MainAxisAlignment.START,
         )
         self.tarjeta = ft.Container(
-            bgcolor="#f8f1de",
+            bgcolor=C.cara,
             border_radius=24,
             padding=ft.Padding.only(left=28, right=28, top=26, bottom=24),
             shadow=ft.BoxShadow(
                 blur_radius=22,
                 spread_radius=1,
-                color=ft.Colors.with_opacity(0.22, "#030303"),
+                color=C.sombra,
                 offset=ft.Offset(0, 7),
             ),
             content=self._construir_paso(),
@@ -184,13 +188,12 @@ class ContenidoView(ft.Container):
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
             controls=[
-                ft.Text("CREAR CONTENIDO", size=13, weight="bold", color="#b58a6d"),
+                ft.Text("CREAR CONTENIDO", size=13, font_family="LetraTitulo", color=C.texto_suave),
                 ft.Text(
                     "Hagamos algo bonito para Instagram",
                     size=42,
-                    font_family="Georgia",
-                    italic=True,
-                    color="#18120d",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                 ),
                 self.texto_subtitulo,
                 ft.Container(height=24),
@@ -280,33 +283,33 @@ class ContenidoView(ft.Container):
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(ft.Icons.CHECK, color="#ffffff", size=16)
+                        content=ft.Icon(ft.Icons.CHECK, color=C.fondo, size=16)
                         if completado
-                        else ft.Text(str(numero), color="#ffffff", size=14, weight="bold"),
+                        else ft.Text(str(numero), color=C.texto, size=14, font_family="LetraTitulo"),
                         width=32,
                         height=32,
                         alignment=ft.Alignment(0, 0),
-                        bgcolor="#7d8545" if completado else "#0d0905",
+                        bgcolor=C.texto if completado else C.cara_encendida,
                         border_radius=16,
                     ),
                     ft.Text(
                         texto,
-                        color="#1c1610" if activo else "#7c7267",
+                        color=C.texto if activo else C.texto_suave,
                         size=14,
-                        weight="bold" if activo else "normal",
+                        font_family="LetraTitulo" if activo else "LetraTexto",
                         expand=True,
                     ),
                 ],
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="#fbf5e9",
+            bgcolor=C.fondo,
             border_radius=28,
             padding=ft.Padding.symmetric(horizontal=14, vertical=9),
             shadow=ft.BoxShadow(
                 blur_radius=10 if activo else 6,
                 spread_radius=0,
-                color=ft.Colors.with_opacity(0.20 if activo else 0.10, "#f4ca83"),
+                color=C.sombra,
                 offset=ft.Offset(0, 3),
             ),
         )
@@ -329,33 +332,33 @@ class ContenidoView(ft.Container):
         if cargando:
             contenido = ft.Row(
                 controls=[
-                    ft.ProgressRing(width=16, height=16, stroke_width=2, color="#f4ca83"),
-                    ft.Text(texto_cargando, color="#ffffff", weight="bold", size=14),
+                    ft.ProgressRing(width=16, height=16, stroke_width=2, color=C.texto),
+                    ft.Text(texto_cargando, color=C.texto, font_family="LetraTitulo", size=14),
                 ],
                 spacing=10,
             )
         else:
             contenido = ft.Row(
                 controls=[
-                    ft.Icon(icono, color="#ffa200" if habilitado else "#c9bda3", size=18),
+                    ft.Icon(icono, color=C.texto if habilitado else C.tenue, size=18),
                     ft.Text(
                         texto,
-                        color="#ffffff" if habilitado else "#8a7e72",
+                        color=C.texto if habilitado else C.texto_suave,
                         size=14,
-                        weight="bold",
+                        font_family="LetraTitulo",
                     ),
                 ],
                 spacing=8,
             )
         return ft.Container(
             content=contenido,
-            bgcolor="#0d0905" if (habilitado or cargando) else "#eadfca",
+            bgcolor=C.cara_encendida if (habilitado or cargando) else C.linea,
             padding=ft.Padding.symmetric(horizontal=24, vertical=13),
             border_radius=28,
             shadow=(
                 ft.BoxShadow(
                     blur_radius=10,
-                    color=ft.Colors.with_opacity(0.28, ft.Colors.BLACK),
+                    color=C.sombra,
                     offset=ft.Offset(0, 4),
                 )
                 if (habilitado or cargando)
@@ -370,13 +373,13 @@ class ContenidoView(ft.Container):
         # dialogo_platillo.py — borde neutro, sin relleno.
         controles = []
         if icono:
-            controles.append(ft.Icon(icono, size=16, color="#5e5449"))
-        controles.append(ft.Text(texto, color="#5e5449", weight="bold", size=14))
+            controles.append(ft.Icon(icono, size=16, color=C.texto_suave))
+        controles.append(ft.Text(texto, color=C.texto_suave, font_family="LetraTitulo", size=14))
         return ft.Container(
             content=ft.Row(controls=controles, spacing=8, tight=True,
                             alignment=ft.MainAxisAlignment.CENTER),
             bgcolor=ft.Colors.TRANSPARENT,
-            border=ft.Border.all(1, "#eadfca"),
+            border=ft.Border.all(1, C.linea),
             border_radius=28,
             padding=ft.Padding.symmetric(horizontal=22, vertical=13),
             ink=True,
@@ -387,8 +390,8 @@ class ContenidoView(ft.Container):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ARROW_BACK, size=14, color="#8a7e72"),
-                    ft.Text("Atrás", color="#8a7e72", weight="bold", size=13),
+                    ft.Icon(ft.Icons.ARROW_BACK, size=14, color=C.texto_suave),
+                    ft.Text("Atrás", color=C.texto_suave, font_family="LetraTitulo", size=13),
                 ],
                 spacing=6,
             ),
@@ -404,7 +407,7 @@ class ContenidoView(ft.Container):
         if boton_atras is not None:
             controles.append(boton_atras)
         controles.append(
-            ft.Text(hint, size=13, color="#8a7e72", italic=True, expand=True)
+            ft.Text(hint, size=13, color=C.texto_suave, expand=True)
         )
         controles.append(boton_principal)
         return ft.Row(controls=controles, vertical_alignment=ft.CrossAxisAlignment.CENTER)
@@ -421,15 +424,13 @@ class ContenidoView(ft.Container):
                 ft.Text(
                     "Elige tu diseño",
                     size=22,
-                    font_family="Georgia",
-                    weight="bold",
-                    italic=True,
-                    color="#1c1610",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                 ),
                 ft.Text(
                     "Una de estas 4 plantillas es el fondo de tu anuncio.",
                     size=13,
-                    color="#7c7267",
+                    color=C.texto_suave,
                 ),
                 ft.Container(height=22),
                 ft.Row(
@@ -470,15 +471,15 @@ class ContenidoView(ft.Container):
                             border_radius=12,
                         ),
                         border_radius=14,
-                        border=ft.Border.all(3, "#d9ad4e") if seleccionada else None,
+                        border=ft.Border.all(3, C.texto) if seleccionada else None,
                         shadow=ft.BoxShadow(
                             blur_radius=10,
-                            color=ft.Colors.with_opacity(0.22, ft.Colors.BLACK),
+                            color=C.sombra,
                             offset=ft.Offset(0, 4),
                         ),
                     ),
                     self._circulo_seleccion(seleccionada),
-                    ft.Text(plantilla.nombre_bonito, size=11, color="#806f61"),
+                    ft.Text(plantilla.nombre_bonito, size=11, color=C.texto_suave),
                 ],
             ),
         )
@@ -488,10 +489,10 @@ class ContenidoView(ft.Container):
             width=24,
             height=24,
             border_radius=12,
-            bgcolor="#d9ad4e" if seleccionada else "#fbf5e9",
-            border=ft.Border.all(2, "#d9ad4e"),
+            bgcolor=C.texto if seleccionada else C.fondo,
+            border=ft.Border.all(2, C.texto),
             alignment=ft.Alignment(0, 0),
-            content=ft.Icon(ft.Icons.CHECK, size=14, color="#ffffff") if seleccionada else None,
+            content=ft.Icon(ft.Icons.CHECK, size=14, color=C.fondo) if seleccionada else None,
         )
 
     def _on_elegir_plantilla(self, id_plantilla: str):
@@ -532,16 +533,14 @@ class ContenidoView(ft.Container):
                 ft.Text(
                     "Elige el platillo",
                     size=22,
-                    font_family="Georgia",
-                    weight="bold",
-                    italic=True,
-                    color="#1c1610",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                 ),
                 ft.Text(
                     "Solo se muestran los platillos que ya tienen su foto "
                     "recortada lista.",
                     size=13,
-                    color="#7c7267",
+                    color=C.texto_suave,
                 ),
                 ft.Container(height=22),
                 ft.Row(
@@ -586,8 +585,8 @@ class ContenidoView(ft.Container):
             spacing=12,
             controls=[
                 ft.Container(height=20),
-                ft.ProgressRing(width=28, height=28, stroke_width=3, color="#f4ca83"),
-                ft.Text("Cargando tus platillos...", size=13, color="#7c7267"),
+                ft.ProgressRing(width=28, height=28, stroke_width=3, color=C.texto),
+                ft.Text("Cargando tus platillos...", size=13, color=C.texto_suave),
                 ft.Container(height=20),
             ],
         )
@@ -599,12 +598,12 @@ class ContenidoView(ft.Container):
             spacing=8,
             controls=[
                 ft.Container(height=10),
-                ft.Icon(ft.Icons.ERROR_OUTLINE, size=30, color="#d9534f"),
+                ft.Icon(ft.Icons.ERROR_OUTLINE, size=30, color=C.texto_suave),
                 ft.Text(
                     "No se pudieron cargar los platillos.", size=14,
-                    weight="bold", color="#5e5449",
+                    font_family="LetraTitulo", color=C.texto_suave,
                 ),
-                ft.Text("Revisa tu internet e intenta de nuevo.", size=12, color="#8a7e72"),
+                ft.Text("Revisa tu internet e intenta de nuevo.", size=12, color=C.texto_suave),
                 ft.Container(height=14),
                 self._boton_principal(
                     "Reintentar", self._on_reintentar_platillos, icono=ft.Icons.REFRESH
@@ -626,14 +625,14 @@ class ContenidoView(ft.Container):
             spacing=8,
             controls=[
                 ft.Container(height=10),
-                ft.Icon(ft.Icons.RESTAURANT_MENU_OUTLINED, size=30, color="#c9bda3"),
+                ft.Icon(ft.Icons.RESTAURANT_MENU_OUTLINED, size=30, color=C.tenue),
                 ft.Text(
                     "Todavía no hay ningún platillo con foto recortada.",
-                    size=14, weight="bold", color="#5e5449", text_align=ft.TextAlign.CENTER,
+                    size=14, font_family="LetraTitulo", color=C.texto_suave, text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Text(
                     "Genera el recorte de un platillo desde \"Mi menú\" y vuelve aquí.",
-                    size=12, color="#8a7e72", text_align=ft.TextAlign.CENTER,
+                    size=12, color=C.texto_suave, text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Container(height=14),
                 self._boton_atras(lambda e: self._ir_a(1)),
@@ -656,10 +655,10 @@ class ContenidoView(ft.Container):
                         width=176,
                         height=198,
                         border_radius=14,
-                        bgcolor="#f3ead4",
+                        bgcolor=C.cara,
                         padding=8,
-                        border=ft.Border.all(3, "#d9ad4e") if seleccionado
-                        else ft.Border.all(1, "#eadfca"),
+                        border=ft.Border.all(3, C.texto) if seleccionado
+                        else ft.Border.all(1, C.linea),
                         content=ft.Image(
                             src=imagen,
                             width=160,
@@ -673,8 +672,8 @@ class ContenidoView(ft.Container):
                     ),
                     self._circulo_seleccion(seleccionado),
                     ft.Text(
-                        platillo.get("nombre") or "", size=11, color="#806f61",
-                        weight="bold", text_align=ft.TextAlign.CENTER,
+                        platillo.get("nombre") or "", size=11, color=C.texto_suave,
+                        font_family="LetraTitulo", text_align=ft.TextAlign.CENTER,
                     ),
                 ],
             ),
@@ -709,8 +708,7 @@ class ContenidoView(ft.Container):
                         "Escríbela una sola vez -- el diseño la repite solo "
                         "varias veces.",
                         size=11,
-                        color="#8a7e72",
-                        italic=True,
+                        color=C.texto_suave,
                         width=460,
                     )
                 )
@@ -724,15 +722,13 @@ class ContenidoView(ft.Container):
                 ft.Text(
                     "Escribe el texto",
                     size=22,
-                    font_family="Georgia",
-                    weight="bold",
-                    italic=True,
-                    color="#1c1610",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                 ),
                 ft.Text(
                     f'Así se verá en la plantilla "{plantilla.nombre_bonito}".',
                     size=13,
-                    color="#7c7267",
+                    color=C.texto_suave,
                 ),
                 ft.Container(height=22),
                 ft.Column(
@@ -758,11 +754,11 @@ class ContenidoView(ft.Container):
             width=460,
             height=52,
             border_radius=16,
-            border_color="#eadfca",
-            focused_border_color="#f4ca83",
-            bgcolor="#f8f1de",
-            color="#5e5449",
-            hint_style=ft.TextStyle(color="#9b8f7e"),
+            border_color=C.linea,
+            focused_border_color=C.texto,
+            bgcolor=C.cara,
+            color=C.texto_suave,
+            hint_style=ft.TextStyle(color=C.texto_suave),
             text_size=14,
             on_change=lambda e, c=campo: self._textos.__setitem__(c, e.control.value),
         )
@@ -796,15 +792,13 @@ class ContenidoView(ft.Container):
                 ft.Text(
                     "Elige el formato",
                     size=22,
-                    font_family="Georgia",
-                    weight="bold",
-                    italic=True,
-                    color="#1c1610",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                 ),
                 ft.Text(
                     "¿Post normal para el feed, o historia vertical?",
                     size=13,
-                    color="#7c7267",
+                    color=C.texto_suave,
                 ),
                 ft.Container(height=22),
                 ft.Row(controls=opciones, spacing=18, alignment=ft.MainAxisAlignment.CENTER),
@@ -840,24 +834,24 @@ class ContenidoView(ft.Container):
                     ft.Text(
                         formato.nombre_bonito,
                         size=16,
-                        color="#1c1610" if activa else "#8a7e72",
-                        weight="bold" if activa else "normal",
+                        color=C.texto if activa else C.texto_suave,
+                        font_family="LetraTitulo" if activa else "LetraTexto",
                     ),
                     ft.Text(
                         f"{ancho} × {alto}",
                         size=11,
-                        color="#8a7e72" if activa else "#a89a86",
+                        color=C.texto_suave if activa else C.texto_suave,
                     ),
                 ],
             ),
-            bgcolor="#f8f1de" if activa else "#f4edde",
+            bgcolor=C.cara if activa else C.cara,
             padding=ft.Padding.symmetric(horizontal=26, vertical=14),
             border_radius=22,
-            border=ft.Border.all(2, "#d9ad4e") if activa else None,
+            border=ft.Border.all(2, C.texto) if activa else None,
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 spread_radius=0,
-                color=ft.Colors.with_opacity(0.22 if activa else 0.08, "#030303"),
+                color=C.sombra,
                 offset=ft.Offset(0, 3),
             ),
         )
@@ -926,32 +920,30 @@ class ContenidoView(ft.Container):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=0,
             controls=[
-                ft.Icon(ft.Icons.CHECK_CIRCLE, size=34, color="#7d8545"),
+                ft.Icon(ft.Icons.CHECK_CIRCLE, size=34, color=C.texto),
                 ft.Container(height=10),
                 ft.Text(
                     "¡Tu anuncio ya está listo!",
                     size=22,
-                    font_family="Georgia",
-                    italic=True,
-                    weight="bold",
-                    color="#1c1610",
+                    font_family="LetraTitulo",
+                    color=C.texto,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Text(
                     "Se guardó automáticamente en tu biblioteca -- no hace "
                     "falta guardarlo aparte.",
                     size=13,
-                    color="#7c7267",
+                    color=C.texto_suave,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 ft.Container(height=22),
                 ft.Container(
-                    bgcolor="#eee5cf",
+                    bgcolor=C.cara,
                     border_radius=14,
                     padding=8,
                     shadow=ft.BoxShadow(
                         blur_radius=14,
-                        color=ft.Colors.with_opacity(0.22, ft.Colors.BLACK),
+                        color=C.sombra,
                         offset=ft.Offset(0, 5),
                     ),
                     content=ft.Image(

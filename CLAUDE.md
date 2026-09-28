@@ -11,7 +11,7 @@ Guidance for Claude Code in this repo. **Kept deliberately short**: it holds cur
 
 Images live in **Cloudflare R2** (never Supabase Storage — keep it at zero buckets). The system is also being turned into a **resellable white-label template** rented semi-annually to other restaurants (one Supabase project per client).
 
-**The phased roadmap lives in `Hey Claude Code, read this file..txt` (gitignored) — read it at the start of a session.** Status: Phases 1–7 done. Only **Fase 8** remains (cleanup: `home_view.py`'s fake numbers, and the owner's own visual pass on the public site).
+**The phased roadmap lives in `planes/Hey Claude Code, read this file..txt`, and the current panel redesign plan in `planes/plan panel.txt` (the whole `planes/` folder is gitignored) — read them at the start of a session.** Status: Phases 1–7 done. Only **Fase 8** remains (cleanup: `home_view.py`'s fake numbers, and the owner's own visual pass on the public site).
 
 **Layout**: the whole Flet panel lives in **`panel/`** (`main.py`, `controllers/`, `views/`, `models/`, `herramientas/`, its own `assets/`, the generated `biblioteca/`). **Every panel path in this file (`views/…`, `models/…`, `assets/…`, `herramientas/…`) is relative to `panel/`.** The repo root holds only the static site (+ its own `assets/`: `frames/`, `logomonky.png`, `sin-foto.png`, …), `cloudflare/`, `panel_licencias/`, the shared `.env` and `requirements.txt`. `logomonky.png`/`sin-foto.png` exist in both `assets/` folders on purpose (each half is self-contained). `panel/main.py` `os.chdir`s to its own folder, so relative paths (Flet and Pillow) work no matter where it's launched from; the models load `.env` from the repo root (`parents[2]`).
 
@@ -19,7 +19,7 @@ Roles: the chat user is the **developer**; "el dueño"/"the owner" in docs is th
 
 ## Secrets & repo safety
 
-- **The repo is PUBLIC** (`github.com/mateo777g/proyectotaku`). Before every commit check `.gitignore` still covers `.env`, `Hey Claude Code, read this file..txt`, `EJEMPLOS 2/`, `biblioteca/`, `clientes.json`.
+- **The repo is PUBLIC** (`github.com/mateo777g/proyectotaku`). Before every commit check `.gitignore` still covers `.env`, `planes/`, `EJEMPLOS 2/`, `biblioteca/`, `clientes.json`, `panel/config.json`.
 - `.env` (real `KEY=value`): `SUPABASE_URL`, `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `SUPABASE_ACCESS_TOKEN` (Management API PAT, DDL only), `SUPABASE_ADMIN_EMAIL`, `OPENAI_API_KEY`, optional `OPENAI_MODEL`, `CLOUDFLARE_WORKER_URL`, `CLOUDFLARE_R2_PUBLIC_BASE`, plus admin-only `CLOUDFLARE_API_TOKEN`/`_ACCOUNT_ID`/`_R2_BUCKET`. Never print/log/copy values; reference via env vars.
 - **No service_role key, ever.** If a write fails, check the admin session — never add service_role or loosen `anon` policies.
 - Passwords (owner + developer licence user) are in the roadmap `.txt` under "AUTENTICACIÓN DEL PANEL". Use them for real end-to-end tests (read them from the file in Python, not on a command line). Never copy them into `.env`, a tracked file, or console output. Cloudflare redeploy recipe is also there ("ACCESO A CLOUDFLARE").
@@ -93,15 +93,15 @@ Bucket `takumonky`, Worker `taku-monky-uploads` (on `takumonky5.workers.dev`). S
 - `contenido_view.py` → `biblioteca_view.py` → `ajustes_view.py` — ad generator, gallery, settings (see Fase 7 below).
 - Views are rebuilt from scratch on every navigation; no caching anywhere in the panel.
 
-## AI agent (`models/ia_controller.py`, `models/venta_dao.py`, `views/agenteIA_view.py`)
+## AI agent (`models/ia_controller.py`, `models/saludo_ia.py`, `models/venta_dao.py`, `views/agenteIA_view.py`)
 
-- OpenAI SDK, default model **`gpt-4o-mini`** (override `OPENAI_MODEL`). No Anthropic key needed.
+- OpenAI SDK, default model **`gpt-4o`** for the conversation (override `OPENAI_MODEL`); the welcome greeting uses **`gpt-4o-mini`** (`models/saludo_ia.py`, override `OPENAI_MODEL_SALUDO`). No Anthropic key needed.
 - Each question re-reads `platillos`/`mesas`/`ventas`/`venta_items`, flattens them into the system prompt with local-time dates. `VentaDAO` is read-only, capped at 500 ventas.
 - **Python does all arithmetic** (`_resumen_calculado`: totals per period/table/day/product, per period incl. this month, plus a `TOTAL POR PRODUCTO` line). The prompt tells the model to copy numbers, never re-sum. Don't remove this — the model mis-summed real data. Only closed sales count; open tabs reported separately. Business day runs 6:00→6:00 (`_HORA_CORTE_DEL_DIA = 6`).
 - Normalization: table names unified case-insensitively (catalog name wins); products grouped by `platillo_id` (names collide), falling back to name only for deleted platillos.
 - **Scope rule stays at the top of the prompt**: only this business; off-topic → one-line refusal, no "just this once" overrides.
 - The three "Ideas para ti" shortcut prompts (today/week/month, by product, never by table) say the total goes **below** the table, not as a table row — otherwise the model sums a column wrongly.
-- Welcome greeting is generated by `IAController.saludo()` (random form + tone, gender-neutral filter `_MARCA_GENERO`, one retry, silent local fallback — never a red banner).
+- Welcome greeting lives entirely in `models/saludo_ia.py` (`redactar()` (random form + tone, gender-neutral filter `_MARCA_GENERO`, one retry, silent local fallback — never a red banner). Pre-written: the same module keeps ONE greeting in reserve (requested at app start on the login screen — it needs no session — again in `mostrar_panel()`, and each time the view takes one), discarded if the nickname or time of day changed; the view shows it from the first frame, or the local fallback instantly if none is ready (never a blank, never swapped afterwards).
 - UI: two states (welcome centered / chat with input anchored bottom, width `ANCHO_CHAT=720`). Enter sends, Shift+Enter newline; send button appears only with text (orange square in welcome, plain icon in chat, same size). Answers render with `ft.Markdown` (GFM, `soft_line_break=True`) in Georgia 16 / 1.55 line-height; tables and code stay non-Georgia. Answers reveal line by line (`_partir_en_renglones`/`_revelar`; tables/code/quotes as one block), then are swapped for one `ft.Markdown` so selection works. "Pensando..." uses the animated `assets/logo-pensando.webp` (regenerate with `python herramientas/generar_logo_pensando.py` from `assets/svg/`); never a Python-driven frame timer. `_quitar_indicador()` removes the thinking row only if present — keep it.
 
 ## Content creation (Fase 7 — done)
@@ -111,8 +111,8 @@ Flow: template → platillo (only those with `image_url_recortada`, category Pla
 - `models/plantillas.py` — the only reader of `assets/taku-plantillas/zones.json`. 4 templates (`01-topografico` headline only, `02-naranja`/`03-blanca` headline+subline, `04-negra` `headline_stack` repeated 7×). `campos_texto` tells the form which fields to show.
 - `models/generador_anuncios.py` — `generar_anuncio(...)` composes background → logo → text → photo with Pillow and writes straight to `biblioteca/` (`RUTA_BIBLIOTECA`), returning a forward-slash path. Backgrounds are pre-rasterized at **2×** in `png-final/` (`herramientas/generar_fondos_plantillas.py`, constant `ESCALA`). The logo box is trimmed below the pre-painted spark (`_caja_logo_bajo_destello`). Text is uppercased and shrunk to fit `max_w`. Photos cached in memory — always return `.copy()`.
 - Ad font is **League Spartan Black** (`assets/fuentes/`, OFL) as a stand-in for Lovelo (not bundled: personal-use licence). Georgia is the panel font, never the ads'. Wordmark PNGs: `assets/logo-wordmark-{blanco,naranja}.png` (`herramientas/generar_wordmark.py`); emblem: `assets/logo-emblema.png` (`logomonky.png` stays untouched for the sidebar). `assets/img1-4.png` are the finished mockups of the 4 templates (used as thumbnails).
-- `models/config_usuario.py` — secondary export folder in `%LOCALAPPDATA%\TakuMonky\config.json`, fallback `~/Downloads`. Read by `biblioteca_view.py`, written by `ajustes_view.py` (only on "Guardar ajustes").
-- `ajustes_view.py` also has "Cerrar sesión" → `router.cerrar_sesion()` on the UI thread (it rebuilds the page).
+- `models/config_usuario.py` — owns **`panel/config.json`** (gitignored in `panel/.gitignore`, Anxie-style): `ruta_exportacion` (fallback `~/Downloads`), `nombre_completo`/`como_llamarte` (`models/perfil.py`), `tema` (`views/tema.py`). Everyone writes through `guardar_config()`, which only changes its own keys. Migrates once from the old `%LOCALAPPDATA%\TakuMonky\config.json` (left in place).
+- `ajustes_view.py`'s bottom card is **Tema** (Oscuro/Claro `interruptor` from `views/piezas.py`) → `router.cambiar_tema()` saves and rebuilds Ajustes. "Cerrar sesión" lives only in the sidebar (`views/barra_lateral.py`).
 - `herramientas/` = one-off scripts the developer runs by hand; nothing the app imports.
 
 ## Public menu site (`index.html`, `menu-*.html`, `style.css`, `catalogo.css`, `catalogo.js`, `menu.js`, `carrusel.js`, `carta.js`, `hero-animacion.js`)

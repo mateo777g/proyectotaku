@@ -40,5 +40,10 @@ clientes.json
 # esta linea.
 biblioteca/
 
-# Planes, roadmap y guías: documentación privada, fuera del repo público.
-planes/
+guia panel flet diseno y optimizacion.txt
+
+# La configuración de quien usa el panel (carpeta de exportación, nombre, tema):
+# models/config_usuario.py la escribe aquí, junto a main.py, como en Anxie.
+# Trae el nombre completo y rutas de su PC, y el repo es PÚBLICO.
+config.json
+config.json.tmp

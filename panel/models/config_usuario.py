@@ -1,7 +1,8 @@
 """
 models/config_usuario.py
-Configuración del dueño que vive FUERA del repo — hoy solo la ruta
-secundaria de exportación que usa views/biblioteca_view.py (Fase 7.4).
+Configuración de quien usa el panel (panel/config.json): la ruta
+secundaria de exportación que usa views/biblioteca_view.py (Fase 7.4), el
+perfil y el tema. Ver "DÓNDE SE GUARDA".
 
 NOTA DE ALCANCE, explícita a propósito (pedida así en el prompt de la Fase
 7.4 en vez de asumirse en silencio): este archivo NO es la pantalla de
@@ -17,46 +18,84 @@ en un solo lugar y las dos lo leen." obtener_ruta_exportacion() sigue
 cayendo a ~/Downloads cuando el dueño nunca guardó nada (o la ruta
 guardada ya no existe en disco) — ver esa función.
 
-DÓNDE SE GUARDA — la pregunta que el roadmap dejó abierta en el bloque
-"CÓMO SE ARMA" de la Fase 7 ("LO ÚNICO QUE PROPONGO CAMBIAR" frente a
-EJEMPLOS 2, que usa un config.json en la raíz del repo): aquí se sigue la
-convención que este proyecto ya sentó en otros tres lugares (sesion.json,
-mientras existió; huerfanos_r2.json; panel_licencias/clientes.json) en vez
-de esa — la configuración del usuario vive en %LOCALAPPDATA%\\TakuMonky\\,
-fuera del repo. Dos razones, no solo la de siempre: (1) es la convención
-ya sentada, y (2) este repo es PÚBLICO — un config.json rastreado
-publicaría la ruta real de la máquina del dueño en cuanto se hiciera commit
-con una ruta ya guardada.
+DÓNDE SE GUARDA (28/09, a pedido del dueño, como en Anxie): en un solo
+config.json dentro de la carpeta del panel (panel/config.json, junto a
+main.py), con todo lo de quien usa el panel: la carpeta de exportación
+("ruta_exportacion"), el perfil ("nombre_completo", "como_llamarte",
+models/perfil.py) y el tema ("tema", views/tema.py). Está en
+panel/.gitignore: trae el nombre completo y rutas de la PC, y el repo es
+PÚBLICO. Antes vivía en %LOCALAPPDATA%/TakuMonky/config.json; si ese
+existe y el nuevo todavía no, se copia una vez (_migrar_config_viejo()).
 
 Sin flet y sin Pillow, mismo estilo que models/tiempo.py: es solo datos de
 configuración, nada que dependa de la UI.
 """
 import json
 import os
+import traceback
 from pathlib import Path
 
-_NOMBRE_CARPETA = "TakuMonky"
-_ARCHIVO_CONFIG = "config.json"
+# La carpeta del panel (panel/), no el directorio actual: así el archivo
+# cae en el mismo sitio aunque alguien importe esto sin pasar por main.py.
+_RUTA_CONFIG = Path(__file__).resolve().parents[1] / "config.json"
 _CLAVE_RUTA_EXPORTACION = "ruta_exportacion"
 
 
-def _ruta_archivo_config() -> Path:
+def _ruta_config_vieja() -> Path:
     base = os.getenv("LOCALAPPDATA") or str(Path.home())
-    carpeta = Path(base) / _NOMBRE_CARPETA
-    carpeta.mkdir(parents=True, exist_ok=True)
-    return carpeta / _ARCHIVO_CONFIG
+    return Path(base) / "TakuMonky" / "config.json"
+
+
+def _migrar_config_viejo() -> None:
+    """Una sola vez: si todavía no hay panel/config.json pero sí el de
+    %LOCALAPPDATA%, se copia su contenido para no perder la carpeta y el
+    perfil ya guardados. El viejo se deja donde está (no se borra nada)."""
+    if _RUTA_CONFIG.exists():
+        return
+    vieja = _ruta_config_vieja()
+    try:
+        if vieja.exists():
+            datos = json.loads(vieja.read_text(encoding="utf-8"))
+            if isinstance(datos, dict):
+                _escribir(datos)
+    except (OSError, json.JSONDecodeError):
+        traceback.print_exc()
+
+
+def _escribir(datos: dict) -> None:
+    # A un .tmp y luego os.replace: un corte a medias no deja config.json roto.
+    temporal = _RUTA_CONFIG.with_suffix(".json.tmp")
+    temporal.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(temporal, _RUTA_CONFIG)
 
 
 def _leer_config() -> dict:
-    ruta = _ruta_archivo_config()
+    _migrar_config_viejo()
     try:
-        return json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else {}
+        return json.loads(_RUTA_CONFIG.read_text(encoding="utf-8")) if _RUTA_CONFIG.exists() else {}
     except (OSError, json.JSONDecodeError):
         # Un config.json corrupto no debe tumbar el panel -- se trata igual
         # que "el dueño nunca configuró nada", mismo criterio que ya sigue
         # _registrar_huerfano() en cloudflare_storage.py con su propio
         # archivo fuera del repo.
         return {}
+
+
+def leer_config() -> dict:
+    """Todo config.json como diccionario ({} si no existe o está roto). Lo
+    comparten la ruta de exportación, el perfil (models/perfil.py) y el tema
+    (views/tema.py): cada uno cambia SOLO sus claves con guardar_config()."""
+    datos = _leer_config()
+    return datos if isinstance(datos, dict) else {}
+
+
+def guardar_config(cambios: dict) -> None:
+    """Cambia solo las claves de `cambios` y deja las demás como estaban.
+    Escribe a un .tmp y lo cambia por el bueno (os.replace): un corte a
+    medias no deja config.json roto."""
+    datos = leer_config()
+    datos.update(cambios)
+    _escribir(datos)
 
 
 def obtener_ruta_exportacion() -> str:
@@ -78,8 +117,4 @@ def guardar_ruta_exportacion(ruta: str) -> None:
     """Persiste la ruta elegida. Pensada para llamarse al pulsar "Guardar
     Ajustes" en la 7.5 -- NO en cuanto Tkinter la devuelve -- mismo
     criterio que ya sigue EJEMPLOS 2 (ver el roadmap, "LOS AJUSTES")."""
-    config = _leer_config()
-    config[_CLAVE_RUTA_EXPORTACION] = os.path.normpath(ruta)
-    _ruta_archivo_config().write_text(
-        json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    guardar_config({_CLAVE_RUTA_EXPORTACION: os.path.normpath(ruta)})
