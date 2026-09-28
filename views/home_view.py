@@ -183,10 +183,10 @@ class HomeView(ft.Container):
                             border_radius=20,
                             padding=22,
                             shadow=ft.BoxShadow(
-                                blur_radius=12,
+                                blur_radius=16,
                                 spread_radius=0,
-                                color=ft.Colors.with_opacity(0.28, "#ffa200"),
-                                offset=ft.Offset(0, 4)
+                                color=ft.Colors.with_opacity(0.24, ft.Colors.BLACK),
+                                offset=ft.Offset(0, 6)
                             ),
                             content=ft.Column(
                                 controls=[
@@ -221,7 +221,7 @@ class HomeView(ft.Container):
                             shadow=ft.BoxShadow(
                                 blur_radius=16,
                                 spread_radius=0,
-                                color=ft.Colors.with_opacity(0.36, ft.Colors.BLACK),
+                                color=ft.Colors.with_opacity(0.24, ft.Colors.BLACK),
                                 offset=ft.Offset(0, 6)
                             ),
                             content=ft.Column(
@@ -273,10 +273,10 @@ class HomeView(ft.Container):
                     border_radius=20,
                     padding=22,
                     shadow=ft.BoxShadow(
-                        blur_radius=12,
+                        blur_radius=16,
                         spread_radius=0,
-                        color=ft.Colors.with_opacity(0.28, "#ffa200"),
-                        offset=ft.Offset(0, 4)
+                        color=ft.Colors.with_opacity(0.24, ft.Colors.BLACK),
+                        offset=ft.Offset(0, 6)
                     ),
                     content=ft.Column(
                         controls=[
@@ -309,10 +309,10 @@ class HomeView(ft.Container):
             border_radius=18,
             padding=22,
             shadow=ft.BoxShadow(
-                blur_radius=10,
+                blur_radius=16,
                 spread_radius=0,
-                color=ft.Colors.with_opacity(0.28, "#ffa200"),
-                offset=ft.Offset(0, 3)
+                color=ft.Colors.with_opacity(0.24, ft.Colors.BLACK),
+                offset=ft.Offset(0, 6)
             ),
             content=ft.Column(
                 controls=[
@@ -343,10 +343,10 @@ class HomeView(ft.Container):
             border_radius=18,
             padding=22,
             shadow=ft.BoxShadow(
-                blur_radius=10,
+                blur_radius=16,
                 spread_radius=0,
-                color=ft.Colors.with_opacity(0.28, "#ffa200"),
-                offset=ft.Offset(0, 3)
+                color=ft.Colors.with_opacity(0.24, ft.Colors.BLACK),
+                offset=ft.Offset(0, 6)
             ),
             content=ft.Column(
                 controls=[
