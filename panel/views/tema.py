@@ -92,6 +92,54 @@ CLARO = {
 }
 
 TEMAS = {"oscuro": OSCURO, "claro": CLARO}
+
+# --- EL DISEÑO NUEVO (28/09): fondo de manchas + vidrio -------------------------------------------
+# Los colores del rediseño que nació en el Agente IA y que van a heredar las demás vistas. Viven
+# aparte (D.texto, D.vidrio...) para no pisar los de arriba mientras las vistas viejas sigan
+# usándolos. Salen tal cual de la maqueta (panel/diseno/maquetas-agente-ia/); las reglas de uso
+# están en planes/plan panel.txt ("DISEÑO MANCHAS + VIDRIO").
+D_CLARO = {
+    "suelo": "#fafaf8",                  # el color del fondo de manchas (y de la ventana)
+    "manchas": "assets/fondo-manchas-claro.webp",
+    "logo_marca": "assets/fragmentless-naranja.svg",   # herramientas/vectorizar_logo.py
+    "logo_simbolo": "assets/fragmentless-naranja-simbolo.svg",   # el del saludo del agente
+    "logo_pensando": "assets/logo-pensando-naranja.webp",       # herramientas/generar_logo_pensando.py
+    "acento": "#E8622A",                 # naranja del logo: botón de enviar e insignia "IA"
+    "vidrio": "#CCFFFFFF",               # blanco al 80 % + desenfoque 18
+    "vidrio_linea": "#14000000",         # 8 %
+    "sombra": "#2E000000",               # 18 %, blur 60, caída 24
+    "solido": "#ffffff",                 # caja de texto, tarjetas de idea, tablas
+    "texto": "#0b0b0b",
+    "suave": "#5f5f5a",                  # descripciones, botones apagados
+    "tenue": "#8b8b85",                  # etiquetas mono, pistas, segunda línea del título
+    "linea": "#17000000",                # 9 %
+    "chip": "#0B000000",                 # 4.5 %: fondo de chips, iconos y el selector
+    "tinta": "#0b0b0b",                  # lo activo: opción del menú, botón principal, burbuja
+    "sobre_tinta": "#ffffff",
+}
+D_OSCURO = {
+    "suelo": "#161616",
+    "manchas": "assets/fondo-manchas-oscuro.webp",
+    "logo_marca": "assets/fragmentless-azul.svg",      # herramientas/vectorizar_logo.py
+    "logo_simbolo": "assets/fragmentless-azul-simbolo.svg",
+    "logo_pensando": "assets/logo-pensando-azul.webp",
+    "acento": "#1355E8",                 # azul del logo (fragmentless.png)
+    "vidrio": "#C70E0E0E",               # #0e0e0e al 78 %
+    "vidrio_linea": "#17FFFFFF",
+    "sombra": "#8C000000",               # 55 %
+    "solido": "#1b1b1b",
+    "texto": "#f5f5f2",
+    "suave": "#a6a6a0",
+    "tenue": "#7c7c77",
+    "linea": "#1AFFFFFF",
+    "chip": "#0FFFFFFF",
+    "tinta": "#f5f5f2",
+    "sobre_tinta": "#0b0b0b",
+}
+D_TEMAS = {"oscuro": D_OSCURO, "claro": D_CLARO}
+# Iguales en los dos temas.
+VERDE = "#3f9b5a"                         # el punto de "en vivo"
+D = SimpleNamespace(**D_OSCURO)
 POR_DEFECTO = "oscuro"
 
 # Los colores del tema elegido: C.texto, C.linea... Se cambian en su sitio (poner()), así que
@@ -110,6 +158,7 @@ def poner(nombre):
         nombre = POR_DEFECTO
     _actual = nombre
     C.__dict__.update(TEMAS[nombre])
+    D.__dict__.update(D_TEMAS[nombre])
 
 
 def cargar():

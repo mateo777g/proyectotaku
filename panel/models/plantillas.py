@@ -45,7 +45,7 @@ _RUTA_BASE = Path(__file__).resolve().parent.parent
 _RUTA_ZONES = _RUTA_BASE / "assets" / "taku-plantillas" / "zones.json"
 
 # Ruta relativa a la raíz del repo, NO un Path absoluto -- a propósito, y
-# por la misma razón que "assets/sin-foto.png"/"assets/logo-pensando.webp"
+# por la misma razón que "assets/sin-foto.png"/"assets/logo-pensando-naranja.webp"
 # en el resto del proyecto son strings sueltos: la app siempre corre con la
 # raíz del repo como cwd ("python main.py", ver "Running the app" en
 # CLAUDE.md), así que esta misma ruta le sirve tal cual tanto a flet

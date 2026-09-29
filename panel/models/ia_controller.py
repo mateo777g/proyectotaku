@@ -467,6 +467,7 @@ class IAController:
                 "arrancar sin ella."
             )
         self.client = OpenAI(api_key=_OPENAI_API_KEY)
+        self.ultima_lectura = None
 
     def preguntar(self, pregunta_usuario: str, historial: list[dict] | None = None) -> str:
         """Bloqueante — llamar siempre desde asyncio.to_thread(), igual que
@@ -481,6 +482,8 @@ class IAController:
         platillos = PlatilloDAO.obtener_todos()
         mesas = MesaDAO.obtener_todos()
         ventas = VentaDAO.obtener_ventas_con_items()
+        # Lo que se leyó para esta respuesta: la vista lo enseña en "LO QUE LEÍ PARA RESPONDER".
+        self.ultima_lectura = {"platillos": len(platillos), "mesas": len(mesas), "ventas": len(ventas)}
 
         ahora = datetime.datetime.now().astimezone()
         nombres_mesa = _canonizar_mesas(ventas, mesas)

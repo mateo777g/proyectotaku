@@ -10,6 +10,7 @@ from views import tema
 from views.agenteIA_view import AgenteIAView
 from views.ajustes_view import AjustesView
 from views.barra_lateral import crear_barra_lateral
+from views.diseno import FUENTES, fondo_manchas
 from views.biblioteca_view import BibliotecaView
 from views.contenido_view import ContenidoView
 from views.home_view import HomeView
@@ -32,7 +33,7 @@ class MainController:
         # vista: cada una lee sus colores al construirse (views/tema.py).
         tema.cargar()
         self.page.theme_mode = tema.C.modo
-        self.page.bgcolor = tema.C.fondo
+        self.page.bgcolor = tema.D.suelo
         self.page.padding = 0
         # La letra del panel, registrada una sola vez: la barra lateral la usa en todas las
         # vistas. Las familias se llaman por lo que son: cambiar de fuente es cambiar dos líneas.
@@ -41,10 +42,13 @@ class MainController:
         fuentes["LetraTexto"] = "assets/PlusJakartaSans-Medium.ttf"
         # Coolvetica (condensada), solo para los números grandes de los contadores.
         fuentes["Coolvetica"] = "assets/Coolvetica Rg Cram.otf"
+        # Las del diseño nuevo (views/diseno.py), una familia por peso.
+        fuentes.update(FUENTES)
         self.page.fonts = fuentes
         # La letra por defecto de todo el panel: así ningún texto se queda en Roboto.
-        self.page.theme = ft.Theme(font_family="LetraTexto")
-        self.page.dark_theme = ft.Theme(font_family="LetraTexto")
+        # divider_color: es el color de las rayas de las tablas del markdown (Agente IA); sin él
+        # salían negras. Sale del tema (views/tema.py, D.linea), así que se pone con cada tema.
+        self._poner_temas_flet()
 
         # Eventos de la ventana que llegan aunque nadie los escuche (el tema de Windows, el foco
         # de la ventana...). Sin manejador, Flet hace igual su auto-update, que compara la página
@@ -69,6 +73,10 @@ class MainController:
         # no necesita la sesión, y para cuando se termina de escribir la
         # contraseña ya está listo (models/saludo_ia.py).
         self.page.run_task(self.precargar_saludo)
+
+    def _poner_temas_flet(self):
+        self.page.theme = ft.Theme(font_family="LetraTexto", divider_color=tema.D.linea)
+        self.page.dark_theme = ft.Theme(font_family="LetraTexto", divider_color=tema.D.linea)
 
     # La ventana cambia de tamaño según la pantalla: el login va en una ventana chica y
     # centrada; al entrar al panel se maximiza, y al cerrar sesión vuelve a la chica.
@@ -150,7 +158,8 @@ class MainController:
         # próxima vez nazca con el velo del tema nuevo.
         tema.guardar(nombre)
         self.page.theme_mode = tema.C.modo
-        self.page.bgcolor = tema.C.fondo
+        self.page.bgcolor = tema.D.suelo
+        self._poner_temas_flet()
         ventana = getattr(self, "ventana_perfil", None)
         if ventana is not None:
             self.page.overlay.remove(ventana["capa"])
@@ -181,9 +190,22 @@ class MainController:
             self.vista_actual = "home"
             widget = HomeView(self)
 
-        # La barra y la vista, lado a lado. La barra se rehace con cada vista (marca la activa).
-        self._poner_vista(ft.Row(
-            [crear_barra_lateral(self, self.vista_actual), widget],
-            expand=True, spacing=0,
-            vertical_alignment=ft.CrossAxisAlignment.STRETCH,
-        ))
+        # Detrás de todo va el fondo, y encima la barra (flotante, de vidrio) y la vista, lado a
+        # lado. La barra se rehace con cada vista (marca la activa). El fondo de manchas es
+        # EXCLUSIVO del agente de IA; en las demás vistas su propio fondo (color + degradado) se
+        # sube a toda la ventana, así la barra de vidrio toma el fondo de la vista en la que está.
+        if self.vista_actual == "agente_financiero":
+            fondo = fondo_manchas()
+        else:
+            fondo = ft.Container(left=0, top=0, right=0, bottom=0,
+                                 bgcolor=widget.bgcolor, gradient=widget.gradient)
+            widget.bgcolor = None
+            widget.gradient = None
+        self._poner_vista(ft.Stack([
+            fondo,
+            ft.Row(
+                [crear_barra_lateral(self, self.vista_actual), widget],
+                left=0, top=0, right=0, bottom=0, spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.STRETCH,
+            ),
+        ], expand=True))
