@@ -47,6 +47,20 @@ class VentaDAO:
         return respuesta.data or []
 
     @staticmethod
+    def obtener_abiertas() -> list[dict]:
+        """Solo las cuentas abiertas ahora mismo, sin sus items: lo que necesita la vista de
+        Mesas para decir qué mesa está ocupada, cuánto lleva y desde cuándo. Mucho más ligera
+        que obtener_ventas_con_items() (que es para el agente y para Inicio)."""
+        respuesta = (
+            client.from_("ventas")
+            .select("id, mesa, total, created_at")
+            .eq("estado", "abierta")
+            .order("created_at")
+            .execute()
+        )
+        return respuesta.data or []
+
+    @staticmethod
     def obtener_items_de_ventas(ids_venta: list[int]) -> list[dict]:
         """Los renglones de venta_items que pertenecen a esas ventas, en un
         solo IN(...) en vez de una consulta por venta — mismo criterio de

@@ -1,42 +1,35 @@
 """
 views/components/dialogo_mesa.py
-Diálogo de alta/edición de una mesa (Fase 5.1) — se abre desde "Agregar
-mesa" y el lápiz de cada fila en views/mesas_view.py.
+Ventana de alta/edición de una mesa — se abre desde "Agregar mesa" y el lápiz de cada fila en
+views/mesas_view.py.
 
-Versión reducida de views/components/dialogo_platillo.py: una sola mesa
-solo tiene `nombre`, así que este diálogo es un único TextField en vez de
-foto+nombre+descripción+categoría+precio. Mismo lenguaje visual de todos
-modos (tarjeta 420, campos height=52/border_radius=16, botón oscuro
-border_radius=30, misma caja de error roja) y el mismo gotcha de Flet
-(Column con tight=True) — no hay razón para inventar un estilo nuevo solo
-porque el formulario es más chico.
+Diseño manchas + vidrio (29/09, maqueta https://claude.ai/artifact/JR1YURXBzRRbR4NRiVtG4L): la
+misma ventana que la de platillos (diseno.ventana) pero con un solo campo, porque una mesa solo
+tiene nombre. Arriba la etiqueta mono (que dice "GUARDANDO…" mientras guarda), el título y la X;
+el campo NOMBRE; la caja de error; y el botón principal.
 
-El botón "X" explícito + el guard `_ocupado` en `_cerrar()` existen por la
-MISMA razón documentada en dialogo_platillo.py: AlertDialog(modal=True) no
-deja cancelar con tap-fuera ni Escape en esta versión de Flet, y sin el
+La X explícita + el guard `_ocupado` en `_cerrar()` existen por la MISMA razón documentada en
+dialogo_platillo.py: AlertDialog(modal=True) no deja cancelar con tap-fuera ni Escape, y sin el
 guard un guardado a medias se podría cortar a la mitad.
 """
 import asyncio
+import traceback
 
 import flet as ft
 import httpx
 
 from models.mesa_dao import MesaDAO
-from views.piezas import (apagar_boton, boton_atajo, boton_cerrar_dialogo, caja_error, campo,
-                          dialogo_tarjeta, texto)
+from views.diseno import apagar, boton, boton_cuadro, caja_error, campo, etiqueta, texto, ventana
 
-_ANCHO_TARJETA = 420
-_ANCHO_CAMPO = _ANCHO_TARJETA - 36 - 36
+_ANCHO_TARJETA = 440
 
 
 class DialogoMesa:
     """Uso: DialogoMesa(router, on_guardado=callback, mesa=fila_o_None).abrir()
 
-    `mesa=None` → modo alta. `mesa=<dict>` → modo edición, precargado con
-    esa fila. `on_guardado` se llama tras crear/actualizar con éxito para
-    que mesas_view.py refresque la lista — sin argumentos (a diferencia de
-    DialogoPlatillo, aquí no hay ninguna limpieza de Cloudflare de la que
-    avisar)."""
+    `mesa=None` → modo alta. `mesa=<dict>` → modo edición, precargado con esa fila.
+    `on_guardado` se llama sin argumentos tras crear/actualizar con éxito, para que
+    mesas_view.py recargue la tabla."""
 
     def __init__(self, router, on_guardado, mesa: dict | None = None):
         self.router = router
@@ -49,42 +42,50 @@ class DialogoMesa:
         self.campo_nombre = campo(
             valor=self.mesa.get("nombre", ""),
             pista='Ej. "Mesa 6" o "Barra 1"',
-            icono=ft.Icons.TABLE_RESTAURANT_OUTLINED,
-            tamano=13,
             autofoco=True,
             al_enviar=self._on_guardar_click,
         )
 
-        self.texto_error = texto("", 12, expand=True)
+        self.texto_error = texto("", 12.5, 500, expand=True)
         self.zona_error = caja_error(self.texto_error)
 
-        self.boton_guardar = boton_atajo(
-            ft.Icons.CHECK if self.editando else ft.Icons.ADD,
+        self.boton_guardar = boton(
             "Guardar cambios" if self.editando else "Agregar mesa",
+            "check" if self.editando else "mas",
             self._on_guardar_click,
+            principal=True,
         )
 
-        self.dialog = dialogo_tarjeta(
+        self._texto_arriba = "EDITAR MESA" if self.editando else "NUEVA MESA"
+        self.texto_paso = etiqueta(self._texto_arriba)
+
+        self.dialog = ventana(
             ft.Column(
+                # Sin tight=True el Column reclama todo el alto disponible del diálogo.
                 tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=0,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                 controls=[
-                    texto("EDITAR MESA" if self.editando else "AGREGAR MESA", 12, suave=True,
-                          text_align=ft.TextAlign.CENTER),
-                    ft.Container(height=4),
-                    texto(self.mesa.get("nombre") if self.editando else "Nueva mesa", 26,
-                          titulo=True, text_align=ft.TextAlign.CENTER, max_lines=1,
-                          overflow=ft.TextOverflow.ELLIPSIS),
-                    ft.Container(height=24),
-                    ft.Row([self.campo_nombre]),
-                    self.zona_error,
+                    ft.Row([
+                        ft.Column([
+                            self.texto_paso,
+                            texto(self.mesa.get("nombre") if self.editando else "Agrega una mesa",
+                                  24, 800, espaciado=-0.5, max_lines=1,
+                                  overflow=ft.TextOverflow.ELLIPSIS),
+                        ], spacing=6, tight=True, expand=True),
+                        # modal=True bloquea el tap fuera y Escape: la X es la salida.
+                        boton_cuadro("cerrar", lambda e: self._cerrar(), "Cerrar"),
+                    ], vertical_alignment=ft.CrossAxisAlignment.START),
                     ft.Container(height=22),
-                    ft.Row([self.boton_guardar]),
+                    ft.Column([etiqueta("NOMBRE"), self.campo_nombre], spacing=8, tight=True,
+                              horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+                    ft.Container(height=14),
+                    self.zona_error,
+                    ft.Container(height=10),
+                    ft.Row([self.boton_guardar], alignment=ft.MainAxisAlignment.END),
                 ],
             ),
             _ANCHO_TARJETA,
-            boton_cerrar_dialogo(lambda e: self._cerrar()),
         )
 
     # ------------------------------------------------------------------
@@ -103,6 +104,8 @@ class DialogoMesa:
         return nombre, None
 
     def _on_guardar_click(self, e):
+        if self._ocupado:
+            return
         nombre, error = self._validar()
         if error:
             self._mostrar_error(error)
@@ -116,18 +119,17 @@ class DialogoMesa:
                 await asyncio.to_thread(MesaDAO.actualizar, self.mesa["id"], nombre)
             else:
                 await asyncio.to_thread(MesaDAO.crear, nombre)
-        except httpx.RequestError as e:
-            print(f"[dialogo_mesa] error de red al guardar: {e}")
+        except httpx.RequestError:
+            traceback.print_exc()
+            self._set_cargando(False)
             self._mostrar_error("No hay conexión con el servidor. Revisa tu internet.")
-            self._set_cargando(False)
             return
-        except Exception as e:
-            # Incluye el choque con la restricción UNIQUE(nombre) si ya
-            # existe una mesa con ese nombre — Postgres lo rechaza con un
-            # error de la API que cae aquí, no hace falta un chequeo aparte.
-            print(f"[dialogo_mesa] error al guardar: {e}")
-            self._mostrar_error("No se pudo guardar. ¿Ya existe una mesa con ese nombre?")
+        except Exception:
+            # Incluye el choque con la restricción UNIQUE(nombre) si ya existe una mesa con ese
+            # nombre — Postgres lo rechaza con un error de la API que cae aquí.
+            traceback.print_exc()
             self._set_cargando(False)
+            self._mostrar_error("No se pudo guardar. ¿Ya existe una mesa con ese nombre?")
             return
 
         self._set_cargando(False)  # si no, _cerrar() se niega a cerrar (_ocupado sigue True)
@@ -140,7 +142,9 @@ class DialogoMesa:
         self.zona_error.update()
 
     def _set_cargando(self, cargando: bool):
-        # Apagado mientras guarda (sin rueda de carga: el apagado ya lo dice).
+        # Sin rueda de carga: el botón apagado y, arriba, "GUARDANDO…".
         self._ocupado = cargando
-        apagar_boton(self.boton_guardar, cargando)
+        self.texto_paso.value = "GUARDANDO…" if cargando else self._texto_arriba
+        apagar(self.boton_guardar, cargando)
+        self.texto_paso.update()
         self.boton_guardar.update()
