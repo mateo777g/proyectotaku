@@ -122,6 +122,123 @@ def boton(etiqueta_boton, nombre_icono, al_pulsar, principal=False, alto=40):
     return cuerpo
 
 
+def apagar(control, apagado):
+    # Un botón que no se puede usar ahora (guardando, nada elegido): al 40 % y sin clic.
+    control.disabled = apagado
+    control.opacity = 0.4 if apagado else 1
+
+
+def boton_cuadro(nombre_icono, al_pulsar, ayuda, lado=36):
+    """Botón de solo icono (el ojito y el lápiz de cada fila, la X de una ventana): cuadro con
+    borde fino D.linea, radio 10, icono 16."""
+    cuerpo = ft.Container(
+        width=lado, height=lado, border_radius=10, border=ft.Border.all(1, D.linea),
+        alignment=ft.Alignment.CENTER, content=icono(nombre_icono, 16), tooltip=ayuda,
+        on_click=al_pulsar, animate_opacity=150,
+    )
+
+    def encima(e):
+        cuerpo.bgcolor = D.chip if e.data in (True, "true") else None
+        cuerpo.update()
+
+    cuerpo.on_hover = encima
+    return cuerpo
+
+
+def campo(pista="", valor="", multilinea=False, prefijo=None, al_cambiar=None, al_enviar=None,
+          autofoco=False, **kwargs):
+    """Una caja de texto en sólido: borde 1 px D.linea (D.suave al escribir), radio 12, letra
+    13.5. Sin relleno propio: toma el sólido de la ventana o de la tarjeta en la que va."""
+    return ft.TextField(
+        value=valor, hint_text=pista, multiline=multilinea,
+        min_lines=2 if multilinea else None, max_lines=3 if multilinea else 1,
+        prefix=ft.Text(prefijo, size=13.5, font_family="Jakarta500", color=D.suave)
+        if prefijo else None,
+        text_size=13.5, text_style=ft.TextStyle(font_family="Jakarta500", color=D.texto),
+        hint_style=ft.TextStyle(font_family="Jakarta500", color=D.tenue, size=13.5),
+        border_color=D.linea, focused_border_color=D.suave, focused_border_width=1,
+        border_width=1, border_radius=12, filled=False,
+        content_padding=ft.Padding.symmetric(horizontal=14, vertical=12),
+        cursor_color=D.texto, selection_color=D.chip,
+        on_change=al_cambiar, on_submit=al_enviar, autofocus=autofoco, **kwargs,
+    )
+
+
+def selector(opciones, elegida, al_elegir, alto=30, tamano=12.5):
+    """El selector segmentado (Hoy/Semana/Mes de Inicio, las categorías de Mi menú): caja
+    D.chip radio 12, padding 3; el elegido en sólido con sombra de 1 px. Devuelve el Container;
+    se repinta llamando otra vez a selector() y cambiando su .content (ver Mi menú)."""
+    segmentos = []
+    for opcion in opciones:
+        es = opcion == elegida
+        segmentos.append(ft.Container(
+            height=alto, padding=ft.Padding.symmetric(horizontal=12), border_radius=9,
+            alignment=ft.Alignment.CENTER, bgcolor=D.solido if es else None,
+            shadow=ft.BoxShadow(blur_radius=3, color="#26000000", offset=ft.Offset(0, 1))
+            if es else None,
+            content=texto(opcion, tamano, 600, D.texto if es else D.suave),
+            on_click=lambda e, o=opcion: al_elegir(o),
+        ))
+    return ft.Container(padding=3, border_radius=12, bgcolor=D.chip,
+                        content=ft.Row(segmentos, spacing=2, tight=True))
+
+
+def ventana(contenido, ancho):
+    """Las ventanas (agregar/editar un platillo, confirmar): AlertDialog modal y transparente;
+    lo que se ve es una tarjeta sólida de radio 26 con la sombra del vidrio, sobre el velo del
+    tema. modal=True no cierra con Escape ni con el velo: cada ventana trae su X o su Cancelar.
+    El Column de `contenido` necesita tight=True (si no, reclama todo el alto del diálogo)."""
+    return ft.AlertDialog(
+        modal=True, bgcolor=ft.Colors.TRANSPARENT, elevation=0, barrier_color=D.velo,
+        content_padding=0,
+        content=ft.Container(
+            width=ancho, padding=28, bgcolor=D.solido, border=ft.Border.all(1, D.linea),
+            border_radius=26, shadow=sombra_vidrio(), content=contenido,
+        ),
+    )
+
+
+def caja_error(texto_control):
+    # El error dentro de una ventana, sin rojo: chip con borde fino e icono de alerta.
+    return ft.Container(
+        visible=False, bgcolor=D.chip, border=ft.Border.all(1, D.linea), border_radius=12,
+        padding=ft.Padding.symmetric(horizontal=14, vertical=11),
+        content=ft.Row([icono("alerta", 16, D.suave), texto_control], spacing=10,
+                       vertical_alignment=ft.CrossAxisAlignment.CENTER),
+    )
+
+
+def confirmar(page, titulo, mensaje, al_confirmar, texto_boton="Sí, eliminar",
+              nombre_icono="eliminar", al_cancelar=None):
+    """Confirmación de algo que no se deshace (eliminar un platillo). Sin rojo: el peligro lo
+    dice el texto. Cancelar cierra (y llama a `al_cancelar`, si hay: la ventana de editar se
+    vuelve a abrir); el botón principal cierra y llama a `al_confirmar`."""
+    def cerrar(e=None):
+        page.pop_dialog()
+
+    def cancelar(e):
+        cerrar()
+        if al_cancelar:
+            al_cancelar()
+
+    def si(e):
+        cerrar()
+        al_confirmar()
+
+    page.show_dialog(ventana(ft.Column([
+        ft.Container(width=44, height=44, border_radius=12, bgcolor=D.chip,
+                     alignment=ft.Alignment.CENTER, content=icono("alerta", 20)),
+        ft.Container(height=16),
+        texto(titulo, 18, 800, espaciado=-0.3),
+        ft.Container(height=6),
+        texto(mensaje, 13, 500, D.suave, alto=1.45),
+        ft.Container(height=24),
+        ft.Row([boton("Cancelar", "cerrar", cancelar),
+                boton(texto_boton, nombre_icono, si, principal=True)],
+               spacing=10, alignment=ft.MainAxisAlignment.END),
+    ], tight=True, spacing=0), 420))
+
+
 def insignia(valor):
     # La pastilla naranja de "IA" en la barra.
     return ft.Container(

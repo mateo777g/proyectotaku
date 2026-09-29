@@ -116,6 +116,7 @@ D_CLARO = {
     "chip": "#0B000000",                 # 4.5 %: fondo de chips, iconos y el selector
     "tinta": "#0b0b0b",                  # lo activo: opción del menú, botón principal, burbuja
     "sobre_tinta": "#ffffff",
+    "velo": "#59000000",                 # detrás de una ventana (35 %)
 }
 D_OSCURO = {
     "suelo": "#161616",
@@ -135,6 +136,7 @@ D_OSCURO = {
     "chip": "#0FFFFFFF",
     "tinta": "#f5f5f2",
     "sobre_tinta": "#0b0b0b",
+    "velo": "#99000000",                 # 60 %
 }
 D_TEMAS = {"oscuro": D_OSCURO, "claro": D_CLARO}
 # Iguales en los dos temas.

@@ -50,14 +50,15 @@ PERIODOS = [
     ("Mes", "mes", "Piezas vendidas y total, en lo que va del mes."),
 ]
 
-# Los atajos de "¿Qué hacemos hoy?": (icono, título, descripción, vista, abrir diálogo nuevo).
+# Los atajos de "¿Qué hacemos hoy?": (icono, título, descripción, vista, cómo llega). "nuevo"
+# abre Mi menú con el diálogo de alta; "ocultar", en el modo "Ocultar varios".
 ATAJOS = [
     ("crear", "Crear post para Instagram", "Imágenes promocionales automáticas.",
-     "contenido", False),
-    ("oculto", "Marcar un platillo como agotado", "Se oculta de tu menú.", "menu", False),
-    ("agregar", "Agregar un producto nuevo", "Con foto, precio y descripción.", "menu", True),
+     "contenido", None),
+    ("oculto", "Marcar un platillo como agotado", "Se oculta de tu menú.", "menu", "ocultar"),
+    ("agregar", "Agregar un producto nuevo", "Con foto, precio y descripción.", "menu", "nuevo"),
     ("ia", "Administrar finanzas con IA", "Analiza y optimiza tu negocio.",
-     "agente_financiero", False),
+     "agente_financiero", None),
 ]
 
 
@@ -186,7 +187,7 @@ class HomeView(ft.Container):
                 ft.Container(expand=True),
                 boton_actualizar,
                 boton("Crear contenido", "crear", self._ir("contenido")),
-                boton("Nuevo platillo", "mas", self._ir("menu", True), principal=True),
+                boton("Nuevo platillo", "mas", self._ir("menu", "nuevo"), principal=True),
             ], spacing=14, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         )
 
@@ -318,8 +319,9 @@ class HomeView(ft.Container):
     # ------------------------------------------------------------------
     # Piezas
     # ------------------------------------------------------------------
-    def _ir(self, ruta, abrir_dialogo_nuevo=False):
-        return lambda _: self.router.cambiar_vista(ruta, abrir_dialogo_nuevo)
+    def _ir(self, ruta, como=None):
+        return lambda _: self.router.cambiar_vista(ruta, abrir_dialogo_nuevo=como == "nuevo",
+                                                   ocultar_varios=como == "ocultar")
 
     @staticmethod
     def _cargando_texto():
@@ -350,7 +352,7 @@ class HomeView(ft.Container):
         self.cifras[clave][0].value = valor
         self.cifras[clave][1].value = nota
 
-    def _tarjeta_atajo(self, nombre_icono, titulo, descripcion, ruta, abrir_dialogo):
+    def _tarjeta_atajo(self, nombre_icono, titulo, descripcion, ruta, como):
         """Como las ideas del agente: icono arriba y flechita que sale con el cursor encima
         (junto con el borde oscuro); título y descripción abajo. Toda la tarjeta es el botón."""
         flecha = ft.Container(content=icono("derecha", 16, D.tenue), opacity=0,
@@ -359,7 +361,7 @@ class HomeView(ft.Container):
             expand=1, padding=16, border_radius=18, bgcolor=D.solido,
             border=ft.Border.all(1, D.linea),
             animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
-            on_click=self._ir(ruta, abrir_dialogo),
+            on_click=self._ir(ruta, como),
             content=ft.Column([
                 ft.Row([
                     ft.Container(width=36, height=36, border_radius=11, bgcolor=D.chip,

@@ -235,6 +235,24 @@ class PlatilloDAO:
         return respuesta.data[0]
 
     @staticmethod
+    def ocultar_varios(ids: list[int]) -> list[dict]:
+        """"Ocultar varios" de Mi menú: pone visible=false a todos los ids en UNA consulta.
+        Igual que cambiar_visibilidad(), nunca borra. Si RLS bloquea alguna fila, no viene en
+        `data`: se levanta EscrituraSinEfecto aunque las demás sí se hayan ocultado (la vista
+        recarga la tabla para mostrar lo que de verdad quedó)."""
+        respuesta = (
+            client.from_("platillos")
+            .update({"visible": False})
+            .in_("id", list(ids))
+            .execute()
+        )
+        if len(respuesta.data or []) != len(set(ids)):
+            raise EscrituraSinEfecto(
+                f"Ocultar platillos {sorted(ids)} afectó {len(respuesta.data or [])} filas."
+            )
+        return respuesta.data
+
+    @staticmethod
     def obtener_recientes(limite: int = 3) -> list[dict]:
         """Para la tarjeta "Lo último de tu menú" de home_view.py (Fase 2.7):
         los últimos platillos que tuvieron un alta O una edición (incluye

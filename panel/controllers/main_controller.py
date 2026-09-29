@@ -166,16 +166,19 @@ class MainController:
             self.ventana_perfil = None
         self.cambiar_vista("ajustes")
 
-    def cambiar_vista(self, vista: str, abrir_dialogo_nuevo: bool = False):
-        """abrir_dialogo_nuevo: lo usa SOLO el atajo "Agregar un producto nuevo" de Inicio para
-        llegar a Mi menú con el diálogo de alta ya abierto. Se pasa directo al constructor de
+    def cambiar_vista(self, vista: str, abrir_dialogo_nuevo: bool = False,
+                      ocultar_varios: bool = False):
+        """abrir_dialogo_nuevo / ocultar_varios: los usan SOLO los atajos de Inicio ("Agregar un
+        producto nuevo", "Marcar un platillo como agotado") para llegar a Mi menú con el diálogo
+        de alta abierto o en el modo "Ocultar varios". Se pasan directo al constructor de
         MenuView (no como estado del router) para que no quede una bandera "pegada"."""
         self.vista_actual = vista
 
         if vista == "home":
             widget = HomeView(self)
         elif vista == "menu":
-            widget = MenuView(self, abrir_dialogo_nuevo=abrir_dialogo_nuevo)
+            widget = MenuView(self, abrir_dialogo_nuevo=abrir_dialogo_nuevo,
+                              ocultar_varios=ocultar_varios)
         elif vista == "mesas":
             widget = MesasView(self)
         elif vista == "agente_financiero":

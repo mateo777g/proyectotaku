@@ -60,16 +60,16 @@ import httpx
 
 from models import cloudflare_storage
 from models.platillo_dao import PlatilloDAO
-from views.piezas import (apagar_boton, boton_atajo, boton_cerrar_dialogo, caja_error, campo,
-                          dialogo_tarjeta, texto)
-from views.tema import C
+from views import piezas
+from views.diseno import (apagar, boton, boton_cuadro, caja_error, campo, confirmar, etiqueta,
+                          selector, texto, ventana)
+from views.piezas import boton_atajo, dialogo_tarjeta
+from views.tema import C, D
 
 _CATEGORIAS = ["Platillos", "Bebidas", "Postres"]
 
-# Mismo ancho de tarjeta y campo que sesion_view.py (Fase 2.0) — se reusa la
-# medida ya establecida en vez de inventar una nueva.
-_ANCHO_TARJETA = 420
-_ANCHO_CAMPO = _ANCHO_TARJETA - 36 - 36
+# El ancho de la ventana (diseño manchas + vidrio): cabe la categoría y el precio lado a lado.
+_ANCHO_TARJETA = 520
 
 # Fase 4.3 (carta de celular del index) — tope del dueño para no llenar
 # Cloudflare de recortes: como máximo 5 Platillos llevan image_url_recortada
@@ -155,150 +155,143 @@ class DialogoPlatillo:
             self.platillo.get("image_url") if self.editando else None
         )
 
+        # Diseño manchas + vidrio (29/09): tarjeta sólida sobre el velo (diseno.ventana),
+        # encabezado con la etiqueta mono (que dice el paso mientras guarda) y la X, foto,
+        # campos con su etiqueta arriba, categoría en selector segmentado y abajo Eliminar
+        # (solo al editar) y el botón principal.
+
         # ---------------- foto (Fase 3) ----------------
         self.imagen_preview = ft.Image(
             src=self._imagen_url_actual or "assets/sin-foto.png",
             width=72,
             height=72,
             fit=ft.BoxFit.COVER,
-            border_radius=12,
-            # Si _imagen_url_actual ya no carga (borrada a mano, sin
-            # internet), cae al mismo placeholder que usan las filas sin
-            # foto en vez de un ícono roto.
-            error_content=ft.Image(
-                src="assets/sin-foto.png", width=72, height=72, fit=ft.BoxFit.COVER, border_radius=12
-            ),
+            # Si _imagen_url_actual ya no carga (borrada a mano, sin internet), cae al mismo
+            # placeholder que usan las filas sin foto en vez de un ícono roto.
+            error_content=ft.Image(src="assets/sin-foto.png", width=72, height=72,
+                                   fit=ft.BoxFit.COVER),
         )
-        # El botón de la foto se rehace al cambiar su texto ("Agregar" → "Cambiar"): el texto
-        # de un botón del panel va escrito dos veces (el relevo) y no se cambia en su sitio.
+        # El botón de la foto se rehace al cambiar su texto ("Agregar" → "Cambiar").
         self.hueco_boton_foto = ft.Container()
         self._poner_boton_foto("Cambiar foto" if self._imagen_url_actual else "Agregar foto")
         self.fila_foto = ft.Row(
             controls=[
-                self.imagen_preview,
-                ft.Container(width=14),
+                ft.Container(width=72, height=72, border_radius=14, bgcolor="#000000",
+                             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                             content=self.imagen_preview),
                 ft.Column(
                     controls=[
                         self.hueco_boton_foto,
-                        texto("JPG o PNG · se optimiza automáticamente", 11, suave=True),
+                        texto("JPG o PNG · se optimiza automáticamente", 12, 500, D.tenue),
                     ],
-                    spacing=6,
+                    spacing=8,
                     tight=True,
-                    alignment=ft.MainAxisAlignment.CENTER,
                 ),
             ],
+            spacing=16,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
         # ---------------- campos ----------------
         self.campo_nombre = campo(
+            pista="Ej. Tacos al pastor",
             valor=self.platillo.get("nombre", ""),
-            pista="Nombre del platillo",
-            icono=ft.Icons.RESTAURANT_MENU_OUTLINED,
-            tamano=13,
             autofoco=True,
         )
-
         self.campo_descripcion = campo(
+            pista="Qué lleva, cómo se sirve… (opcional)",
             valor=self.platillo.get("descripcion") or "",
-            pista="Descripción (opcional)",
-            icono=ft.Icons.NOTES_OUTLINED,
-            tamano=13,
+            multilinea=True,
         )
-        self.campo_descripcion.multiline = True
-        self.campo_descripcion.min_lines = 2
-        self.campo_descripcion.max_lines = 3
-
-        estilo = ft.TextStyle(font_family="LetraTexto", color=C.texto, size=13)
-        self.campo_categoria = ft.Dropdown(
-            value=self.platillo.get("categoria") or None,
-            hint_text="Selecciona una categoría",
-            leading_icon=ft.Icon(ft.Icons.CATEGORY_OUTLINED, color=C.texto_suave, size=20),
-            options=[ft.DropdownOption(key=c, text=c, style=ft.ButtonStyle(
-                text_style=estilo, color=C.texto)) for c in _CATEGORIAS],
-            expand=True,
-            border_radius=10,
-            border_color=C.linea,
-            focused_border_color=C.texto_suave,
-            filled=True,
-            fill_color=C.pozo,
-            bgcolor=C.globo,
-            color=C.texto,
-            text_style=estilo,
-            hint_style=ft.TextStyle(font_family="LetraTexto", color=C.texto_suave, size=13),
-            text_size=13,
-        )
-
+        # La categoría: selector segmentado con las 3 fijas del CHECK de la tabla.
+        self._categoria = self.platillo.get("categoria") if self.editando else None
+        self.hueco_categoria = ft.Container(
+            content=selector(_CATEGORIAS, self._categoria, self._elegir_categoria, alto=36,
+                             tamano=13))
         self.campo_precio = campo(
+            pista="0",
             valor=_texto_precio(self.platillo.get("precio")),
-            pista="Precio",
-            icono=ft.Icons.SELL_OUTLINED,
-            tamano=13,
+            prefijo="$ ",
+            keyboard_type=ft.KeyboardType.NUMBER,
         )
-        self.campo_precio.prefix = "$ "
-        self.campo_precio.keyboard_type = ft.KeyboardType.NUMBER
 
         # ---------------- caja de error ----------------
-        self.texto_error = texto("", 12, expand=True)
+        self.texto_error = texto("", 12.5, 500, expand=True)
         self.zona_error = caja_error(self.texto_error)
 
-        # ---------------- botón guardar ----------------
-        self.boton_guardar = boton_atajo(
-            ft.Icons.CHECK if self.editando else ft.Icons.ADD,
+        # ---------------- botones ----------------
+        self.boton_guardar = boton(
             "Guardar cambios" if self.editando else "Agregar platillo",
+            "check" if self.editando else "mas",
             self._on_guardar_click,
+            principal=True,
         )
-
-        # Arriba, qué ventana es; mientras guarda dice en qué paso va (_set_cargando).
-        self._texto_arriba = "EDITAR PLATILLO" if self.editando else "AGREGAR PLATILLO"
-        self.texto_paso = texto(self._texto_arriba, 12, suave=True, text_align=ft.TextAlign.CENTER)
-
-        controles_tarjeta = [
-            self.texto_paso,
-            ft.Container(height=4),
-            texto(self.platillo.get("nombre") if self.editando else "Nuevo platillo", 26,
-                  titulo=True, text_align=ft.TextAlign.CENTER, max_lines=1,
-                  overflow=ft.TextOverflow.ELLIPSIS),
-            ft.Container(height=24),
-            self.fila_foto,
-            ft.Container(height=14),
-            ft.Row([self.campo_nombre]),
-            ft.Container(height=14),
-            ft.Row([self.campo_descripcion]),
-            ft.Container(height=14),
-            ft.Row([self.campo_categoria]),
-            ft.Container(height=14),
-            ft.Row([self.campo_precio]),
-            self.zona_error,
-            ft.Container(height=22),
-            ft.Row([self.boton_guardar]),
-        ]
-
         # Eliminar: sin rojo (el peligro lo dice el texto y la confirmación de después).
         self.boton_eliminar = None
         if self.editando:
-            self.boton_eliminar = boton_atajo(ft.Icons.DELETE_OUTLINE, "Eliminar platillo",
-                                              self._on_eliminar_click)
-            controles_tarjeta += [ft.Container(height=10), ft.Row([self.boton_eliminar])]
+            self.boton_eliminar = boton("Eliminar platillo", "eliminar", self._on_eliminar_click)
 
-        # Botón de cerrar (X) — modal=True bloquea el tap fuera del diálogo
-        # y Flet no le da Escape por default, así que sin esto no había
-        # ninguna forma de cancelar el formulario sin guardar o eliminar.
-        self.dialog = dialogo_tarjeta(
+        # Arriba, qué ventana es; mientras guarda dice en qué paso va (_set_cargando).
+        self._texto_arriba = "EDITAR PLATILLO" if self.editando else "NUEVO PLATILLO"
+        self.texto_paso = etiqueta(self._texto_arriba)
+
+        def con_etiqueta(nombre, control, estirar=True, **kwargs):
+            # estirar: el control llena el ancho. La categoría no (va en una fila, a su medida).
+            return ft.Column([etiqueta(nombre), control], spacing=8, tight=True,
+                             horizontal_alignment=ft.CrossAxisAlignment.STRETCH if estirar
+                             else ft.CrossAxisAlignment.START, **kwargs)
+
+        self.dialog = ventana(
             ft.Column(
                 # Sin tight=True el Column reclama todo el alto disponible del diálogo.
                 tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=0,
-                controls=controles_tarjeta,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                controls=[
+                    ft.Row([
+                        ft.Column([
+                            self.texto_paso,
+                            texto(self.platillo.get("nombre") if self.editando
+                                  else "Agrega un platillo", 24, 800, espaciado=-0.5,
+                                  max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                        ], spacing=6, tight=True, expand=True),
+                        # modal=True bloquea el tap fuera y Escape: la X es la salida.
+                        boton_cuadro("cerrar", lambda e: self._cerrar(), "Cerrar"),
+                    ], vertical_alignment=ft.CrossAxisAlignment.START),
+                    ft.Container(height=22),
+                    self.fila_foto,
+                    ft.Container(height=20),
+                    con_etiqueta("NOMBRE", self.campo_nombre),
+                    ft.Container(height=16),
+                    con_etiqueta("DESCRIPCIÓN", self.campo_descripcion),
+                    ft.Container(height=16),
+                    ft.Row([
+                        con_etiqueta("CATEGORÍA", self.hueco_categoria, estirar=False),
+                        con_etiqueta("PRECIO", self.campo_precio, expand=True),
+                    ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.START),
+                    ft.Container(height=14),
+                    self.zona_error,
+                    ft.Container(height=14),
+                    ft.Row(
+                        ([self.boton_eliminar] if self.boton_eliminar else [])
+                        + [ft.Container(expand=True), self.boton_guardar],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                ],
             ),
             _ANCHO_TARJETA,
-            boton_cerrar_dialogo(lambda e: self._cerrar()),
         )
 
+    def _elegir_categoria(self, categoria):
+        if self._ocupado:
+            return
+        self._categoria = categoria
+        self.hueco_categoria.content = selector(_CATEGORIAS, categoria, self._elegir_categoria,
+                                                alto=36, tamano=13)
+        self.hueco_categoria.update()
+
     def _poner_boton_foto(self, texto_boton):
-        self.boton_foto = boton_atajo(ft.Icons.ADD_A_PHOTO_OUTLINED, texto_boton,
-                                      self._on_elegir_foto_click, ancho=180, alto=40)
+        self.boton_foto = boton(texto_boton, "biblio", self._on_elegir_foto_click)
         self.hueco_boton_foto.content = self.boton_foto
 
     # ------------------------------------------------------------------
@@ -320,7 +313,7 @@ class DialogoPlatillo:
         if not nombre:
             return None, "El nombre del platillo es obligatorio."
 
-        categoria = self.campo_categoria.value
+        categoria = self._categoria
         if categoria not in _CATEGORIAS:
             return None, "Selecciona una categoría."
 
@@ -542,7 +535,7 @@ class DialogoPlatillo:
 
     async def _elegir_foto_async(self):
         self._eligiendo_foto = True
-        apagar_boton(self.boton_foto, True)
+        apagar(self.boton_foto, True)
         self.boton_foto.update()
         try:
             # _elegir_archivo_imagen() es bloqueante de verdad (el diálogo
@@ -551,7 +544,7 @@ class DialogoPlatillo:
             ruta = await asyncio.to_thread(_elegir_archivo_imagen)
         finally:
             self._eligiendo_foto = False
-            apagar_boton(self.boton_foto, False)
+            apagar(self.boton_foto, False)
             self.boton_foto.update()
 
         if not ruta:
@@ -578,14 +571,23 @@ class DialogoPlatillo:
 
     # ------------------------------------------------------------------
     def _on_eliminar_click(self, e):
-        _confirmar(
+        if self._ocupado:
+            return
+        # La confirmación sustituye a esta ventana (una a la vez). Si dice que sí o cancela,
+        # esta se vuelve a abrir; al eliminar, ya con "ELIMINANDO..." arriba.
+        self.page.pop_dialog()
+
+        def si():
+            self.abrir()
+            self.page.run_task(self._eliminar_async)
+
+        confirmar(
             self.page,
-            titulo="¿Eliminar este platillo?",
-            mensaje=(
-                f"\"{self.platillo.get('nombre', '')}\" se borrará por completo "
-                "de Supabase. Esta acción no se puede deshacer."
-            ),
-            on_confirmar=lambda: self.page.run_task(self._eliminar_async),
+            "¿Eliminar este platillo?",
+            f"\"{self.platillo.get('nombre', '')}\" se borrará de tu menú para siempre. "
+            "Si solo se acabó, mejor ocúltalo con el ojito.",
+            si,
+            al_cancelar=self.abrir,
         )
 
     async def _eliminar_async(self):
@@ -657,14 +659,14 @@ class DialogoPlatillo:
         # Sin rueda de carga: los botones apagados y, arriba, el paso en el que va.
         self.texto_paso.value = texto.upper() if cargando else self._texto_arriba
         self.texto_paso.update()
-        apagar_boton(self.boton_guardar, cargando)
+        apagar(self.boton_guardar, cargando)
         self.boton_guardar.update()
         if self.boton_eliminar is not None:
-            apagar_boton(self.boton_eliminar, cargando)
+            apagar(self.boton_eliminar, cargando)
             self.boton_eliminar.update()
         # Fase 3: tampoco se debe poder abrir el selector de archivos a
         # medio guardado/borrado.
-        apagar_boton(self.boton_foto, cargando)
+        apagar(self.boton_foto, cargando)
         self.boton_foto.update()
 
 
@@ -687,9 +689,9 @@ def _confirmar(page: ft.Page, *, titulo: str, mensaje: str, on_confirmar):
             controls=[
                 ft.Icon(ft.Icons.WARNING_AMBER_OUTLINED, size=30, color=C.texto_suave),
                 ft.Container(height=12),
-                texto(titulo, 17, titulo=True, text_align=ft.TextAlign.CENTER),
+                piezas.texto(titulo, 17, titulo=True, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=8),
-                texto(mensaje, 13, suave=True, text_align=ft.TextAlign.CENTER),
+                piezas.texto(mensaje, 13, suave=True, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=24),
                 ft.Row([boton_atajo(ft.Icons.DELETE_OUTLINE, "Sí, eliminar", _confirmar_click)]),
                 ft.Container(height=10),
