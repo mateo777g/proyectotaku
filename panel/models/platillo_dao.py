@@ -62,7 +62,7 @@ _CATEGORIAS_FIJAS = ("Platillos", "Bebidas", "Postres")
 # agregar esa columna + un trigger (trg_platillos_updated_at, ver
 # CLAUDE.md/roadmap) para que la tarjeta detecte ediciones de verdad, no
 # solo altas.
-_COLUMNAS_RECIENTES = "id, nombre, created_at, updated_at"
+_COLUMNAS_RECIENTES = "id, nombre, image_url, created_at, updated_at"
 
 # Solo lo que pinta el selector de platillo del asistente de contenido
 # (Fase 7.3, views/contenido_view.py) — igual criterio que _COLUMNAS
