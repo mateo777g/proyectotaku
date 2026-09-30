@@ -7,7 +7,7 @@ Guidance for Claude Code in this repo. **Kept deliberately short**: it holds cur
 "Taku Monky" — system for a taquería, two halves sharing one **Supabase** project:
 
 - **Flet (Python) desktop admin panel** for the owner: menu CRUD, tables catalog, AI agent, ad generator, stats.
-- **Static public site** (plain HTML/CSS/JS at repo root, FTP'd to Hostinger as-is, no build step): public menu (`index.html` + 3 `menu-*.html`) and the staff sales tool (`mesas.html`). No Python serves it.
+- **Static public site** (plain HTML/CSS/JS at repo root, no build step; **not deployed anywhere yet** — the developer previews it on a local server; hosting not decided (probably Vercel)): public menu (`index.html` + 3 `menu-*.html`) and the staff sales tool (`mesas.html`). No Python serves it.
 
 Images live in **Cloudflare R2** (never Supabase Storage — keep it at zero buckets). The system is also being turned into a **resellable white-label template** rented semi-annually to other restaurants (one Supabase project per client).
 
