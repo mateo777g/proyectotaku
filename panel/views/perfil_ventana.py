@@ -3,23 +3,27 @@ import traceback
 import flet as ft
 
 from models import perfil
-from views.piezas import (aviso, boton_atajo, cabecera_tarjeta, campo, capa_ventana,
-                          sin_auto_update, tarjeta_iphone)
-from views.tema import C
+from views.diseno import (boton, boton_cuadro, caja_error, campo, etiqueta, sombra_vidrio,
+                          texto)
+from views.piezas import capa_ventana, sin_auto_update
+from views.tema import D
 
 # --- VENTANA "PERFIL" ---
-# Se abre al pulsar el pie de la barra lateral (la guía de Fragmentless, A4.6): "Nombre completo"
-# y "¿Cómo quieres que Fragmentless te llame?". Por ahora sin foto. Lo que se guarda está en
-# models/perfil.py.
+# Se abre al pulsar el pie de la barra lateral: "Nombre completo" y "¿Cómo quieres que
+# Fragmentless te llame?". Lo que se guarda está en models/perfil.py.
+#
+# Diseño manchas + vidrio (30/09), como las ventanas de agregar mesa / platillo: tarjeta sólida de
+# radio 26, etiqueta mono "PERFIL", título, X arriba y un solo botón en tinta. Maqueta aprobada:
+# https://claude.ai/artifact/TUMyJiwQiuQrHao64KEpKA. Los errores salen DENTRO de la ventana
+# (caja_error); al guardar se cierra sin aviso, como las demás ventanas.
 #
 # No es de una sección, es de todo el panel: su capa va en page.overlay, encima de la ventana
-# entera (la barra incluida), como la de Claude, y no dentro de una vista como las de Mi menú. Se
-# crea una vez y se queda ahí; al cambiar de vista no se pierde.
+# entera (la barra incluida), y no dentro de una vista. Se crea una vez y se queda ahí; al cambiar
+# de vista no se pierde (al cambiar de tema, MainController la quita para que nazca con el velo
+# nuevo). Escape y un clic en el velo la cierran.
 
-ANCHO_TARJETA = 620
-ANCHO_CAMPO = 260
+ANCHO_TARJETA = 440
 MAXIMO = 20                 # lo que cabe en el saludo de Inicio sin salirse
-ABAJO = 9                   # los avisos, en el hueco de debajo de la tarjeta (como en las ventanas de las vistas)
 
 
 def abrir_perfil(router):
@@ -33,12 +37,12 @@ def abrir_perfil(router):
         page.overlay.append(capa)
         page._overlay.update()
 
-    campo_nombre = campo(pista="Tu nombre y apellidos", valor=perfil.nombre_completo(), tamano=13,
-                         expand=False)
+    campo_nombre = campo(pista="Tu nombre y apellidos", valor=perfil.nombre_completo())
     # Sin pista: el dueño no quiso un "Ej: …".
-    campo_llamarte = campo(valor=perfil.elegido(), tamano=13, expand=False)
-    for c in (campo_nombre, campo_llamarte):
-        c.width = ANCHO_CAMPO
+    campo_llamarte = campo(valor=perfil.elegido())
+    texto_error = texto("", 12.5, 500, expand=True)
+    zona_error = caja_error(texto_error)
+    zona_error.margin = ft.Margin.only(top=14)
 
     def cerrar():
         # Escape vuelve a ser de la vista (las que cierran con él sus ventanitas).
@@ -46,16 +50,21 @@ def abrir_perfil(router):
             page.on_keyboard_event = anterior
         ventana["cerrar"]()
 
+    def mostrar_error(mensaje):
+        texto_error.value = mensaje
+        zona_error.visible = True
+        zona_error.update()
+
     def guardar(_=None):
         llamarte = campo_llamarte.value.strip()
         if len(llamarte) > MAXIMO:
-            aviso(page, f"Cómo te llamo: máximo {MAXIMO} letras.", abajo=ABAJO)
+            mostrar_error(f"Cómo te llamo: máximo {MAXIMO} letras.")
             return
         try:
             perfil.guardar(campo_nombre.value, llamarte)
         except OSError:
             traceback.print_exc()
-            aviso(page, "No se pudo guardar el perfil.", abajo=ABAJO)
+            mostrar_error("No se pudo guardar el perfil. Intenta de nuevo.")
             return
         cerrar()
         # El nombre nuevo, ya: en el pie de la barra que se ve y en el saludo de Inicio si está.
@@ -64,27 +73,53 @@ def abrir_perfil(router):
                 pintar()
             except RuntimeError:
                 pass            # un pintor de una vista que ya no está en pantalla
-        aviso(page, "Perfil guardado.")
 
     def al_teclear(e):
         ft.context.disable_auto_update()
         if e.key == "Escape":
             cerrar()
 
+    def al_escribir_llamarte(_):
+        # El error se va en cuanto se corrige lo que se escribe.
+        if zona_error.visible:
+            zona_error.visible = False
+            zona_error.update()
+
     # Enter en cualquiera de los dos campos guarda, como "Guardar cambios".
     campo_nombre.on_submit = sin_auto_update(guardar)
     campo_llamarte.on_submit = sin_auto_update(guardar)
+    campo_llamarte.on_change = sin_auto_update(al_escribir_llamarte)
 
-    tarjeta = tarjeta_iphone(ft.Column([
-        *cabecera_tarjeta("PERFIL", "Tus datos y cómo te llama Fragmentless en el panel."),
-        _fila("Nombre completo", campo_nombre),
-        ft.Divider(height=1, thickness=1, color=C.linea),
-        _fila("¿Cómo quieres que Fragmentless te llame?", campo_llamarte),
-        ft.Container(height=20),
-        ft.Row([boton_atajo(ft.Icons.CHECK, "Guardar cambios", guardar),
-                boton_atajo(ft.Icons.CLOSE, "Cancelar", lambda _: cerrar())], spacing=25),
-    ], spacing=10, tight=True), expand=None)
-    tarjeta.width = ANCHO_TARJETA
+    tarjeta = ft.Container(
+        width=ANCHO_TARJETA, padding=28, bgcolor=D.solido, border=ft.Border.all(1, D.linea),
+        border_radius=26, shadow=sombra_vidrio(),
+        content=ft.Column([
+            ft.Row([
+                ft.Column([
+                    etiqueta("PERFIL"),
+                    texto("Tus datos", 24, 800, espaciado=-0.5),
+                    texto("Y cómo te llama Fragmentless en el panel.", 12.5, 500, D.suave,
+                          alto=1.45),
+                ], spacing=6, tight=True, expand=True),
+                boton_cuadro("cerrar", sin_auto_update(lambda _: cerrar()), "Cerrar"),
+            ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=12),
+            ft.Container(height=22),
+            etiqueta("NOMBRE COMPLETO"),
+            ft.Container(height=8),
+            campo_nombre,
+            ft.Container(height=18),
+            etiqueta("¿CÓMO QUIERES QUE FRAGMENTLESS TE LLAME?"),
+            ft.Container(height=8),
+            campo_llamarte,
+            ft.Container(height=8),
+            texto(f"Sale en el saludo de Inicio y del Agente IA. Máximo {MAXIMO} letras.", 12,
+                  500, D.tenue),
+            zona_error,
+            ft.Container(height=24),
+            ft.Row([boton("Guardar cambios", "check", sin_auto_update(guardar), principal=True)],
+                   alignment=ft.MainAxisAlignment.END),
+        ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+    )
 
     # Escape cierra, mientras está abierta. Se cambia el manejador sin page.update(): con uno ya
     # puesto no hace falta, y en las demás vistas se comprobó que llega igual; un
@@ -93,15 +128,3 @@ def abrir_perfil(router):
     page.on_keyboard_event = al_teclear
     ventana["al_cerrar"] = cerrar
     ventana["abrir"](tarjeta)
-
-
-def _fila(texto, control):
-    # Una fila como las de Claude: la pregunta a la izquierda (Medium 14, blanco) y el campo a la
-    # derecha, con aire arriba y abajo.
-    return ft.Container(
-        padding=ft.Padding(left=0, top=6, right=0, bottom=6),
-        content=ft.Row([
-            ft.Text(texto, color=C.texto, size=14, font_family="LetraTexto", expand=True),
-            control,
-        ], spacing=25, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-    )
