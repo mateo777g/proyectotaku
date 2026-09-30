@@ -258,7 +258,7 @@ async function cargarMesas() {
     const [{ data: mesas, error: errorMesas }, { data: abiertas, error: errorAbiertas }] =
       await Promise.all([
         _supabase.from("mesas").select("id, nombre, orden").order("orden").order("id"),
-        _supabase.from("ventas").select("id, mesa, total, created_at").eq("estado", "abierta"),
+        _supabase.from("ventas").select("id, mesa, mesa_id, total, created_at").eq("estado", "abierta"),
       ]);
     if (errorMesas) throw errorMesas;
     if (errorAbiertas) throw errorAbiertas;
@@ -270,15 +270,19 @@ async function cargarMesas() {
       return;
     }
 
-    // mesa (texto libre en ventas) vs nombre (catálogo fijo) se comparan
-    // sin distinguir mayúsculas/espacios — mismo criterio que ya usaba el
-    // "reanudar" del campo libre que existía antes de esta lista fija.
-    const abiertaPorNombre = new Map(
-      (abiertas || []).map((v) => [v.mesa.trim().toLowerCase(), v])
-    );
+    // Cada cuenta se empareja con su mesa por la liga ventas.mesa_id, así
+    // renombrar una mesa no la separa de su cuenta. Las cuentas sin liga
+    // (abiertas antes de existir mesa_id) caen al nombre, sin distinguir
+    // mayúsculas/espacios.
+    const abiertaPorMesaId = new Map();
+    const abiertaPorNombre = new Map();
+    for (const v of abiertas || []) {
+      if (v.mesa_id != null) abiertaPorMesaId.set(v.mesa_id, v);
+      else abiertaPorNombre.set(v.mesa.trim().toLowerCase(), v);
+    }
 
     contenedorLista.innerHTML = _mesasCache.map((m) => {
-      const abierta = abiertaPorNombre.get(m.nombre.trim().toLowerCase());
+      const abierta = abiertaPorMesaId.get(m.id) || abiertaPorNombre.get(m.nombre.trim().toLowerCase());
       if (abierta) {
         return `
           <button class="tk-mesas-tarjeta tk-mesas-tarjeta--ocupada" onclick="abrirVentaExistente(${abierta.id})">
@@ -307,12 +311,19 @@ async function abrirMesaNueva(mesaId) {
   try {
     const { data: nueva, error } = await _supabase
       .from("ventas")
-      .insert([{ mesa: mesa.nombre }])
+      .insert([{ mesa: mesa.nombre, mesa_id: mesa.id }])
       .select()
       .single();
     if (error) throw error;
     await abrirVentaExistente(nueva.id);
   } catch (err) {
+    // 23505 = el índice ventas_una_abierta_por_mesa: alguien más ya abrió
+    // esta mesa (otra tablet, o esta lista estaba vieja).
+    if (err.code === "23505") {
+      mostrarToast("Esa mesa ya tiene una cuenta abierta. Te la muestro.", "error");
+      await cargarMesas();
+      return;
+    }
     console.error("Error al abrir mesa:", err);
     mostrarToast("No se pudo abrir la mesa: " + (err.message || "error desconocido"), "error");
   }
@@ -327,10 +338,14 @@ async function abrirVentaExistente(ventaId) {
   try {
     const { data: venta, error: errorVenta } = await _supabase
       .from("ventas")
-      .select("id, mesa, total, estado")
+      .select("id, mesa, total, estado, mesas(nombre)")
       .eq("id", ventaId)
       .single();
     if (errorVenta) throw errorVenta;
+    // El título usa el nombre que la mesa tiene hoy (por la liga), no la
+    // copia que se guardó al abrir la cuenta.
+    if (venta.mesas && venta.mesas.nombre) venta.mesa = venta.mesas.nombre;
+    delete venta.mesas;
 
     const { data: items, error: errorItems } = await _supabase
       .from("venta_items")

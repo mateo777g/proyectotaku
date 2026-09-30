@@ -18,12 +18,6 @@ class EscrituraSinEfecto(Exception):
     """Ver la clase homónima en platillo_dao.py — mismo significado aquí."""
 
 
-class CuentasSinMover(Exception):
-    """La mesa SÍ se renombró, pero sus cuentas abiertas se quedaron con el nombre viejo
-    (ventas.mesa es texto libre, no llave foránea). Quien llame debe avisarlo: esas cuentas
-    ya no aparecen en mesas.html hasta que se corrijan."""
-
-
 _COLUMNAS = "id, nombre, orden"
 
 
@@ -61,16 +55,7 @@ class MesaDAO:
     def actualizar(id_mesa: int, nombre: str) -> dict:
         """Solo renombra — no toca `orden` (no hay todavía una forma de
         reordenar mesas a mano, igual que platillos antes de tener un drag
-        and drop; se puede agregar después si hace falta).
-
-        Las cuentas ABIERTAS de la mesa se llevan el nombre nuevo: ventas.mesa es texto libre
-        y mesas.html/Inicio/esta vista las emparejan con el catálogo por nombre, así que sin
-        esto la cuenta queda huérfana (nadie la puede cobrar desde mesas.html). Las cerradas
-        conservan su nombre de ese día. Si la mesa se renombró pero las cuentas no se pudieron
-        mover, lanza CuentasSinMover."""
-        anterior = (
-            client.from_("mesas").select("nombre").eq("id", id_mesa).execute()
-        ).data or []
+        and drop; se puede agregar después si hace falta)."""
         respuesta = (
             client.from_("mesas").update({"nombre": nombre}).eq("id", id_mesa).execute()
         )
@@ -78,34 +63,7 @@ class MesaDAO:
             raise EscrituraSinEfecto(
                 f"El update de mesas id={id_mesa} no afectó ninguna fila."
             )
-        if anterior and anterior[0]["nombre"] != nombre:
-            try:
-                MesaDAO._mover_cuentas_abiertas(anterior[0]["nombre"], nombre)
-            except Exception as error:
-                raise CuentasSinMover(str(error)) from error
         return respuesta.data[0]
-
-    @staticmethod
-    def _mover_cuentas_abiertas(nombre_viejo: str, nombre_nuevo: str) -> None:
-        # Mismo emparejamiento que el resto del sistema (_normalizar_mesa), por eso se filtra
-        # aquí y no con un .eq() exacto en la consulta. Import local: ia_controller importa
-        # este módulo.
-        from models.ia_controller import _normalizar_mesa
-
-        clave = _normalizar_mesa(nombre_viejo)
-        abiertas = (
-            client.from_("ventas").select("id, mesa").eq("estado", "abierta").execute()
-        ).data or []
-        ids = [v["id"] for v in abiertas if _normalizar_mesa(v.get("mesa")) == clave]
-        if not ids:
-            return
-        respuesta = (
-            client.from_("ventas").update({"mesa": nombre_nuevo}).in_("id", ids).execute()
-        )
-        if len(respuesta.data or []) != len(ids):
-            raise EscrituraSinEfecto(
-                f"Se movieron {len(respuesta.data or [])} de {len(ids)} cuentas abiertas."
-            )
 
     @staticmethod
     def eliminar(id_mesa: int) -> None:

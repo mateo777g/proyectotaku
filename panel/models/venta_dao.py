@@ -18,7 +18,10 @@ DAOs (ese problema es específico de UPDATE/DELETE bloqueados por RLS).
 """
 from models.supabase_client import client
 
-_COLUMNAS_VENTAS = "id, mesa, estado, total, created_at, updated_at, cerrada_at"
+# mesas(nombre) = el nombre ACTUAL de la mesa, por la liga ventas.mesa_id -> mesas.id.
+_COLUMNAS_VENTAS = (
+    "id, mesa, mesa_id, mesas(nombre), estado, total, created_at, updated_at, cerrada_at"
+)
 _COLUMNAS_ITEMS = "id, venta_id, platillo_id, nombre, precio_unitario, cantidad, created_at"
 
 # Tope de cuántas ventas se traen para el agente de IA (ver ia_controller.py)
@@ -29,6 +32,20 @@ _COLUMNAS_ITEMS = "id, venta_id, platillo_id, nombre, precio_unitario, cantidad,
 # es resumir/agregar en SQL (o acotar por fecha), no subir el número a lo
 # bruto — dejarlo anotado aquí para no repetir la discusión después.
 _LIMITE_VENTAS_POR_DEFECTO = 500
+
+
+def _con_nombre_actual(ventas: list[dict]) -> list[dict]:
+    """Cada venta sale con `mesa` = el nombre que la mesa tiene HOY en el catálogo.
+
+    ventas.mesa es el nombre copiado el día que se abrió la cuenta; si después se renombró la
+    mesa, esa copia ya no coincide con el catálogo y la cuenta se "perdía" (Inicio, Mesas y el
+    agente emparejan por nombre). Con la liga mesa_id se usa el nombre vivo. Las ventas sin
+    liga (mesa borrada, o abiertas por un mesas.js viejo) se quedan con su copia."""
+    for venta in ventas:
+        ligada = venta.pop("mesas", None)
+        if ligada and ligada.get("nombre"):
+            venta["mesa"] = ligada["nombre"]
+    return ventas
 
 
 class VentaDAO:
@@ -44,7 +61,7 @@ class VentaDAO:
             .limit(limite)
             .execute()
         )
-        return respuesta.data or []
+        return _con_nombre_actual(respuesta.data or [])
 
     @staticmethod
     def obtener_abiertas() -> list[dict]:
@@ -53,12 +70,12 @@ class VentaDAO:
         que obtener_ventas_con_items() (que es para el agente y para Inicio)."""
         respuesta = (
             client.from_("ventas")
-            .select("id, mesa, total, created_at")
+            .select("id, mesa, mesa_id, mesas(nombre), total, created_at")
             .eq("estado", "abierta")
             .order("created_at")
             .execute()
         )
-        return respuesta.data or []
+        return _con_nombre_actual(respuesta.data or [])
 
     @staticmethod
     def obtener_items_de_ventas(ids_venta: list[int]) -> list[dict]:

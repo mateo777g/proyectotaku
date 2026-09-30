@@ -18,7 +18,7 @@ import traceback
 import flet as ft
 import httpx
 
-from models.mesa_dao import CuentasSinMover, MesaDAO
+from models.mesa_dao import MesaDAO
 from views.diseno import apagar, boton, boton_cuadro, caja_error, campo, etiqueta, texto, ventana
 
 _ANCHO_TARJETA = 440
@@ -28,8 +28,7 @@ class DialogoMesa:
     """Uso: DialogoMesa(router, on_guardado=callback, mesa=fila_o_None).abrir()
 
     `mesa=None` → modo alta. `mesa=<dict>` → modo edición, precargado con esa fila.
-    `on_guardado` se llama tras crear/actualizar con éxito (con un texto de aviso si la mesa se
-    renombró pero su cuenta abierta no se pudo mover), para que
+    `on_guardado` se llama sin argumentos tras crear/actualizar con éxito, para que
     mesas_view.py recargue la tabla."""
 
     def __init__(self, router, on_guardado, mesa: dict | None = None):
@@ -120,16 +119,6 @@ class DialogoMesa:
                 await asyncio.to_thread(MesaDAO.actualizar, self.mesa["id"], nombre)
             else:
                 await asyncio.to_thread(MesaDAO.crear, nombre)
-        except CuentasSinMover:
-            # La mesa ya se renombró: se cierra como éxito, pero avisando.
-            traceback.print_exc()
-            self._set_cargando(False)
-            self._cerrar()
-            self.on_guardado(
-                f"La mesa se renombró, pero su cuenta abierta sigue a nombre de "
-                f"«{self.mesa['nombre']}» y no aparecerá en mesas.html."
-            )
-            return
         except httpx.RequestError:
             traceback.print_exc()
             self._set_cargando(False)
