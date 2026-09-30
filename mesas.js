@@ -258,7 +258,7 @@ async function cargarMesas() {
     const [{ data: mesas, error: errorMesas }, { data: abiertas, error: errorAbiertas }] =
       await Promise.all([
         _supabase.from("mesas").select("id, nombre, orden").order("orden").order("id"),
-        _supabase.from("ventas").select("id, mesa, total, updated_at").eq("estado", "abierta"),
+        _supabase.from("ventas").select("id, mesa, total, created_at").eq("estado", "abierta"),
       ]);
     if (errorMesas) throw errorMesas;
     if (errorAbiertas) throw errorAbiertas;
@@ -284,7 +284,7 @@ async function cargarMesas() {
           <button class="tk-mesas-tarjeta tk-mesas-tarjeta--ocupada" onclick="abrirVentaExistente(${abierta.id})">
             <span class="tk-mesas-tarjeta-mesa">${escapeHtml(m.nombre)}</span>
             <span class="tk-mesas-tarjeta-estado tk-mesas-tarjeta-estado--ocupada">Ocupada · ${formatearPrecio(abierta.total)}</span>
-            <span class="tk-mesas-tarjeta-tiempo">${tiempoRelativo(abierta.updated_at)}</span>
+            <span class="tk-mesas-tarjeta-tiempo">${tiempoRelativo(abierta.created_at)}</span>
           </button>
         `;
       }

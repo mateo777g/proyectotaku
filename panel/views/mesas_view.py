@@ -326,5 +326,7 @@ class MesasView(ft.Container):
             return
         await self._cargar()
 
-    def _on_guardado(self):
+    def _on_guardado(self, aviso_texto: str | None = None):
+        if aviso_texto:
+            aviso(self.page_ref, aviso_texto)
         self.page_ref.run_task(self._cargar)
