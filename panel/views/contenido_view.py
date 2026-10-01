@@ -15,6 +15,11 @@ pantalla):
   1080×1920) y 3 ¿Qué quieres decir? (texto libre). Abajo "Irá en el anuncio: ..." (los datos
   del negocio que lleva ese formato) con "Editar", y "Generar anuncio", que se enciende con las
   tres.
+- Fila OPCIONAL (01/10, noche; maqueta https://claude.ai/artifact/AuWieY9WJjgHoNnVpb7hiw), sin
+  número ni palomita: "Color" (cuadrito + código; abre components/dialogo_color.py), el botón de
+  volver al rojo (apagado mientras esté el rojo) y "Combinar" (abre components/dialogo_combinar.py;
+  apagado sin producto; con combo, fotitos + nombres y la X para quitarlo). El color NO se
+  recuerda: cada visita empieza en rojo. Para hacerle sitio, la sección 3 ya no ocupa tanto.
 - Tarjeta "RESULTADO" (vidrio, 440 de ancho): vacío (marco punteado) / generando (rueda) /
   listo (la imagen + "Guardado en Mi biblioteca", Generar otra, Abrir carpeta) / error.
 
@@ -37,8 +42,11 @@ import openai
 from models import generador_ia
 from models.datos_negocio_dao import DatosNegocioDAO
 from models.platillo_dao import PlatilloDAO
+from views.components.dialogo_color import ROJO_MUESTRA, DialogoColor
+from views.components.dialogo_combinar import DialogoCombinar
 from views.components.dialogo_negocio import DialogoNegocio
-from views.diseno import ALTO_BARRA_SUPERIOR, MARGEN, boton, etiqueta, icono, punto, texto, vidrio
+from views.diseno import (ALTO_BARRA_SUPERIOR, MARGEN, apagar, boton, boton_cuadro, etiqueta,
+                          icono, punto, texto, vidrio)
 from views.tema import D, VERDE
 
 ANCHO_RESULTADO = 440
@@ -118,6 +126,21 @@ def _boton_ancho(etiqueta_boton, nombre_icono, al_pulsar, principal=False):
     return cuerpo
 
 
+def _boton_opcion(contenido, al_pulsar):
+    # Los botones de la fila OPCIONAL (Color, Combinar): alto 36, radio 11, borde fino.
+    cuerpo = ft.Container(height=36, border_radius=11, border=ft.Border.all(1, D.linea),
+                          padding=ft.Padding.symmetric(horizontal=12), content=contenido,
+                          on_click=al_pulsar, animate_opacity=150)
+
+    def encima(e):
+        if not cuerpo.disabled:
+            cuerpo.bgcolor = D.chip if e.data in (True, "true") else None
+            cuerpo.update()
+
+    cuerpo.on_hover = encima
+    return cuerpo
+
+
 def _mensaje_de_error(error: Exception) -> str:
     """Los errores de la generación en palabras del dueño (sin llave, sin saldo, sin red...)."""
     if isinstance(error, generador_ia.SinLlave):
@@ -153,6 +176,10 @@ class ContenidoView(ft.Container):
         self._busqueda = ""
         self._producto: dict | None = None
         self._formato: str | None = None
+        # Opcionales: el color (None = el rojo de siempre; no se recuerda entre visitas) y los
+        # productos que acompañan al principal (combo, máximo 2 extra).
+        self._color: str | None = None
+        self._extras: list[dict] = []
         # Estado del resultado: "vacio" / "generando" / "listo" / "error", y lo que se pidió.
         self._fase = "vacio"
         self._pedido: dict | None = None
@@ -233,7 +260,7 @@ class ContenidoView(ft.Container):
         self.marca3 = ft.Container(content=_marca(3, False))
         self.campo_mensaje = ft.TextField(
             hint_text="Ej. 2x1 en frappés todos los viernes de octubre.",
-            multiline=True, min_lines=1, max_lines=None, border=ft.InputBorder.NONE,
+            multiline=True, min_lines=2, max_lines=None, border=ft.InputBorder.NONE,
             filled=False, dense=True, content_padding=0,
             text_size=13.5,
             text_style=ft.TextStyle(font_family="Jakarta400", color=D.texto, height=1.5),
@@ -242,18 +269,70 @@ class ContenidoView(ft.Container):
             cursor_color=D.texto, on_change=self._on_escribir,
         )
         caja_mensaje = ft.Container(
-            expand=True, padding=ft.Padding.symmetric(horizontal=14, vertical=12),
+            expand=True, padding=ft.Padding.symmetric(horizontal=14, vertical=10),
             border_radius=12, border=ft.Border.all(1, D.linea),
             content=ft.Column([self.campo_mensaje], spacing=0,
                               horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
             # El área vacía de la caja también lleva al campo (como un textarea).
             on_click=lambda e: self.campo_mensaje.focus(),
         )
+        # Con combo no sale el precio del menú: se avisa bajo la caja.
+        self.nota_combo = ft.Container(
+            visible=False, margin=ft.Margin.only(top=-4),
+            content=ft.Row([icono("info", 14, D.tenue),
+                            texto("Con combo no sale el precio del menú: escribe el precio del "
+                                  "combo en tu mensaje.", 12, 500, D.tenue, expand=True)],
+                           spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        )
+        # Ya no se estira tanto como antes (lo que se escribe es poco): unos 3 renglones; el
+        # espacio que soltó es para la fila OPCIONAL de abajo.
         seccion_mensaje = _seccion([
             ft.Row([self.marca3, texto("¿Qué quieres decir?", 14.5, 700)], spacing=10,
                    vertical_alignment=ft.CrossAxisAlignment.CENTER),
             caja_mensaje,
+            self.nota_combo,
         ], expand=True, espacio=12)
+
+        # --------------------------------------------------------------
+        # OPCIONAL: color del anuncio y combinar productos (sin número ni palomita)
+        # --------------------------------------------------------------
+        self.muestra_color = ft.Container(width=18, height=18, border_radius=5,
+                                          border=ft.Border.all(1, "#1F000000"))
+        self.valor_color = texto("", 11, 400, D.tenue, mono=True)
+        self.boton_color = _boton_opcion(
+            ft.Row([self.muestra_color, texto("Color", 13, 600), self.valor_color], spacing=9,
+                   tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            self._abrir_color)
+        self.boton_color.padding = ft.Padding.only(left=9, right=12)
+        self.boton_color.tooltip = "Elegir el color del anuncio"
+        self.boton_rojo = boton_cuadro("volver", self._volver_rojo, "Volver al rojo de siempre")
+        self.cuenta_combo = texto("", 11, 400, D.tenue, mono=True)
+        self.boton_combinar = _boton_opcion(
+            ft.Row([icono("combinar", 16), texto("Combinar", 13, 600), self.cuenta_combo],
+                   spacing=8, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            self._abrir_combinar)
+        self.boton_combinar.tooltip = "Poner hasta 3 productos en el mismo anuncio"
+        self.fotos_combo = ft.Stack(height=24)
+        self.resumen_combo = ft.Text(size=12, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
+        # Con combo los nombres casi nunca caben enteros: completos en la ayuda del ratón.
+        self.zona_resumen = ft.Container(content=self.resumen_combo, expand=1)
+        self.boton_quitar_combo = boton_cuadro("cerrar", self._quitar_combo, "Quitar el combo")
+        fila_opciones = ft.Container(
+            padding=ft.Padding.only(left=16, top=12, right=14, bottom=12),
+            bgcolor=D.solido, border=ft.Border.all(1, D.linea), border_radius=18,
+            content=ft.Row([
+                etiqueta("OPCIONAL"),
+                ft.Container(width=4),
+                self.boton_color,
+                self.boton_rojo,
+                ft.Container(width=1, height=24, bgcolor=D.linea,
+                             margin=ft.Margin.symmetric(horizontal=4)),
+                self.boton_combinar,
+                ft.Row([self.fotos_combo, self.zona_resumen], spacing=8, expand=True,
+                       vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                self.boton_quitar_combo,
+            ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        )
 
         # --------------------------------------------------------------
         # Pie: lo que irá en el anuncio + Generar
@@ -292,6 +371,7 @@ class ContenidoView(ft.Container):
                 seccion_producto,
                 seccion_formato,
                 seccion_mensaje,
+                fila_opciones,
                 pie,
             ], spacing=14),
         )
@@ -502,8 +582,9 @@ class ContenidoView(ft.Container):
                 content=ft.Column([
                     ft.ProgressRing(width=28, height=28, stroke_width=2.4, color=D.texto),
                     texto("Generando tu anuncio...", 14.5, 700),
-                    texto(f"{self._pedido['producto'].get('nombre', '')} · "
-                          f"{FORMATOS[clave][0]}", 12.5, 500, D.suave, alto=1.45,
+                    texto(" + ".join(p.get("nombre", "") for p in
+                                     [self._pedido["producto"]] + self._pedido["extras"])
+                          + f" · {FORMATOS[clave][0]}", 12.5, 500, D.suave, alto=1.45,
                           text_align=ft.TextAlign.CENTER),
                     texto("Puede tardar un poco.", 12, 500, D.tenue, alto=1.45),
                 ], spacing=12, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
@@ -534,18 +615,62 @@ class ContenidoView(ft.Container):
         self.zona_marco.content = marco
         self.zona_acciones.visible = self._fase == "listo"
 
+    def _combo(self):
+        """El principal y sus extra, en orden (vacío si no hay producto)."""
+        return [self._producto] + self._extras if self._producto is not None else []
+
+    def _pintar_opciones(self):
+        # Color: el cuadrito con el color elegido (o el rojo de siempre) y su código.
+        self.muestra_color.bgcolor = self._color or ROJO_MUESTRA
+        self.valor_color.value = self._color or "ROJO"
+        apagar(self.boton_rojo, self._color is None)
+
+        # Combinar: apagado hasta que haya principal; con combo, fotitos + nombres y la X.
+        combo = self._combo()
+        hay_combo = bool(self._extras) and self._producto is not None
+        apagar(self.boton_combinar, self._producto is None)
+        self.cuenta_combo.value = f"{len(combo)}/3"
+        self.cuenta_combo.visible = hay_combo
+        self.fotos_combo.controls = [
+            ft.Container(left=i * 18, width=24, height=24, border_radius=7,
+                         border=ft.Border.all(2, D.solido),
+                         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                         content=ft.Image(src=p.get("image_url") or "assets/sin-foto.png",
+                                          fit=ft.BoxFit.COVER, width=24, height=24))
+            for i, p in enumerate(combo)] if hay_combo else []
+        self.fotos_combo.width = 24 + 18 * (len(combo) - 1) if hay_combo else 0
+        self.fotos_combo.visible = hay_combo
+        if hay_combo:
+            resumen, color, peso = " + ".join(p.get("nombre", "") for p in combo), D.texto, 600
+        elif self._producto is not None:
+            resumen, color, peso = "Hasta 3 productos en un mismo anuncio.", D.tenue, 500
+        else:
+            resumen, color, peso = "Elige primero el producto.", D.tenue, 500
+        self.resumen_combo.value = resumen
+        self.zona_resumen.tooltip = resumen if hay_combo else None
+        self.resumen_combo.color = color
+        self.resumen_combo.font_family = f"Jakarta{peso}"
+        self.boton_quitar_combo.visible = hay_combo
+        self.nota_combo.visible = hay_combo
+        self.campo_mensaje.hint_text = ("Ej. Taco + agua por $99 todo octubre." if hay_combo
+                                        else "Ej. 2x1 en frappés todos los viernes de octubre.")
+
     def _pintar_estado(self, actualizar=True):
         """Todo lo que cambia al elegir/escribir/generar (sin la rejilla de productos)."""
         self._pintar_marcas()
         self._pintar_generar()
         self._pintar_resultado()
+        self._pintar_opciones()
         self._pintar_van(actualizar=False)
         for clave, tarjeta in self.tarjetas_formato.items():
             tarjeta.shadow = _anillo(clave == self._formato)
         if actualizar:
             self._actualizar(self.marca1, self.marca2, self.marca3, self.boton_generar,
                              self.texto_formato_resultado, self.zona_marco, self.zona_acciones,
-                             self.texto_van, *self.tarjetas_formato.values())
+                             self.texto_van, *self.tarjetas_formato.values(),
+                             self.boton_color, self.boton_rojo, self.boton_combinar,
+                             self.fotos_combo, self.zona_resumen, self.boton_quitar_combo,
+                             self.nota_combo, self.campo_mensaje)
 
     # ------------------------------------------------------------------
     # Acciones
@@ -556,7 +681,41 @@ class ContenidoView(ft.Container):
 
     def _elegir_producto(self, platillo):
         self._producto = platillo
+        # Si el nuevo principal era uno de los extra, deja de ser extra.
+        self._extras = [p for p in self._extras if p.get("id") != platillo.get("id")]
         self._pintar_productos()
+        self._pintar_estado()
+
+    def _abrir_color(self, e=None):
+        combo = bool(self._extras)
+        producto = self._producto or {}
+        DialogoColor(
+            self.router, self._color,
+            foto=producto.get("image_url") or "assets/sin-foto.png",
+            precio="" if combo else generador_ia.formatear_precio(producto.get("precio")),
+            al_elegir=self._on_color,
+        ).abrir()
+
+    def _on_color(self, color):
+        self._color = color
+        self._pintar_estado()
+
+    def _volver_rojo(self, e=None):
+        self._color = None
+        self._pintar_estado()
+
+    def _abrir_combinar(self, e=None):
+        if self._producto is None:
+            return
+        DialogoCombinar(self.router, self._producto, self._platillos or [], self._extras,
+                        al_listo=self._on_combo).abrir()
+
+    def _on_combo(self, extras):
+        self._extras = extras
+        self._pintar_estado()
+
+    def _quitar_combo(self, e=None):
+        self._extras = []
         self._pintar_estado()
 
     def _elegir_formato(self, clave):
@@ -581,6 +740,8 @@ class ContenidoView(ft.Container):
             "producto": self._producto,
             "formato": self._formato,
             "mensaje": (self.campo_mensaje.value or "").strip(),
+            "color": self._color,
+            "extras": list(self._extras),
         }
         self._fase = "generando"
         self._pintar_estado()
@@ -595,7 +756,7 @@ class ContenidoView(ft.Container):
                 self._datos_error = False
             self._ruta = await asyncio.to_thread(
                 generador_ia.generar, pedido["producto"], pedido["formato"],
-                pedido["mensaje"], self._datos)
+                pedido["mensaje"], self._datos, pedido["color"], pedido["extras"])
             self._fase = "listo"
         except Exception as error:
             traceback.print_exc()
