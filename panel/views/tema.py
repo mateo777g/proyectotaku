@@ -113,6 +113,7 @@ D_CLARO = {
     "suave": "#5f5f5a",                  # descripciones, botones apagados
     "tenue": "#8b8b85",                  # etiquetas mono, pistas, segunda línea del título
     "linea": "#17000000",                # 9 %
+    "linea_fuerte": "#2E000000",         # 18 %: el borde punteado del resultado (Crear contenido)
     "chip": "#0B000000",                 # 4.5 %: fondo de chips, iconos y el selector
     "tinta": "#0b0b0b",                  # lo activo: opción del menú, botón principal, burbuja
     "sobre_tinta": "#ffffff",
@@ -133,6 +134,7 @@ D_OSCURO = {
     "suave": "#a6a6a0",
     "tenue": "#7c7c77",
     "linea": "#1AFFFFFF",
+    "linea_fuerte": "#33FFFFFF",         # 20 %
     "chip": "#0FFFFFFF",
     "tinta": "#f5f5f2",
     "sobre_tinta": "#0b0b0b",

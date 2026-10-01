@@ -1,954 +1,615 @@
 """
 views/contenido_view.py
-Fase 7.3 — el asistente real de creación de contenido. Conecta el catálogo
-de plantillas (models/plantillas.py, Fase 7.1) y el compositor Pillow
-(models/generador_anuncios.py, Fase 7.2) al lenguaje visual que YA estaba
-aprobado en el wizard estático de la 7.0-7.2: los pills de paso con check
-verde, la tarjeta #f8f1de con sombra, las miniaturas 176x198 con anillo de
-selección, y el botón negro con AUTO_AWESOME. No se rediseñó nada — donde
-algo no tenía con qué mapearse en el diseño existente se documenta abajo
-en vez de improvisarse en silencio.
+Crear contenido CON IA (01/10), diseño manchas + vidrio SIN el fondo de manchas (es exclusivo del
+Agente IA): la vista pinta su suelo (D.suelo) y MainController lo sube detrás de la barra.
+Maqueta aprobada, pasada tal cual: https://claude.ai/artifact/EzzYQTCWrHhJJ2Bbmx1WPG. Lo único
+que allí era de muestra (la imagen con la etiqueta MUESTRA) aquí es el anuncio real.
 
-MAPEO DE PASOS (decisión explícita, pedida así por el dueño en el prompt de
-esta fase, no asumida)
------------------------------------------------------------------------
-El wizard estático pintaba 3 pasos: "Elegir tipo de anuncio" / "Elegir
-platillo" / "Instrucciones". El flujo real que pidió el dueño (roadmap,
-"EL FLUJO QUE PIDIÓ EL DUEÑO") tiene 4 decisiones con datos completamente
-distintos entre sí — diseño, platillo, texto, formato — más un resultado
-que ya queda guardado solo. Meter texto Y formato dentro de un único paso
-"Instrucciones" habría escondido dos pantallas distintas (un formulario de
-texto que cambia de forma según la plantilla, y un selector de dos
-tamaños de salida) detrás de una sola etiqueta. Se optó por CRECER la fila
-de pasos a 4 pills, uno por decisión real: Diseño / Platillo / Texto /
-Formato — mismo componente visual (_paso), generalizado para N pasos en
-vez de 3 fijos.
+UNA sola pantalla con todo a la vista (lo pidió el desarrollador: nada de pasos que cambian de
+pantalla):
+- Barra de arriba (vidrio): "Crear contenido", chip "Tus anuncios se guardan en Mi biblioteca" y
+  "Datos del negocio" (abre components/dialogo_negocio.py).
+- Tarjeta "NUEVO ANUNCIO" (vidrio) con tres secciones en sólido, cada una con su número que se
+  vuelve palomita verde al llenarse: 1 Producto (TODOS los platillos del menú, con foto o
+  sin-foto.png, buscador sin acentos en memoria), 2 Formato (post 1080×1350 / historia
+  1080×1920) y 3 ¿Qué quieres decir? (texto libre). Abajo "Irá en el anuncio: ..." (los datos
+  del negocio que lleva ese formato) con "Editar", y "Generar anuncio", que se enciende con las
+  tres.
+- Tarjeta "RESULTADO" (vidrio, 440 de ancho): vacío (marco punteado) / generando (rueda) /
+  listo (la imagen + "Guardado en Mi biblioteca", Generar otra, Abrir carpeta) / error.
 
-La "vista previa -> guardado" (paso 6 del roadmap) NO es un 5to pill:
-generador_anuncios.generar_anuncio() ya escribe el archivo en biblioteca/
-al componerlo (ver su docstring — "generar y guardar son el mismo acto"),
-así que no hay una acción de "guardar" independiente que merezca su propio
-paso. Se resuelve como una pantalla de resultado dentro de la misma
-tarjeta, con los 4 pills ya en verde — es la respuesta del asistente a
-"ya terminaste", no un paso más que completar.
-
-Las "pestañas" (Continuo/Comida rápida) del wizard estático tampoco tenían
-con qué mapearse tal cual: obtener_plantillas() regresa 4 plantillas
-PLANAS, sin ninguna agrupación de "estilos" en el catálogo real. En vez de
-inventar una categoría que no existe en los datos, se reaprovechó el
-MISMO componente (el pill _pestana ya aprobado) para lo que sí tiene
-exactamente dos opciones reales: elegir FORMATO (post/historia) en el
-paso 4 — mismo control visual, datos reales en vez de inventados.
-
-ESTADO DEL ASISTENTE
----------------------
-Un único diccionario de instancia por campo (no un dataclass aparte): se
-conserva completo mientras el dueño navega hacia atrás y adelante entre
-pasos (clic en un pill ya completado), así que volver a "Diseño" y luego
-seguir de nuevo no borra el platillo/texto/formato ya elegidos. La única
-limpieza deliberada es _textos al cambiar de plantilla (los campos son
-específicos de cada plantilla — headline_stack no es headline) y el reseteo
-completo al pedir "Crear otro anuncio" desde la pantalla de resultado.
-
-Selección por clic (diseño/platillo/formato) deshabilita+atenúa el botón
-"Continuar" cuando no hay nada elegido (no se puede fallar validando algo
-que ya es imposible de dejar vacío). El paso de TEXTO es lo único que
-valida al hacer clic en "Continuar", con el mismo banner rojo
-#f7e4e3/#d9534f/#a33c39 que ya usa dialogo_platillo.py/menu_view.py — un
-TextField no se puede "apagar" de forma útil mientras se escribe, así que
-aquí se seguyó el mismo patrón que _validar() en dialogo_platillo.py en
-vez de inventar un tercer lenguaje de validación.
-
-generar_anuncio() es bloqueante (Pillow + una descarga a R2) — se llama
-con asyncio.to_thread, mismo convenio que el resto del proyecto; mientras
-corre, el botón muestra el mismo ProgressRing dorado que ya usa
-dialogo_platillo.py (nunca el logo animado de "Pensando..." — ese es
-exclusivo de agenteIA_view.py, ver CLAUDE.md). Un fallo (sin internet, un
-ValueError de validación de generar_anuncio) se muestra con el banner rojo
-compartido, nunca con un try/except mudo.
+La imagen la hace models/generador_ia.py (gpt-image-2.5-sunburst, bloqueante: va con
+asyncio.to_thread) y la guarda en biblioteca/, donde Mi biblioteca ya la ve. Las PLANTILLAS de
+antes no se borraron: su vista está en views/contenido_plantillas_view.py, sin ruta ni botón,
+para reintegrarla después.
 """
 import asyncio
+import os
+import subprocess
 import traceback
+import unicodedata
 
 import flet as ft
-
-from views.piezas import fondo_pagina, tarjeta_iphone
-from views.tema import C
+import flet.canvas as cv
 import httpx
+import openai
 
-from models.generador_anuncios import generar_anuncio
-from models.plantillas import FORMATOS, obtener_plantilla, obtener_plantillas
+from models import generador_ia
+from models.datos_negocio_dao import DatosNegocioDAO
 from models.platillo_dao import PlatilloDAO
+from views.components.dialogo_negocio import DialogoNegocio
+from views.diseno import ALTO_BARRA_SUPERIOR, MARGEN, boton, etiqueta, icono, punto, texto, vidrio
+from views.tema import D, VERDE
 
-# Etiquetas de los campos de texto que puede pedir una plantilla (ver
-# Formato.campos_texto en models/plantillas.py, trampa #6 del roadmap):
-# (etiqueta corta, hint de ejemplo, ícono). headline_stack lleva su propia
-# aclaración aparte en _pantalla_texto() porque, a diferencia de los otros
-# dos, el dueño lo escribe UNA sola vez y generador_anuncios.py lo repite
-# solo — eso no es obvio con solo un hint.
-_CAMPOS_TEXTO = {
-    "headline": ("Título principal", "Ej. TACO ÁRABE", ft.Icons.TITLE),
-    "subline": ("Subtítulo", "Ej. SABOR CASERO Y DELICIOSO", ft.Icons.SHORT_TEXT),
-    "headline_stack": ("Frase", "Ej. SABOR AUTÉNTICO", ft.Icons.REPEAT),
+ANCHO_RESULTADO = 440
+COLUMNAS_PRODUCTOS = 5
+# Alto de una tarjeta de producto (6 + foto 96 + 8 + nombre + precio + 10) más el anillo de 2 px
+# de la elegida (con su respiro): se ve un renglón y los demás se alcanzan con la rueda del ratón.
+ALTO_PRODUCTOS = 164
+
+# formato -> (título, medidas, qué lleva, nombre corto, etiqueta del resultado, marco ancho×alto)
+FORMATOS = {
+    "post": ("Post de Instagram", "1080 × 1350", "Lleva el nombre y el teléfono.", "post",
+             "POST · 1080 × 1350", (360, 450)),
+    "historia": ("Historia de Instagram", "1080 × 1920",
+                 "Nombre, teléfono, página web y dirección.", "historia",
+                 "HISTORIA · 1080 × 1920", (288, 512)),
 }
 
-_ETIQUETAS_PASOS = [(1, "Diseño"), (2, "Platillo"), (3, "Texto"), (4, "Formato")]
 
-_SUBTITULOS = {
-    1: "Elige un estilo para comenzar tu próxima publicación.",
-    2: "Elige el platillo que quieres promocionar.",
-    3: "Escribe el texto que llevará tu anuncio.",
-    4: "Elige en qué formato quieres publicarlo.",
-}
+def _sin_acentos(valor: str) -> str:
+    descompuesto = unicodedata.normalize("NFD", valor or "")
+    return "".join(c for c in descompuesto if unicodedata.category(c) != "Mn").lower()
+
+
+def _anillo(elegido):
+    # El anillo de 2 px en tinta de lo elegido (box-shadow 0 0 0 2px de la maqueta).
+    return ft.BoxShadow(spread_radius=2, blur_radius=0, color=D.tinta) if elegido else None
+
+
+def _marca(numero, listo):
+    """El número de cada sección (1, 2, 3) que se vuelve palomita verde al llenarse."""
+    if listo:
+        return ft.Container(width=24, height=24, border_radius=12, bgcolor=VERDE,
+                            alignment=ft.Alignment.CENTER, content=icono("check", 13, "#ffffff"))
+    return ft.Container(width=24, height=24, border_radius=12, bgcolor=D.chip,
+                        border=ft.Border.all(1, D.linea), alignment=ft.Alignment.CENTER,
+                        content=texto(str(numero), 11, 400, D.suave, mono=True))
+
+
+def _seccion(contenido, expand=None, espacio=14):
+    # Las tres secciones de la tarjeta: sólido, borde fino, radio 18, padding 16.
+    return ft.Container(padding=16, bgcolor=D.solido, border=ft.Border.all(1, D.linea),
+                        border_radius=18, expand=expand,
+                        content=ft.Column(contenido, spacing=espacio, tight=expand is None))
+
+
+def _marco_punteado(ancho, alto, contenido):
+    # El marco de los estados vacío y error: borde punteado de 1.5 px en D.linea_fuerte (flet no
+    # tiene borde punteado: se dibuja en un Canvas detrás).
+    return ft.Stack([
+        cv.Canvas([cv.Rect(0.75, 0.75, ancho - 1.5, alto - 1.5, border_radius=18,
+                           paint=ft.Paint(color=D.linea_fuerte, stroke_width=1.5,
+                                          style=ft.PaintingStyle.STROKE,
+                                          stroke_dash_pattern=[5, 4]))],
+                  width=ancho, height=alto),
+        ft.Container(width=ancho, height=alto, padding=24, alignment=ft.Alignment.CENTER,
+                     content=contenido),
+    ], width=ancho, height=alto)
+
+
+def _boton_ancho(etiqueta_boton, nombre_icono, al_pulsar, principal=False):
+    # Los dos botones bajo el anuncio listo, a lo ancho y centrados (alto 40, radio 12).
+    color = D.sobre_tinta if principal else D.texto
+    cuerpo = ft.Container(
+        expand=1, height=40, border_radius=12, alignment=ft.Alignment.CENTER,
+        bgcolor=D.tinta if principal else None,
+        border=None if principal else ft.Border.all(1, D.linea),
+        content=ft.Row([icono(nombre_icono, 16, color), texto(etiqueta_boton, 13, 600, color)],
+                       spacing=8, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        on_click=al_pulsar, animate_opacity=150,
+    )
+
+    def encima(e):
+        cuerpo.opacity = 0.86 if e.data in (True, "true") else 1
+        cuerpo.update()
+
+    cuerpo.on_hover = encima
+    return cuerpo
+
+
+def _mensaje_de_error(error: Exception) -> str:
+    """Los errores de la generación en palabras del dueño (sin llave, sin saldo, sin red...)."""
+    if isinstance(error, generador_ia.SinLlave):
+        return "Falta la llave de OpenAI en este panel. Pide ayuda a soporte."
+    if isinstance(error, openai.AuthenticationError):
+        return "La llave de OpenAI no es válida. Pide ayuda a soporte."
+    if isinstance(error, openai.PermissionDeniedError):
+        return "Tu cuenta de OpenAI no tiene acceso al modelo de imágenes. Pide ayuda a soporte."
+    if isinstance(error, openai.RateLimitError):
+        if "insufficient_quota" in str(error) or getattr(error, "code", "") == "insufficient_quota":
+            return "Se acabó el saldo de OpenAI. Recárgalo para seguir generando anuncios."
+        return "Se pidieron muchas imágenes seguidas. Espera un minuto e inténtalo otra vez."
+    if isinstance(error, openai.BadRequestError):
+        return "OpenAI no aceptó este anuncio. Cambia el mensaje e inténtalo otra vez."
+    if isinstance(error, (openai.APIConnectionError, httpx.RequestError)):
+        return "No se pudo generar el anuncio. Revisa tu conexión e inténtalo otra vez."
+    return "No se pudo generar el anuncio. Inténtalo otra vez."
 
 
 class ContenidoView(ft.Container):
     def __init__(self, router):
         super().__init__()
         self.router = router
+        self.page_ref = router.page
         self.expand = True
-        self.height = float("inf")
-        self.bgcolor = C.fondo
-        self.gradient = fondo_pagina()
-        self.padding = ft.Padding.only(left=36, right=36, top=42, bottom=36)
+        # El suelo liso del tema: MainController lo sube a toda la ventana, detrás de la barra.
+        self.bgcolor = D.suelo
 
-        # El catálogo de plantillas ya está en memoria desde que se
-        # importó models/plantillas.py (Fase 7.1, se lee UNA vez al
-        # importar el módulo) — no hay red ni Pillow de por medio todavía,
-        # así que se puede leer directo aquí en __init__.
-        self._plantillas = obtener_plantillas()
+        self._platillos: list[dict] | None = None     # None = cargando o no se pudo
+        self._error_menu = None
+        self._datos: dict | None = None                # None = sin leer (o falló)
+        self._datos_error = False
+        self._busqueda = ""
+        self._producto: dict | None = None
+        self._formato: str | None = None
+        # Estado del resultado: "vacio" / "generando" / "listo" / "error", y lo que se pidió.
+        self._fase = "vacio"
+        self._pedido: dict | None = None
+        self._ruta: str | None = None
+        self._error = ""
 
-        # ---------------- estado del asistente ----------------
-        self._paso_actual = 1
-        self._mostrando_resultado = False
-        self._plantilla_id: str | None = None
-        self._platillo_id: int | None = None
-        self._platillo_seleccionado: dict | None = None
-        self._textos: dict[str, str] = {}
-        self._campos_texto_controles: dict[str, ft.TextField] = {}
-        self._formato_id: str | None = None
-        self._ruta_generada: str | None = None
-        self._generando = False
+        # --------------------------------------------------------------
+        # Barra de arriba
+        # --------------------------------------------------------------
+        barra_superior = vidrio(
+            radio=18, sombra=False,
+            top=MARGEN, left=0, right=MARGEN, height=ALTO_BARRA_SUPERIOR,
+            padding=ft.Padding.only(left=20, right=12),
+            contenido=ft.Row([
+                texto("Crear contenido", 15, 700),
+                ft.Container(
+                    height=28, border_radius=14, bgcolor=D.chip,
+                    padding=ft.Padding.symmetric(horizontal=12),
+                    content=ft.Row([punto(VERDE),
+                                    texto("Tus anuncios se guardan en Mi biblioteca", 12, 500,
+                                          D.suave)],
+                                   spacing=8, tight=True,
+                                   vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ),
+                ft.Container(expand=True),
+                boton("Datos del negocio", "tienda", self._abrir_datos),
+            ], spacing=14, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        )
 
-        # Paso 2 — la lista se carga de forma PEREZOSA la primera vez que
-        # se entra a ese paso (ver _pantalla_platillo), no aquí en
-        # __init__: es una llamada de red y no toda visita a "Crear
-        # contenido" llega hasta ese paso.
-        self._platillos_con_recorte: list[dict] | None = None
-        self._cargando_platillos = False
-        self._error_platillos = False
+        # --------------------------------------------------------------
+        # 1 Producto
+        # --------------------------------------------------------------
+        self.marca1 = ft.Container(content=_marca(1, False))
+        self.campo_buscar = ft.TextField(
+            hint_text="Buscar en tu menú", border=ft.InputBorder.NONE, filled=False, dense=True,
+            text_size=12.5, text_style=ft.TextStyle(font_family="Jakarta500", color=D.texto),
+            hint_style=ft.TextStyle(font_family="Jakarta500", color=D.tenue, size=12.5),
+            content_padding=ft.Padding.symmetric(vertical=8), cursor_color=D.texto,
+            expand=True, on_change=self._on_buscar,
+        )
+        buscador = ft.Container(
+            width=220, height=36, border_radius=11, border=ft.Border.all(1, D.linea),
+            padding=ft.Padding.symmetric(horizontal=12),
+            content=ft.Row([icono("buscar", 15, D.tenue), self.campo_buscar], spacing=8,
+                           vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        )
+        self.rejilla = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO,
+                                 controls=[self._nota("Cargando tu menú…")])
+        seccion_producto = _seccion([
+            ft.Row([
+                self.marca1,
+                ft.Column([
+                    texto("Producto", 14.5, 700),
+                    texto("De tu menú. La IA usa su foto para que salga tu producto real.", 12,
+                          500, D.tenue),
+                ], spacing=2, tight=True, expand=True),
+                buscador,
+            ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            ft.Container(height=ALTO_PRODUCTOS, content=self.rejilla),
+        ])
 
-        # ---------------- banner de error compartido ----------------
-        # Mismo lenguaje visual que menu_view.py/dialogo_platillo.py. A
-        # diferencia del banner TEMPORAL de menu_view.py (se autooculta:
-        # avisa de algo que ya pasó y el guardado principal ya salió
-        # bien), este se queda visible hasta que el dueño lo resuelve o
-        # avanza — es un bloqueo real para seguir en el asistente (texto
-        # incompleto, sin conexión al generar), no un aviso de cortesía.
-        self.texto_banner_error = ft.Text("", size=12, color=C.texto_suave, expand=True)
-        self.banner_error = ft.Container(
-            visible=False,
-            bgcolor=C.pozo,
-            border=ft.Border.all(1, C.texto_suave),
-            border_radius=12,
-            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=15, color=C.texto_suave),
-                    self.texto_banner_error,
-                ],
-                spacing=8,
+        # --------------------------------------------------------------
+        # 2 Formato
+        # --------------------------------------------------------------
+        self.marca2 = ft.Container(content=_marca(2, False))
+        self.tarjetas_formato = {clave: self._tarjeta_formato(clave) for clave in FORMATOS}
+        seccion_formato = _seccion([
+            ft.Row([self.marca2, texto("Formato", 14.5, 700)], spacing=10,
+                   vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            # Las dos del mismo alto aunque una descripción ocupe dos renglones.
+            ft.Row(list(self.tarjetas_formato.values()), spacing=10, intrinsic_height=True,
+                   vertical_alignment=ft.CrossAxisAlignment.STRETCH),
+        ])
+
+        # --------------------------------------------------------------
+        # 3 ¿Qué quieres decir?
+        # --------------------------------------------------------------
+        self.marca3 = ft.Container(content=_marca(3, False))
+        self.campo_mensaje = ft.TextField(
+            hint_text="Ej. 2x1 en frappés todos los viernes de octubre.",
+            multiline=True, min_lines=1, max_lines=None, border=ft.InputBorder.NONE,
+            filled=False, dense=True, content_padding=0,
+            text_size=13.5,
+            text_style=ft.TextStyle(font_family="Jakarta400", color=D.texto, height=1.5),
+            hint_style=ft.TextStyle(font_family="Jakarta400", color=D.tenue, size=13.5,
+                                    height=1.5),
+            cursor_color=D.texto, on_change=self._on_escribir,
+        )
+        caja_mensaje = ft.Container(
+            expand=True, padding=ft.Padding.symmetric(horizontal=14, vertical=12),
+            border_radius=12, border=ft.Border.all(1, D.linea),
+            content=ft.Column([self.campo_mensaje], spacing=0,
+                              horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+            # El área vacía de la caja también lleva al campo (como un textarea).
+            on_click=lambda e: self.campo_mensaje.focus(),
+        )
+        seccion_mensaje = _seccion([
+            ft.Row([self.marca3, texto("¿Qué quieres decir?", 14.5, 700)], spacing=10,
+                   vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            caja_mensaje,
+        ], expand=True, espacio=12)
+
+        # --------------------------------------------------------------
+        # Pie: lo que irá en el anuncio + Generar
+        # --------------------------------------------------------------
+        self.texto_van = ft.Text(max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=1,
+                                 expand_loose=True)
+        editar = ft.Container(
+            content=ft.Text("Editar", size=12, font_family="Jakarta600", color=D.texto,
+                            style=ft.TextStyle(decoration=ft.TextDecoration.UNDERLINE)),
+            on_click=self._abrir_datos,
+        )
+        self.boton_generar = ft.Container(height=44, border_radius=12,
+                                          padding=ft.Padding.symmetric(horizontal=20),
+                                          on_click=self._on_generar)
+        pie = ft.Container(
+            padding=ft.Padding.symmetric(horizontal=4),
+            content=ft.Row([
+                ft.Row([self.texto_van, editar], spacing=8, expand=True,
+                       vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                self.boton_generar,
+            ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        )
+
+        tarjeta_nuevo = vidrio(
+            radio=26, padding=20, expand=True,
+            contenido=ft.Column([
+                ft.Container(
+                    padding=ft.Padding.only(left=4, top=4, right=4),
+                    content=ft.Column([
+                        etiqueta("NUEVO ANUNCIO"),
+                        texto("Elige un producto, el formato y lo que quieres decir. La IA "
+                              "arma el anuncio con los datos de tu negocio.", 12.5, 500,
+                              D.suave, alto=1.45),
+                    ], spacing=6, tight=True),
+                ),
+                seccion_producto,
+                seccion_formato,
+                seccion_mensaje,
+                pie,
+            ], spacing=14),
+        )
+
+        # --------------------------------------------------------------
+        # Resultado
+        # --------------------------------------------------------------
+        self.texto_formato_resultado = etiqueta("")
+        self.zona_marco = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
+        self.zona_acciones = ft.Column([
+            ft.Container(
+                padding=ft.Padding.symmetric(horizontal=4),
+                content=ft.Row([icono("check-fino", 16, VERDE),
+                                texto("Guardado en Mi biblioteca", 12.5, 600)], spacing=8),
             ),
-        )
-
-        self.texto_subtitulo = ft.Text(_SUBTITULOS[1], size=15, color=C.texto_suave)
-        self.fila_pasos = ft.Row(
-            controls=self._construir_pasos(),
-            spacing=14,
-            wrap=True,
-            run_spacing=10,
-            alignment=ft.MainAxisAlignment.START,
-        )
-        # La tarjeta de Inicio (tarjeta_iphone). Su contenido cambia por paso: se cambia el
-        # `content` del contenedor de dentro del todo (self._cuerpo_tarjeta).
-        self.tarjeta = tarjeta_iphone(
-            self._construir_paso(), expand=None,
-            padding=ft.Padding.only(left=27, right=27, top=25, bottom=23),
-        )
-        self._cuerpo_tarjeta = self.tarjeta.content.content
-
-        self.content = ft.Column(
-            expand=True,
-            height=float("inf"),
-            spacing=0,
-            scroll=ft.ScrollMode.AUTO,
-            controls=[
-                ft.Text("CREAR CONTENIDO", size=13, font_family="LetraTitulo", color=C.texto_suave),
-                ft.Text(
-                    "Hagamos algo bonito para Instagram",
-                    size=42,
-                    font_family="LetraTitulo",
-                    color=C.texto,
+            ft.Row([
+                _boton_ancho("Generar otra", "actualizar", self._on_generar),
+                _boton_ancho("Abrir carpeta", "carpeta", self._on_abrir_carpeta,
+                             principal=True),
+            ], spacing=10),
+        ], spacing=12, visible=False)
+        tarjeta_resultado = vidrio(
+            radio=26, padding=20, width=ANCHO_RESULTADO,
+            contenido=ft.Column([
+                ft.Container(
+                    padding=ft.Padding.only(left=4, top=4, right=4),
+                    content=ft.Row([etiqueta("RESULTADO"), ft.Container(expand=True),
+                                    self.texto_formato_resultado], spacing=12),
                 ),
-                self.texto_subtitulo,
-                ft.Container(height=24),
-                self.fila_pasos,
-                ft.Container(height=24),
-                self.banner_error,
-                ft.Container(height=18),
-                self.tarjeta,
-            ],
+                self.zona_marco,
+                self.zona_acciones,
+            ], spacing=16),
         )
+
+        cuerpo = ft.Row([tarjeta_nuevo, tarjeta_resultado], spacing=MARGEN,
+                        vertical_alignment=ft.CrossAxisAlignment.STRETCH,
+                        top=ALTO_BARRA_SUPERIOR + MARGEN * 2, left=0, right=MARGEN,
+                        bottom=MARGEN)
+
+        self.content = ft.Stack([cuerpo, barra_superior], expand=True)
+        self._pintar_estado(actualizar=False)
+
+        # Se agenda aquí pero no corre hasta que cambiar_vista() termine de montar la vista.
+        self.page_ref.run_task(self._cargar)
 
     # ------------------------------------------------------------------
-    # Repintado
+    # Utilidades
     # ------------------------------------------------------------------
-    def _actualizar_seguro(self, *controles):
-        """Igual que _refrescar() en agenteIA_view.py: si el dueño navegó
-        a otra pantalla mientras una carga/generación seguía en vuelo, esta
-        vista ya está desmontada y .update() lanzaría una excepción que no
-        vería nadie — se traga a propósito en vez de tumbar la tarea."""
-        for control in controles:
-            try:
-                control.update()
-            except Exception:
-                pass
-
-    def _construir_pasos(self):
-        return [self._paso(numero, texto) for numero, texto in _ETIQUETAS_PASOS]
-
-    def _construir_paso(self):
-        if self._mostrando_resultado:
-            return self._pantalla_resultado()
-        if self._paso_actual == 1:
-            return self._pantalla_diseno()
-        if self._paso_actual == 2:
-            return self._pantalla_platillo()
-        if self._paso_actual == 3:
-            return self._pantalla_texto()
-        return self._pantalla_formato()
-
-    def _repintar(self):
-        """Repinta pills + tarjeta + subtítulo — para cambios de PASO."""
-        self.fila_pasos.controls = self._construir_pasos()
-        self._cuerpo_tarjeta.content = self._construir_paso()
-        self.texto_subtitulo.value = (
-            "Tu anuncio ya está listo." if self._mostrando_resultado
-            else _SUBTITULOS.get(self._paso_actual, "")
-        )
-        self._actualizar_seguro(self.fila_pasos, self.tarjeta, self.texto_subtitulo)
-
-    def _repintar_tarjeta(self):
-        """Repinta solo la tarjeta — para cambios DENTRO del mismo paso
-        (elegir una plantilla/platillo/formato, o el estado de carga del
-        paso 2), sin tocar los pills ni el subtítulo."""
-        self._cuerpo_tarjeta.content = self._construir_paso()
-        self._actualizar_seguro(self.tarjeta)
-
-    def _ir_a(self, numero: int):
-        self._paso_actual = numero
-        self._ocultar_banner()
-        self._repintar()
-
-    def _mostrar_banner(self, mensaje: str):
-        self.texto_banner_error.value = mensaje
-        self.banner_error.visible = True
-        self._actualizar_seguro(self.banner_error)
-
-    def _ocultar_banner(self):
-        if self.banner_error.visible:
-            self.banner_error.visible = False
-            self._actualizar_seguro(self.banner_error)
-
-    def _plantilla_actual(self):
-        return obtener_plantilla(self._plantilla_id)
-
-    # ------------------------------------------------------------------
-    # Fila de pasos (pills) — clic en uno ya completado regresa a ese paso
-    # ------------------------------------------------------------------
-    def _paso(self, numero: int, texto: str):
-        activo = (not self._mostrando_resultado) and numero == self._paso_actual
-        completado = self._mostrando_resultado or numero < self._paso_actual
-        clickable = completado
-
-        return ft.Container(
-            width=200,
-            ink=clickable,
-            on_click=(lambda e, n=numero: self._on_click_paso(n)) if clickable else None,
-            content=ft.Row(
-                controls=[
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.CHECK, color=C.fondo, size=16)
-                        if completado
-                        else ft.Text(str(numero), color=C.texto, size=14, font_family="LetraTitulo"),
-                        width=32,
-                        height=32,
-                        alignment=ft.Alignment(0, 0),
-                        bgcolor=C.texto if completado else C.cara_encendida,
-                        border_radius=16,
-                    ),
-                    ft.Text(
-                        texto,
-                        color=C.texto if activo else C.texto_suave,
-                        size=14,
-                        font_family="LetraTitulo" if activo else "LetraTexto",
-                        expand=True,
-                    ),
-                ],
-                spacing=10,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor=C.fondo,
-            border_radius=28,
-            padding=ft.Padding.symmetric(horizontal=14, vertical=9),
-        )
-
-    def _on_click_paso(self, numero: int):
-        if self._mostrando_resultado:
-            self._mostrando_resultado = False
-            self._ir_a(numero)
-            return
-        if numero >= self._paso_actual:
-            return  # no se puede saltar a un paso que todavía no se completó
-        self._ir_a(numero)
-
-    # ------------------------------------------------------------------
-    # Botones reutilizables (mismo lenguaje que el "Continuar" ya aprobado)
-    # ------------------------------------------------------------------
-    def _boton_principal(self, texto, on_click, *, habilitado=True, cargando=False,
-                          texto_cargando="Generando...", icono=ft.Icons.AUTO_AWESOME):
-        activo = habilitado and not cargando
-        if cargando:
-            contenido = ft.Row(
-                controls=[
-                    ft.ProgressRing(width=16, height=16, stroke_width=2, color=C.texto),
-                    ft.Text(texto_cargando, color=C.texto, font_family="LetraTitulo", size=14),
-                ],
-                spacing=10,
-            )
-        else:
-            contenido = ft.Row(
-                controls=[
-                    ft.Icon(icono, color=C.texto if habilitado else C.tenue, size=18),
-                    ft.Text(
-                        texto,
-                        color=C.texto if habilitado else C.texto_suave,
-                        size=14,
-                        font_family="LetraTitulo",
-                    ),
-                ],
-                spacing=8,
-            )
-        return ft.Container(
-            content=contenido,
-            bgcolor=C.cara_encendida if (habilitado or cargando) else C.linea,
-            padding=ft.Padding.symmetric(horizontal=24, vertical=13),
-            border_radius=28,
-            ink=activo,
-            on_click=(on_click if activo else None),
-        )
-
-    def _boton_secundario(self, texto, on_click, icono=None):
-        # Mismo par de colores que el botón "Cancelar" de _confirmar() en
-        # dialogo_platillo.py — borde neutro, sin relleno.
-        controles = []
-        if icono:
-            controles.append(ft.Icon(icono, size=16, color=C.texto_suave))
-        controles.append(ft.Text(texto, color=C.texto_suave, font_family="LetraTitulo", size=14))
-        return ft.Container(
-            content=ft.Row(controls=controles, spacing=8, tight=True,
-                            alignment=ft.MainAxisAlignment.CENTER),
-            bgcolor=ft.Colors.TRANSPARENT,
-            border=ft.Border.all(1, C.linea),
-            border_radius=28,
-            padding=ft.Padding.symmetric(horizontal=22, vertical=13),
-            ink=True,
-            on_click=on_click,
-        )
-
-    def _boton_atras(self, on_click):
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.ARROW_BACK, size=14, color=C.texto_suave),
-                    ft.Text("Atrás", color=C.texto_suave, font_family="LetraTitulo", size=13),
-                ],
-                spacing=6,
-            ),
-            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
-            border_radius=18,
-            ink=True,
-            on_click=on_click,
-        )
-
-    def _pie_paso(self, boton_principal, hint: str, boton_atras=None):
-        """Fila de pie compartida por los 4 pasos: [Atrás] [hint] [acción]."""
-        controles = []
-        if boton_atras is not None:
-            controles.append(boton_atras)
-        controles.append(
-            ft.Text(hint, size=13, color=C.texto_suave, expand=True)
-        )
-        controles.append(boton_principal)
-        return ft.Row(controls=controles, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-
-    # ------------------------------------------------------------------
-    # Paso 1 — Diseño
-    # ------------------------------------------------------------------
-    def _pantalla_diseno(self):
-        tarjetas = [self._tarjeta_plantilla(p) for p in self._plantillas]
-        algo_elegido = self._plantilla_id is not None
-        return ft.Column(
-            spacing=0,
-            controls=[
-                ft.Text(
-                    "Elige tu diseño",
-                    size=22,
-                    font_family="LetraTitulo",
-                    color=C.texto,
-                ),
-                ft.Text(
-                    "Una de estas 4 plantillas es el fondo de tu anuncio.",
-                    size=13,
-                    color=C.texto_suave,
-                ),
-                ft.Container(height=22),
-                ft.Row(
-                    controls=tarjetas,
-                    spacing=18,
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    wrap=True,
-                    run_spacing=18,
-                ),
-                ft.Container(height=26),
-                self._pie_paso(
-                    self._boton_principal(
-                        "Continuar", self._on_continuar_diseno, habilitado=algo_elegido
-                    ),
-                    "Plantilla lista, dale continuar." if algo_elegido
-                    else "Selecciona una plantilla para continuar.",
-                ),
-            ],
-        )
-
-    def _tarjeta_plantilla(self, plantilla):
-        seleccionada = plantilla.id == self._plantilla_id
-        return ft.Container(
-            ink=True,
-            border_radius=16,
-            padding=6,
-            on_click=lambda e, pid=plantilla.id: self._on_elegir_plantilla(pid),
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=10,
-                controls=[
-                    ft.Container(
-                        content=ft.Image(
-                            src=plantilla.ruta_miniatura,
-                            width=176,
-                            height=198,
-                            fit=ft.BoxFit.COVER,
-                            border_radius=12,
-                        ),
-                        border_radius=14,
-                        border=ft.Border.all(3, C.texto) if seleccionada else None,
-                        shadow=ft.BoxShadow(
-                            blur_radius=10,
-                            color=C.sombra,
-                            offset=ft.Offset(0, 4),
-                        ),
-                    ),
-                    self._circulo_seleccion(seleccionada),
-                    ft.Text(plantilla.nombre_bonito, size=11, color=C.texto_suave),
-                ],
-            ),
-        )
-
-    def _circulo_seleccion(self, seleccionada: bool):
-        return ft.Container(
-            width=24,
-            height=24,
-            border_radius=12,
-            bgcolor=C.texto if seleccionada else C.fondo,
-            border=ft.Border.all(2, C.texto),
-            alignment=ft.Alignment(0, 0),
-            content=ft.Icon(ft.Icons.CHECK, size=14, color=C.fondo) if seleccionada else None,
-        )
-
-    def _on_elegir_plantilla(self, id_plantilla: str):
-        if id_plantilla != self._plantilla_id:
-            # Los campos de texto son específicos de cada plantilla
-            # (headline_stack no es headline) -- un texto ya escrito para
-            # otra plantilla no tiene sentido conservarlo.
-            self._textos = {}
-        self._plantilla_id = id_plantilla
-        self._repintar_tarjeta()
-
-    def _on_continuar_diseno(self, e):
-        if self._plantilla_id is None:
-            return
-        self._ir_a(2)
-
-    # ------------------------------------------------------------------
-    # Paso 2 — Platillo (solo los que tienen recorte)
-    # ------------------------------------------------------------------
-    def _pantalla_platillo(self):
-        if self._error_platillos:
-            return self._contenido_error_platillos()
-
-        if self._platillos_con_recorte is None:
-            if not self._cargando_platillos:
-                self._cargando_platillos = True
-                self.router.page.run_task(self._cargar_platillos_con_recorte)
-            return self._contenido_cargando_platillos()
-
-        if not self._platillos_con_recorte:
-            return self._contenido_sin_platillos()
-
-        tarjetas = [self._tarjeta_platillo(p) for p in self._platillos_con_recorte]
-        algo_elegido = self._platillo_id is not None
-        return ft.Column(
-            spacing=0,
-            controls=[
-                ft.Text(
-                    "Elige el platillo",
-                    size=22,
-                    font_family="LetraTitulo",
-                    color=C.texto,
-                ),
-                ft.Text(
-                    "Solo se muestran los platillos que ya tienen su foto "
-                    "recortada lista.",
-                    size=13,
-                    color=C.texto_suave,
-                ),
-                ft.Container(height=22),
-                ft.Row(
-                    controls=tarjetas,
-                    spacing=18,
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    wrap=True,
-                    run_spacing=18,
-                ),
-                ft.Container(height=26),
-                self._pie_paso(
-                    self._boton_principal(
-                        "Continuar", self._on_continuar_platillo, habilitado=algo_elegido
-                    ),
-                    "Platillo listo, dale continuar." if algo_elegido
-                    else "Selecciona un platillo para continuar.",
-                    boton_atras=self._boton_atras(lambda e: self._ir_a(1)),
-                ),
-            ],
-        )
-
-    async def _cargar_platillos_con_recorte(self):
+    def _actualizar(self, *controles):
         try:
-            datos = await asyncio.to_thread(PlatilloDAO.obtener_con_recorte)
-        except httpx.RequestError as e:
-            print(f"[contenido] error de red al traer platillos con recorte: {e}")
-            self._error_platillos = True
-        except Exception as e:
-            print(f"[contenido] error inesperado al traer platillos con recorte: {e}")
+            for c in controles:
+                c.update()
+        except RuntimeError:
+            pass    # se salió de Crear contenido antes de que llegaran los datos
+
+    @staticmethod
+    def _nota(mensaje):
+        return ft.Container(padding=ft.Padding.symmetric(vertical=18),
+                            alignment=ft.Alignment.CENTER,
+                            content=texto(mensaje, 12.5, 500, D.suave,
+                                          text_align=ft.TextAlign.CENTER))
+
+    def _listo(self):
+        mensaje = (self.campo_mensaje.value or "").strip()
+        return self._producto is not None and self._formato is not None and bool(mensaje)
+
+    # ------------------------------------------------------------------
+    # Carga: el menú y los datos del negocio, uno tras otro (varias consultas a la vez en el
+    # mismo cliente fallaban con WinError 10035, ver Inicio).
+    # ------------------------------------------------------------------
+    async def _cargar(self):
+        try:
+            self._platillos = await asyncio.to_thread(PlatilloDAO.obtener_todos)
+        except httpx.RequestError:
             traceback.print_exc()
-            self._error_platillos = True
+            self._error_menu = "No hay conexión con el servidor. Revisa tu internet."
+        except Exception:
+            traceback.print_exc()
+            self._error_menu = "No se pudo cargar tu menú. Intenta de nuevo en un momento."
+        self._pintar_productos()
+
+        await self._leer_datos()
+
+    async def _leer_datos(self):
+        try:
+            self._datos = await asyncio.to_thread(DatosNegocioDAO.obtener)
+            self._datos_error = False
+        except Exception:
+            traceback.print_exc()
+            self._datos = None
+            self._datos_error = True
+        self._pintar_van()
+
+    # ------------------------------------------------------------------
+    # Pintado
+    # ------------------------------------------------------------------
+    def _pintar_productos(self, actualizar=True):
+        if self._platillos is None:
+            controles = [self._nota(self._error_menu or "Cargando tu menú…")]
+        elif not self._platillos:
+            controles = [self._nota("Todavía no hay productos en tu menú.")]
         else:
-            self._platillos_con_recorte = datos
-        self._cargando_platillos = False
-        if self._paso_actual == 2 and not self._mostrando_resultado:
-            self._repintar_tarjeta()
+            q = _sin_acentos(self._busqueda.strip())
+            lista = [p for p in self._platillos
+                     if not q or q in _sin_acentos(p.get("nombre", ""))]
+            if not lista:
+                controles = [self._nota("No hay productos con ese nombre en tu menú.")]
+            else:
+                tarjetas = [self._tarjeta_producto(p) for p in lista]
+                # Huecos al final para que el último renglón no estire sus tarjetas.
+                tarjetas += [ft.Container(expand=1)
+                             for _ in range(-len(tarjetas) % COLUMNAS_PRODUCTOS)]
+                controles = [ft.Row(tarjetas[i:i + COLUMNAS_PRODUCTOS], spacing=10)
+                             for i in range(0, len(tarjetas), COLUMNAS_PRODUCTOS)]
+        # Un respiro de 2 px para que el anillo de la elegida no se corte en el borde.
+        self.rejilla.controls = [ft.Container(padding=2, content=ft.Column(controles,
+                                                                           spacing=10))]
+        if actualizar:
+            self._actualizar(self.rejilla)
 
-    def _contenido_cargando_platillos(self):
-        return ft.Column(
-            tight=True,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=12,
-            controls=[
-                ft.Container(height=20),
-                ft.ProgressRing(width=28, height=28, stroke_width=3, color=C.texto),
-                ft.Text("Cargando tus platillos...", size=13, color=C.texto_suave),
-                ft.Container(height=20),
-            ],
-        )
-
-    def _contenido_error_platillos(self):
-        return ft.Column(
-            tight=True,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=8,
-            controls=[
-                ft.Container(height=10),
-                ft.Icon(ft.Icons.ERROR_OUTLINE, size=30, color=C.texto_suave),
-                ft.Text(
-                    "No se pudieron cargar los platillos.", size=14,
-                    font_family="LetraTitulo", color=C.texto_suave,
-                ),
-                ft.Text("Revisa tu internet e intenta de nuevo.", size=12, color=C.texto_suave),
-                ft.Container(height=14),
-                self._boton_principal(
-                    "Reintentar", self._on_reintentar_platillos, icono=ft.Icons.REFRESH
-                ),
-                ft.Container(height=6),
-                self._boton_atras(lambda e: self._ir_a(1)),
-            ],
-        )
-
-    def _on_reintentar_platillos(self, e):
-        self._error_platillos = False
-        self._platillos_con_recorte = None
-        self._repintar_tarjeta()
-
-    def _contenido_sin_platillos(self):
-        return ft.Column(
-            tight=True,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=8,
-            controls=[
-                ft.Container(height=10),
-                ft.Icon(ft.Icons.RESTAURANT_MENU_OUTLINED, size=30, color=C.tenue),
-                ft.Text(
-                    "Todavía no hay ningún platillo con foto recortada.",
-                    size=14, font_family="LetraTitulo", color=C.texto_suave, text_align=ft.TextAlign.CENTER,
-                ),
-                ft.Text(
-                    "Genera el recorte de un platillo desde \"Mi menú\" y vuelve aquí.",
-                    size=12, color=C.texto_suave, text_align=ft.TextAlign.CENTER,
-                ),
-                ft.Container(height=14),
-                self._boton_atras(lambda e: self._ir_a(1)),
-            ],
-        )
-
-    def _tarjeta_platillo(self, platillo: dict):
-        seleccionado = platillo.get("id") == self._platillo_id
-        imagen = platillo.get("image_url_recortada") or "assets/sin-foto.png"
+    def _tarjeta_producto(self, platillo):
+        elegido = self._producto is not None and self._producto.get("id") == platillo.get("id")
+        foto = platillo.get("image_url") or "assets/sin-foto.png"
+        capas = [ft.Column([
+            ft.Container(height=96, border_radius=10, clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                         content=ft.Image(src=foto, fit=ft.BoxFit.COVER, height=96)),
+            ft.Container(padding=ft.Padding.symmetric(horizontal=4), content=ft.Column([
+                texto(platillo.get("nombre") or "", 12.5, 600, max_lines=1,
+                      overflow=ft.TextOverflow.ELLIPSIS),
+                texto(generador_ia.formatear_precio(platillo.get("precio")), 11, 400, D.tenue,
+                      mono=True),
+            ], spacing=2, tight=True)),
+        ], spacing=8, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)]
+        if elegido:
+            capas.append(ft.Container(
+                top=6, right=6, width=22, height=22, border_radius=11, bgcolor=D.tinta,
+                alignment=ft.Alignment.CENTER, content=icono("check", 12, D.sobre_tinta)))
         return ft.Container(
-            ink=True,
-            border_radius=16,
-            padding=6,
-            on_click=lambda e, p=platillo: self._on_elegir_platillo(p),
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=10,
-                controls=[
-                    ft.Container(
-                        width=176,
-                        height=198,
-                        border_radius=14,
-                        bgcolor=C.cara,
-                        padding=8,
-                        border=ft.Border.all(3, C.texto) if seleccionado
-                        else ft.Border.all(1, C.linea),
-                        content=ft.Image(
-                            src=imagen,
-                            width=160,
-                            height=182,
-                            fit=ft.BoxFit.CONTAIN,
-                            error_content=ft.Image(
-                                src="assets/sin-foto.png", width=160, height=182,
-                                fit=ft.BoxFit.CONTAIN,
-                            ),
-                        ),
-                    ),
-                    self._circulo_seleccion(seleccionado),
-                    ft.Text(
-                        platillo.get("nombre") or "", size=11, color=C.texto_suave,
-                        font_family="LetraTitulo", text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-            ),
+            expand=1, padding=ft.Padding.only(left=6, top=6, right=6, bottom=10),
+            border_radius=14, border=ft.Border.all(1, D.linea), shadow=_anillo(elegido),
+            # Con fondo: el anillo es una sombra y, sin él, se ve a través de la tarjeta.
+            bgcolor=D.solido, content=ft.Stack(capas),
+            on_click=lambda e, p=platillo: self._elegir_producto(p),
         )
 
-    def _on_elegir_platillo(self, platillo: dict):
-        self._platillo_id = platillo.get("id")
-        self._platillo_seleccionado = platillo
-        self._repintar_tarjeta()
+    def _tarjeta_formato(self, clave):
+        titulo, medidas, lleva, _, _, _ = FORMATOS[clave]
+        tarjeta = ft.Container(
+            expand=1, padding=14, border_radius=14, border=ft.Border.all(1, D.linea),
+            bgcolor=D.solido,
+            content=ft.Row([
+                ft.Container(width=36, height=36, border_radius=11, bgcolor=D.chip,
+                             alignment=ft.Alignment.CENTER, content=icono(clave, 18)),
+                ft.Column([
+                    ft.Row([texto(titulo, 13.5, 700), texto(medidas, 10.5, 400, D.tenue,
+                                                            mono=True)],
+                           spacing=8, vertical_alignment=ft.CrossAxisAlignment.END),
+                    texto(lleva, 12, 500, D.suave, alto=1.4),
+                ], spacing=3, tight=True, expand=True),
+            ], spacing=14, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            on_click=lambda e, c=clave: self._elegir_formato(c),
+        )
+        return tarjeta
 
-    def _on_continuar_platillo(self, e):
-        if self._platillo_id is None:
+    def _pintar_van(self, actualizar=True):
+        if self._datos is None:
+            valor = ("No se pudieron leer los datos del negocio" if self._datos_error
+                     else "Cargando…")
+        else:
+            valor = " · ".join(generador_ia.datos_que_van(self._formato or "post", self._datos)) \
+                or "ningún dato del negocio"
+        self.texto_van.spans = [
+            ft.TextSpan("Irá en el anuncio: ",
+                        ft.TextStyle(size=12, font_family="Jakarta500", color=D.tenue)),
+            ft.TextSpan(valor, ft.TextStyle(size=12, font_family="Jakarta600", color=D.suave)),
+        ]
+        if actualizar:
+            self._actualizar(self.texto_van)
+
+    def _pintar_marcas(self):
+        self.marca1.content = _marca(1, self._producto is not None)
+        self.marca2.content = _marca(2, self._formato is not None)
+        self.marca3.content = _marca(3, bool((self.campo_mensaje.value or "").strip()))
+
+    def _pintar_generar(self):
+        encendido = self._listo() and self._fase != "generando"
+        color = D.sobre_tinta if encendido else D.tenue
+        self.boton_generar.bgcolor = D.tinta if encendido else D.chip
+        self.boton_generar.content = ft.Row([
+            icono("ia", 16, color),
+            texto("Generando..." if self._fase == "generando" else "Generar anuncio", 13, 600,
+                  color),
+        ], spacing=8, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+        self.boton_generar.mouse_cursor = (ft.MouseCursor.CLICK if encendido
+                                           else ft.MouseCursor.FORBIDDEN)
+
+    def _pintar_resultado(self):
+        # El marco toma el formato de lo pedido (generando/listo) o el elegido ahora (vacío).
+        clave = (self._pedido or {}).get("formato") if self._fase in ("generando", "listo") \
+            else self._formato
+        ancho, alto = FORMATOS[clave or "post"][5]
+        self.texto_formato_resultado.value = FORMATOS[clave][4] if clave else ""
+
+        if self._fase == "generando":
+            marco = ft.Container(
+                width=ancho, height=alto, padding=24, border_radius=18, bgcolor=D.solido,
+                border=ft.Border.all(1, D.linea), alignment=ft.Alignment.CENTER,
+                content=ft.Column([
+                    ft.ProgressRing(width=28, height=28, stroke_width=2.4, color=D.texto),
+                    texto("Generando tu anuncio...", 14.5, 700),
+                    texto(f"{self._pedido['producto'].get('nombre', '')} · "
+                          f"{FORMATOS[clave][0]}", 12.5, 500, D.suave, alto=1.45,
+                          text_align=ft.TextAlign.CENTER),
+                    texto("Puede tardar un poco.", 12, 500, D.tenue, alto=1.45),
+                ], spacing=12, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            )
+        elif self._fase == "listo":
+            marco = ft.Container(
+                width=ancho, height=alto, border_radius=18, bgcolor="#111111",
+                clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                shadow=ft.BoxShadow(blur_radius=32, color="#38000000", offset=ft.Offset(0, 12)),
+                content=ft.Image(src=self._ruta, fit=ft.BoxFit.COVER, width=ancho, height=alto),
+            )
+        elif self._fase == "error":
+            marco = _marco_punteado(ancho, alto, ft.Container(
+                padding=ft.Padding.symmetric(horizontal=14, vertical=11), border_radius=12,
+                border=ft.Border.all(1, D.linea), bgcolor=D.chip,
+                content=ft.Row([icono("alerta", 16, D.suave),
+                                texto(self._error, 12.5, 500, expand=True)],
+                               spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            ))
+        else:
+            marco = _marco_punteado(ancho, alto, ft.Column([
+                ft.Container(width=44, height=44, border_radius=13, bgcolor=D.chip,
+                             alignment=ft.Alignment.CENTER,
+                             content=icono("biblio", 20, D.suave)),
+                texto("Aquí aparecerá tu anuncio", 14.5, 700),
+                texto("Llena los tres pasos y toca Generar.", 12.5, 500, D.suave, alto=1.45),
+            ], spacing=10, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+        self.zona_marco.content = marco
+        self.zona_acciones.visible = self._fase == "listo"
+
+    def _pintar_estado(self, actualizar=True):
+        """Todo lo que cambia al elegir/escribir/generar (sin la rejilla de productos)."""
+        self._pintar_marcas()
+        self._pintar_generar()
+        self._pintar_resultado()
+        self._pintar_van(actualizar=False)
+        for clave, tarjeta in self.tarjetas_formato.items():
+            tarjeta.shadow = _anillo(clave == self._formato)
+        if actualizar:
+            self._actualizar(self.marca1, self.marca2, self.marca3, self.boton_generar,
+                             self.texto_formato_resultado, self.zona_marco, self.zona_acciones,
+                             self.texto_van, *self.tarjetas_formato.values())
+
+    # ------------------------------------------------------------------
+    # Acciones
+    # ------------------------------------------------------------------
+    def _on_buscar(self, e):
+        self._busqueda = self.campo_buscar.value or ""
+        self._pintar_productos()
+
+    def _elegir_producto(self, platillo):
+        self._producto = platillo
+        self._pintar_productos()
+        self._pintar_estado()
+
+    def _elegir_formato(self, clave):
+        self._formato = clave
+        self._pintar_estado()
+
+    def _on_escribir(self, e):
+        self._pintar_estado()
+
+    def _abrir_datos(self, e=None):
+        DialogoNegocio(self.router, self._datos, on_guardado=self._on_datos_guardados).abrir()
+
+    def _on_datos_guardados(self, datos):
+        self._datos = datos
+        self._datos_error = False
+        self._pintar_van()
+
+    def _on_generar(self, e):
+        if not self._listo() or self._fase == "generando":
             return
-        self._ir_a(3)
-
-    # ------------------------------------------------------------------
-    # Paso 3 — Texto (los campos cambian según la plantilla, trampa #6)
-    # ------------------------------------------------------------------
-    def _pantalla_texto(self):
-        plantilla = self._plantilla_actual()
-        campos = plantilla.campos_texto
-        self._campos_texto_controles = {}
-
-        controles_campos = []
-        for campo in campos:
-            control = self._campo_texto(campo)
-            controles_campos.append(control)
-            if campo == "headline_stack":
-                controles_campos.append(ft.Container(height=6))
-                controles_campos.append(
-                    ft.Text(
-                        "Escríbela una sola vez -- el diseño la repite solo "
-                        "varias veces.",
-                        size=11,
-                        color=C.texto_suave,
-                        width=460,
-                    )
-                )
-            controles_campos.append(ft.Container(height=16))
-        if controles_campos:
-            controles_campos.pop()  # quita el último espaciador sobrante
-
-        return ft.Column(
-            spacing=0,
-            controls=[
-                ft.Text(
-                    "Escribe el texto",
-                    size=22,
-                    font_family="LetraTitulo",
-                    color=C.texto,
-                ),
-                ft.Text(
-                    f'Así se verá en la plantilla "{plantilla.nombre_bonito}".',
-                    size=13,
-                    color=C.texto_suave,
-                ),
-                ft.Container(height=22),
-                ft.Column(
-                    controls=controles_campos,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=0,
-                ),
-                ft.Container(height=26),
-                self._pie_paso(
-                    self._boton_principal("Continuar", self._on_continuar_texto),
-                    "Puedes regresar a este paso más tarde para cambiarlo.",
-                    boton_atras=self._boton_atras(lambda e: self._ir_a(2)),
-                ),
-            ],
-        )
-
-    def _campo_texto(self, campo: str) -> ft.TextField:
-        etiqueta, hint, icono = _CAMPOS_TEXTO[campo]
-        control = ft.TextField(
-            value=self._textos.get(campo, ""),
-            hint_text=hint,
-            prefix_icon=icono,
-            width=460,
-            height=52,
-            border_radius=16,
-            border_color=C.linea,
-            focused_border_color=C.texto,
-            bgcolor=C.cara,
-            color=C.texto_suave,
-            hint_style=ft.TextStyle(color=C.texto_suave),
-            text_size=14,
-            on_change=lambda e, c=campo: self._textos.__setitem__(c, e.control.value),
-        )
-        self._campos_texto_controles[campo] = control
-        return control
-
-    def _on_continuar_texto(self, e):
-        plantilla = self._plantilla_actual()
-        faltantes = []
-        for campo in plantilla.campos_texto:
-            valor = (self._campos_texto_controles[campo].value or "").strip()
-            self._textos[campo] = valor
-            if not valor:
-                faltantes.append(_CAMPOS_TEXTO[campo][0])
-        if faltantes:
-            self._mostrar_banner(f"Completa: {', '.join(faltantes)}.")
-            return
-        self._ir_a(4)
-
-    # ------------------------------------------------------------------
-    # Paso 4 — Formato (post / historia) -- reusa el pill de "pestañas"
-    # ------------------------------------------------------------------
-    def _pantalla_formato(self):
-        plantilla = self._plantilla_actual()
-        opciones = [self._tarjeta_formato(plantilla.formato(fid)) for fid in FORMATOS]
-        algo_elegido = self._formato_id is not None
-
-        return ft.Column(
-            spacing=0,
-            controls=[
-                ft.Text(
-                    "Elige el formato",
-                    size=22,
-                    font_family="LetraTitulo",
-                    color=C.texto,
-                ),
-                ft.Text(
-                    "¿Post normal para el feed, o historia vertical?",
-                    size=13,
-                    color=C.texto_suave,
-                ),
-                ft.Container(height=22),
-                ft.Row(controls=opciones, spacing=18, alignment=ft.MainAxisAlignment.CENTER),
-                ft.Container(height=26),
-                self._pie_paso(
-                    self._boton_principal(
-                        "Generar anuncio",
-                        self._on_generar_click,
-                        habilitado=algo_elegido and not self._generando,
-                        cargando=self._generando,
-                    ),
-                    "Se guardará solo en tu biblioteca al generarse." if algo_elegido
-                    else "Selecciona un formato para continuar.",
-                    boton_atras=self._boton_atras(lambda e: self._ir_a(3)),
-                ),
-            ],
-        )
-
-    def _tarjeta_formato(self, formato):
-        # Mismo componente visual que la "pestaña" del wizard estático
-        # (Continuo/Comida rápida) -- ver el docstring del módulo: ahí no
-        # había datos reales que agrupar, aquí sí los hay (post/historia).
-        activa = formato.id == self._formato_id
-        ancho, alto = formato.canvas_referencia
-        return ft.Container(
-            ink=True,
-            on_click=lambda e, fid=formato.id: self._on_elegir_formato(fid),
-            content=ft.Column(
-                tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=2,
-                controls=[
-                    ft.Text(
-                        formato.nombre_bonito,
-                        size=16,
-                        color=C.texto if activa else C.texto_suave,
-                        font_family="LetraTitulo" if activa else "LetraTexto",
-                    ),
-                    ft.Text(
-                        f"{ancho} × {alto}",
-                        size=11,
-                        color=C.texto_suave if activa else C.texto_suave,
-                    ),
-                ],
-            ),
-            bgcolor=C.cara if activa else C.cara,
-            padding=ft.Padding.symmetric(horizontal=26, vertical=14),
-            border_radius=22,
-            border=ft.Border.all(2, C.texto) if activa else None,
-        )
-
-    def _on_elegir_formato(self, id_formato: str):
-        self._formato_id = id_formato
-        self._repintar_tarjeta()
-
-    def _on_generar_click(self, e):
-        if self._formato_id is None or self._generando:
-            return
-        self.router.page.run_task(self._generar)
+        self._pedido = {
+            "producto": self._producto,
+            "formato": self._formato,
+            "mensaje": (self.campo_mensaje.value or "").strip(),
+        }
+        self._fase = "generando"
+        self._pintar_estado()
+        self.page_ref.run_task(self._generar)
 
     async def _generar(self):
-        self._generando = True
-        self._ocultar_banner()
-        self._repintar_tarjeta()
-
+        pedido = self._pedido
         try:
-            ruta = await asyncio.to_thread(
-                generar_anuncio,
-                self._plantilla_id,
-                self._formato_id,
-                self._platillo_seleccionado,
-                dict(self._textos),
-            )
-        except httpx.RequestError as e:
-            print(f"[contenido] error de red al generar el anuncio: {e}")
-            self._generando = False
-            self._mostrar_banner("No hay conexión con el servidor. Revisa tu internet.")
-            self._repintar_tarjeta()
-            return
-        except ValueError as e:
-            # Validación de generar_anuncio (faltó un campo de texto, o el
-            # platillo no traía image_url_recortada) -- el mensaje ya sale
-            # legible en español, se muestra tal cual.
-            print(f"[contenido] validación al generar el anuncio: {e}")
-            self._generando = False
-            self._mostrar_banner(str(e))
-            self._repintar_tarjeta()
-            return
-        except Exception as e:
-            print(f"[contenido] error inesperado al generar el anuncio: {e}")
+            if self._datos is None:
+                # No se pudieron leer al entrar: otro intento antes de gastar una imagen.
+                self._datos = await asyncio.to_thread(DatosNegocioDAO.obtener)
+                self._datos_error = False
+            self._ruta = await asyncio.to_thread(
+                generador_ia.generar, pedido["producto"], pedido["formato"],
+                pedido["mensaje"], self._datos)
+            self._fase = "listo"
+        except Exception as error:
             traceback.print_exc()
-            self._generando = False
-            self._mostrar_banner("No se pudo generar el anuncio. Intenta de nuevo.")
-            self._repintar_tarjeta()
-            return
+            self._error = _mensaje_de_error(error)
+            self._fase = "error"
+        self._pintar_estado()
 
-        self._generando = False
-        self._ruta_generada = ruta
-        self._mostrando_resultado = True
-        self._repintar()
-
-    # ------------------------------------------------------------------
-    # Resultado -- ya generado y guardado (son el mismo acto, ver
-    # generador_anuncios.py); no hay un paso/pill aparte para esto.
-    # ------------------------------------------------------------------
-    def _pantalla_resultado(self):
-        formato = self._plantilla_actual().formato(self._formato_id)
-        ancho_ref, alto_ref = formato.canvas_referencia
-        alto_preview = 460
-        ancho_preview = round(alto_preview * ancho_ref / alto_ref)
-
-        return ft.Column(
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=0,
-            controls=[
-                ft.Icon(ft.Icons.CHECK_CIRCLE, size=34, color=C.texto),
-                ft.Container(height=10),
-                ft.Text(
-                    "¡Tu anuncio ya está listo!",
-                    size=22,
-                    font_family="LetraTitulo",
-                    color=C.texto,
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                ft.Text(
-                    "Se guardó automáticamente en tu biblioteca -- no hace "
-                    "falta guardarlo aparte.",
-                    size=13,
-                    color=C.texto_suave,
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                ft.Container(height=22),
-                ft.Container(
-                    bgcolor=C.cara,
-                    border_radius=14,
-                    padding=8,
-                    content=ft.Image(
-                        src=self._ruta_generada,
-                        width=ancho_preview,
-                        height=alto_preview,
-                        fit=ft.BoxFit.CONTAIN,
-                        border_radius=8,
-                    ),
-                ),
-                ft.Container(height=26),
-                ft.Row(
-                    controls=[
-                        self._boton_secundario(
-                            "Crear otro anuncio", self._on_crear_otro, icono=ft.Icons.REFRESH
-                        ),
-                        self._boton_principal(
-                            "Ver en la biblioteca", self._on_ver_biblioteca,
-                            icono=ft.Icons.ARROW_FORWARD,
-                        ),
-                    ],
-                    spacing=14,
-                    alignment=ft.MainAxisAlignment.CENTER,
-                ),
-            ],
-        )
-
-    def _on_crear_otro(self, e):
-        self._plantilla_id = None
-        self._platillo_id = None
-        self._platillo_seleccionado = None
-        self._textos = {}
-        self._formato_id = None
-        self._ruta_generada = None
-        self._mostrando_resultado = False
-        self._ir_a(1)
-
-    def _on_ver_biblioteca(self, e):
-        self.router.cambiar_vista("biblioteca")
+    def _on_abrir_carpeta(self, e):
+        # El Explorador con el anuncio ya marcado dentro de biblioteca/.
+        try:
+            if self._ruta and os.path.exists(self._ruta):
+                subprocess.Popen(["explorer", "/select,",
+                                  os.path.normpath(os.path.abspath(self._ruta))])
+            else:
+                os.startfile(os.path.abspath(generador_ia.RUTA_BIBLIOTECA))
+        except Exception:
+            traceback.print_exc()
