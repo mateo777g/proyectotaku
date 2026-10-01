@@ -4,7 +4,7 @@ El saludo de bienvenida del Agente IA, entero en un solo sitio (28/09,
 separado de models/ia_controller.py a pedido del desarrollador): el prompt,
 el modelo que lo redacta, la frase de respaldo y la reserva.
 
-MODELO: el saludo usa su propio modelo, gpt-4o-mini (configurable con
+MODELO: el saludo usa su propio modelo, gpt-5.6-luna (configurable con
 OPENAI_MODEL_SALUDO en el .env). Es una frase corta y decorativa que se pide
 en cada visita: ahí el modelo grande no se nota pero sí se paga. La
 conversación (models/ia_controller.py) usa gpt-4o y no sabe nada de esto.
@@ -37,7 +37,7 @@ from models.tiempo import momento_del_dia, saludo_por_hora
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-_MODELO = os.getenv("OPENAI_MODEL_SALUDO", "gpt-4o-mini")
+_MODELO = os.getenv("OPENAI_MODEL_SALUDO", "gpt-5.6-luna")
 _cliente_openai = None
 
 
@@ -214,11 +214,10 @@ def redactar(nombre: str) -> str:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": "Escribe el saludo."},
                 ],
-                # Alta a propósito: el chiste es que no salga lo mismo
-                # cada vez. Aun así el tono y la forma sorteados hacen
-                # más por la variedad que este número.
-                temperature=1.1,
-                max_tokens=40,
+                # Sin temperature: gpt-5.6-luna solo acepta la de por
+                # defecto (1). La variedad la dan el tono y la forma
+                # sorteados. Y pide max_completion_tokens, no max_tokens.
+                max_completion_tokens=40,
             )
             texto = _limpiar_saludo(respuesta.choices[0].message.content)
         except Exception:

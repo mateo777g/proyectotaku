@@ -99,7 +99,8 @@ Bucket `takumonky`, Worker `taku-monky-uploads` (on `takumonky5.workers.dev`). S
 
 ## AI agent (`models/ia_controller.py`, `models/saludo_ia.py`, `models/venta_dao.py`, `views/agenteIA_view.py`)
 
-- OpenAI SDK, default model **`gpt-4o`** for the conversation (override `OPENAI_MODEL`); the welcome greeting uses **`gpt-4o-mini`** (`models/saludo_ia.py`, override `OPENAI_MODEL_SALUDO`). No Anthropic key needed.
+- **Models are non-negotiable (developer's rule, 01/10): `gpt-6.1-sol` for the agent, `gpt-5.6-luna` for the greeting** — newer models cost fewer credits than the old ones; never switch back to `gpt-4o`/`gpt-4o-mini` or swap models without being asked.
+- OpenAI SDK, default model **`gpt-6.1-sol`** for the conversation (override `OPENAI_MODEL`; it only accepts the default `temperature` — don't pass one); the welcome greeting uses **`gpt-5.6-luna`** (`models/saludo_ia.py`, override `OPENAI_MODEL_SALUDO`; no `temperature`, and `max_completion_tokens` instead of `max_tokens`). No Anthropic key needed.
 - Each question re-reads `platillos`/`mesas`/`ventas`/`venta_items`, flattens them into the system prompt with local-time dates. `VentaDAO` is read-only, capped at 500 ventas.
 - **Python does all arithmetic** (`_resumen_calculado`: totals per period/table/day/product, per period incl. this month, plus a `TOTAL POR PRODUCTO` line). The prompt tells the model to copy numbers, never re-sum. Don't remove this — the model mis-summed real data. Only closed sales count; open tabs reported separately. Business day runs 6:00→6:00 (`_HORA_CORTE_DEL_DIA = 6`).
 - Normalization: table names unified case-insensitively (catalog name wins); products grouped by `platillo_id` (names collide), falling back to name only for deleted platillos.
