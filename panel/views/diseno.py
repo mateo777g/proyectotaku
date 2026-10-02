@@ -209,11 +209,12 @@ def caja_error(texto_control):
 
 
 def confirmar(page, titulo, mensaje, al_confirmar, texto_boton="Sí, eliminar",
-              nombre_icono="eliminar", al_cancelar=None, nota=None):
+              nombre_icono="eliminar", al_cancelar=None, nota=None, imagen=None):
     """Confirmación de algo que no se deshace (eliminar un platillo o una mesa). Sin rojo: el
     peligro lo dice el texto. Cancelar cierra (y llama a `al_cancelar`, si hay: la ventana de
     editar se vuelve a abrir); el botón principal cierra y llama a `al_confirmar`. `nota` es un
-    aviso extra en un chip bajo el mensaje (Mesas: "tiene una cuenta abierta de $340...")."""
+    aviso extra en un chip bajo el mensaje (Mesas: "tiene una cuenta abierta de $340...").
+    `imagen` es una miniatura a la derecha del título (Mi biblioteca: el anuncio a borrar)."""
     def cerrar(e=None):
         page.pop_dialog()
 
@@ -226,13 +227,20 @@ def confirmar(page, titulo, mensaje, al_confirmar, texto_boton="Sí, eliminar",
         cerrar()
         al_confirmar()
 
-    page.show_dialog(ventana(ft.Column([
+    cabeza = [
         ft.Container(width=44, height=44, border_radius=12, bgcolor=D.chip,
                      alignment=ft.Alignment.CENTER, content=icono("alerta", 20)),
         ft.Container(height=16),
         texto(titulo, 18, 800, espaciado=-0.3),
         ft.Container(height=6),
         texto(mensaje, 13, 500, D.suave, alto=1.45),
+    ]
+    if imagen is not None:
+        cabeza = [ft.Row([ft.Column(cabeza, spacing=0, tight=True, expand=True), imagen],
+                         spacing=16, vertical_alignment=ft.CrossAxisAlignment.START)]
+
+    page.show_dialog(ventana(ft.Column([
+        *cabeza,
         *([ft.Container(height=14),
            ft.Container(bgcolor=D.chip, border=ft.Border.all(1, D.linea), border_radius=12,
                         padding=ft.Padding.symmetric(horizontal=14, vertical=11),

@@ -60,11 +60,9 @@ import httpx
 
 from models import cloudflare_storage
 from models.platillo_dao import PlatilloDAO
-from views import piezas
 from views.diseno import (apagar, boton, boton_cuadro, caja_error, campo, confirmar, etiqueta,
                           selector, texto, ventana)
-from views.piezas import boton_atajo, dialogo_tarjeta
-from views.tema import C, D
+from views.tema import D
 
 _CATEGORIAS = ["Platillos", "Bebidas", "Postres"]
 
@@ -668,36 +666,3 @@ class DialogoPlatillo:
         # medio guardado/borrado.
         apagar(self.boton_foto, cargando)
         self.boton_foto.update()
-
-
-def _confirmar(page: ft.Page, *, titulo: str, mensaje: str, on_confirmar):
-    """Diálogo de confirmación para acciones destructivas (eliminar un platillo o una mesa).
-    Pintado como una tarjeta del panel y sin rojo: el peligro lo dice el texto."""
-
-    def _cerrar(e=None):
-        page.pop_dialog()
-
-    def _confirmar_click(e):
-        _cerrar()
-        on_confirmar()
-
-    dialogo = dialogo_tarjeta(
-        ft.Column(
-            tight=True,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=0,
-            controls=[
-                ft.Icon(ft.Icons.WARNING_AMBER_OUTLINED, size=30, color=C.texto_suave),
-                ft.Container(height=12),
-                piezas.texto(titulo, 17, titulo=True, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=8),
-                piezas.texto(mensaje, 13, suave=True, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=24),
-                ft.Row([boton_atajo(ft.Icons.DELETE_OUTLINE, "Sí, eliminar", _confirmar_click)]),
-                ft.Container(height=10),
-                ft.Row([boton_atajo(ft.Icons.UNDO, "Cancelar", _cerrar)]),
-            ],
-        ),
-        404,
-    )
-    page.show_dialog(dialogo)
