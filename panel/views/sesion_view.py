@@ -1,14 +1,19 @@
 """
 views/sesion_view.py
-La pantalla de entrar del panel, con el diseño oscuro de la guía (A4.7). Ocupa toda la ventana,
-sin barra lateral, y siempre es lo primero al abrir: la sesión NUNCA se guarda en disco
-(decisión de negocio, ver "POR QUÉ EL LOGIN NO SE GUARDA" del roadmap).
+La pantalla de entrar del panel, con el diseño manchas + vidrio (02/10, maqueta aprobada:
+https://claude.ai/artifact/AXNeYMtPR1tSVgWdXTFjMu). Va en una ventana chica y centrada, no a
+pantalla completa (MainController._ventana_login), sin barra lateral, y siempre es lo primero al
+abrir: la sesión NUNCA se guarda en disco (decisión de negocio, ver "POR QUÉ EL LOGIN NO SE
+GUARDA" del roadmap).
 
-Dos mitades del mismo alto: a la izquierda una tarjeta con correo + contraseña y a la derecha
-las manchas azules con grano, la frase y la etiqueta de la marca.
+Dos mitades del mismo alto: a la izquierda la tarjeta sólida con correo + contraseña, y a la
+derecha las manchas con grano (naranjas en el tema claro, azules en el oscuro: D.manchas_login),
+la frase y la etiqueta de la marca. Las manchas, la frase y la etiqueta son los tres no
+negociables del desarrollador: con el rediseño solo cambió su letra (Plus Jakarta Sans).
 
-Lo que NO cambió con el rediseño: sign_in_with_password, el candado de licencia justo después
-del login (fail closed) y los mensajes. Los errores salen como aviso (la píldora de piezas.py).
+Lo que NO cambió: sign_in_with_password, el candado de licencia justo después del login (fail
+closed) y los mensajes. Los errores (y el "Cerraste sesión." al volver) salen dentro de la
+tarjeta, debajo del botón, como en la ventana Perfil.
 """
 import asyncio
 
@@ -18,76 +23,174 @@ from supabase_auth.errors import AuthApiError
 
 from models.configuracion_negocio_dao import ConfiguracionNegocioDAO
 from models.supabase_client import SUPABASE_ADMIN_EMAIL, client
-from views.piezas import apagar_boton, aviso, boton_atajo, campo, sin_auto_update, tarjeta_iphone
-from views.tema import C
+from views.diseno import apagar, caja_error, etiqueta, icono, texto
+from views.piezas import sin_auto_update
+from views.tema import D
 
 # Todo a 48 del borde de su mitad, 56 arriba: el título de la tarjeta y la frase de las manchas
-# empiezan a la misma altura y a la misma distancia de su borde.
+# empiezan a la misma altura y a la misma distancia de su borde; abajo, la nota de la tarjeta y
+# la etiqueta de la marca terminan juntas.
 MARGEN, MARGEN_ARRIBA = 48, 56
-RADIO = 16
-# Los campos: 56 de alto (relleno 18 arriba y abajo).
-RELLENO_CAMPO = ft.Padding(left=12, top=18, right=12, bottom=18)
+RADIO = 22
+# Los títulos grandes: Jakarta 800 a 56, interlineado 1.04 y -0.03em.
+TAMANO_TITULO = 56
+ESPACIADO_TITULO = -1.68
 
 
-def encabezado(titulo, subtitulo):
-    return [
-        ft.Text(titulo, size=56, color=C.texto, font_family="LetraTitulo",
-                style=ft.TextStyle(height=1.0)),
-        ft.Container(height=14),
-        ft.Text(subtitulo, size=22, color=C.texto_suave, font_family="LetraTexto"),
-    ]
+def _titulo(valor, color=None):
+    return texto(valor, TAMANO_TITULO, 800, color, espaciado=ESPACIADO_TITULO, alto=1.04)
 
 
 class SesionView(ft.Container):
-    def __init__(self, router):
+    def __init__(self, router, motivo=None):
+        """`motivo` es un aviso al llegar ("Cerraste sesión."), si lo hay: sale en la tarjeta."""
         super().__init__()
         self.router = router
         self.page_ref = router.page
         self.expand = True
-        # Liso, sin degradado: que solo brillen las manchas.
-        self.bgcolor = C.fondo_entrar
+        self.bgcolor = D.suelo
         self.padding = 12
 
-        self.campo_correo = campo(pista="Tu correo", icono=ft.Icons.MAIL_OUTLINE, tamano=15,
-                                  valor=SUPABASE_ADMIN_EMAIL, relleno=RELLENO_CAMPO)
-        self.campo_correo.keyboard_type = ft.KeyboardType.EMAIL
         # El correo ya viene puesto (el del .env): el foco empieza en la contraseña.
-        self.campo_password = campo(pista="Tu contraseña", icono=ft.Icons.LOCK_OUTLINE,
-                                    contrasena=True, tamano=15, autofoco=True,
-                                    relleno=RELLENO_CAMPO,
-                                    al_enviar=sin_auto_update(self._on_entrar_click))
-        # "Entrar", el único botón destacado del panel: la forma de los campos, en blanco.
-        self.boton_entrar = boton_atajo(ft.Icons.LOGIN, "Entrar al panel", self._on_entrar_click,
-                                        claro=True, alto=51, radio=10)
+        self.campo_correo, caja_correo = self._campo(
+            "correo", valor=SUPABASE_ADMIN_EMAIL, tipo=ft.KeyboardType.EMAIL)
+        self.campo_password, caja_password = self._campo(
+            "candado", pista="Tu contraseña", contrasena=True, autofoco=True)
 
-        tarjeta = tarjeta_iphone(
-            ft.Column([
-                *encabezado("Inicia sesión", "Ingresa tus datos para administrar tu menú."),
-                ft.Container(height=48),
-                ft.Row([self.campo_correo]),
-                ft.Container(height=12),
-                ft.Row([self.campo_password]),
-                ft.Container(height=16),
-                ft.Row([self.boton_entrar]),
-            ], spacing=0),
-            radio=RADIO, expand=94, colores=C.tarjeta_entrar,
-            padding=ft.Padding(left=MARGEN - 1, top=MARGEN_ARRIBA - 1, right=MARGEN - 1, bottom=MARGEN - 1))
+        # "Entrar al panel": el botón principal (tinta) a todo lo ancho, con la forma de los campos.
+        self.texto_boton = texto("Entrar al panel", 14, 600, D.sobre_tinta)
+        self.boton_entrar = ft.Container(
+            height=48, border_radius=12, bgcolor=D.tinta, alignment=ft.Alignment.CENTER,
+            content=ft.Row([icono("entrar", 16, D.sobre_tinta), self.texto_boton], spacing=8,
+                           tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            on_click=self._on_entrar_click, animate_opacity=150,
+        )
+        self.boton_entrar.on_hover = self._encima_boton
 
-        # A la derecha, las manchas azules con grano (WebP animado: Flutter lo reproduce solo),
-        # la frase y la etiqueta de la marca. Oscuras en los dos temas.
+        # Errores y avisos, debajo del botón (caja_error: chip sin rojo, icono de alerta o info).
+        self.texto_mensaje = texto("", 13, 500, alto=1.45, expand=True)
+        self.zona_mensaje = caja_error(self.texto_mensaje)
+        self.zona_mensaje.margin = ft.Margin.only(top=14)
+        if motivo:
+            self._poner_mensaje(motivo, "info")
+
+        formulario = ft.Column([
+            ft.Container(content=etiqueta("CORREO"), margin=ft.Margin.only(bottom=8)),
+            caja_correo,
+            ft.Container(content=etiqueta("CONTRASEÑA"), margin=ft.Margin.only(top=14, bottom=8)),
+            caja_password,
+            ft.Container(height=20),
+            self.boton_entrar,
+            self.zona_mensaje,
+        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+
+        # La nota de abajo: por qué pide entrar cada vez (la sesión no se guarda, ver arriba).
+        pie = ft.Container(height=48, content=ft.Row([
+            icono("candado", 14, D.tenue),
+            texto("Por seguridad, el panel te pide entrar cada vez que lo abres.", 12.5, 500,
+                  D.tenue),
+        ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER))
+
+        tarjeta = ft.Container(
+            expand=94, bgcolor=D.solido, border=ft.Border.all(1, D.linea), border_radius=RADIO,
+            padding=ft.Padding(left=MARGEN - 1, top=MARGEN_ARRIBA - 1, right=MARGEN - 1,
+                               bottom=MARGEN - 1),
+            content=ft.Column([
+                ft.Column([
+                    _titulo("Inicia sesión"),
+                    ft.Container(height=14),
+                    texto("Ingresa tus datos para administrar tu menú.", 16, 500, D.suave,
+                          alto=1.45),
+                    ft.Container(height=40),
+                    formulario,
+                ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+                pie,
+            ], spacing=0, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        )
+
+        # A la derecha, las manchas con grano (WebP animado: Flutter lo reproduce solo), la frase
+        # y la etiqueta de la marca. Oscuras en los dos temas; el color de las manchas es el del
+        # acento del tema.
         grano = ft.Container(
             expand=106, border_radius=RADIO, bgcolor="#000000", border=ft.Border.all(1, "#1FFFFFFF"),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             content=ft.Stack([
-                ft.Image(src="assets/login-grano.webp", fit=ft.BoxFit.COVER,
+                ft.Image(src=D.manchas_login, fit=ft.BoxFit.COVER,
                          width=float("inf"), height=float("inf")),
-                ft.Container(left=MARGEN, top=MARGEN_ARRIBA, content=ft.Text(
-                    "Moderniza\nTu Negocio", size=56, color=ft.Colors.WHITE,
-                    font_family="LetraTitulo", style=ft.TextStyle(height=1.0))),
+                ft.Container(left=MARGEN, top=MARGEN_ARRIBA,
+                             content=_titulo("Moderniza\nTu Negocio", "#FFFFFF")),
                 ft.Container(left=MARGEN, right=MARGEN, bottom=MARGEN, content=etiqueta_marca()),
             ]))
         self.content = ft.Row([tarjeta, grano], spacing=12,
                               vertical_alignment=ft.CrossAxisAlignment.STRETCH)
+
+    def _campo(self, nombre_icono, valor="", pista=None, contrasena=False, autofoco=False,
+               tipo=None):
+        """Un campo del login: caja de 48 con borde fino D.linea (D.suave mientras se escribe en
+        ella), radio 12, el icono a la izquierda y, en la contraseña, el ojo a la derecha. Como
+        el buscador de Mi menú: la caja es un Container y el TextField va sin borde."""
+        campo = ft.TextField(
+            value=valor, hint_text=pista, password=contrasena, autofocus=autofoco,
+            keyboard_type=tipo, border=ft.InputBorder.NONE, filled=False, dense=True,
+            expand=True, content_padding=ft.Padding.symmetric(vertical=12),
+            text_size=14, text_style=ft.TextStyle(font_family="Jakarta500", color=D.texto),
+            hint_style=ft.TextStyle(font_family="Jakarta500", color=D.tenue, size=14),
+            cursor_color=D.texto, selection_color=D.chip,
+            on_change=self._al_escribir,
+            on_submit=sin_auto_update(self._on_entrar_click) if contrasena else None,
+        )
+        # La contraseña empieza encendida: lleva el autofoco.
+        caja = ft.Container(
+            height=48, border_radius=12, border=ft.Border.all(1, D.suave if autofoco else D.linea),
+            padding=ft.Padding.only(left=14, right=6 if contrasena else 14),
+        )
+
+        def enfocar(encendida):
+            caja.border = ft.Border.all(1, D.suave if encendida else D.linea)
+            caja.update()
+
+        campo.on_focus = lambda e: enfocar(True)
+        campo.on_blur = lambda e: enfocar(False)
+        if contrasena:
+            # El ojo va DENTRO del TextField (suffix_icon): un clic fuera del campo le quita el
+            # foco (Flutter, en escritorio), y devolvérselo con focus() selecciona todo lo escrito.
+            campo.suffix_icon = self._ojo(campo)
+            campo.suffix_icon_size_constraints = ft.BoxConstraints(
+                min_width=36, max_width=36, min_height=36, max_height=36)
+        caja.content = ft.Row([icono(nombre_icono, 16, D.suave), campo], spacing=10,
+                              vertical_alignment=ft.CrossAxisAlignment.CENTER)
+        return campo, caja
+
+    def _ojo(self, campo):
+        # Mostrar / ocultar la contraseña. El icono se reemplaza (uno montado no se cambia).
+        boton = ft.Container(width=36, height=36, border_radius=10, alignment=ft.Alignment.CENTER,
+                             content=icono("ojo", 16, D.suave), tooltip="Mostrar contraseña")
+
+        def alternar(e):
+            campo.password = not campo.password
+            boton.content = icono("ojo" if campo.password else "oculto", 16, D.suave)
+            boton.tooltip = "Mostrar contraseña" if campo.password else "Ocultar contraseña"
+            campo.update()
+
+        def encima(e):
+            boton.bgcolor = D.chip if e.data in (True, "true") else None
+            boton.update()
+
+        boton.on_click = alternar
+        boton.on_hover = encima
+        return boton
+
+    def _encima_boton(self, e):
+        if self.boton_entrar.disabled:
+            return
+        self.boton_entrar.opacity = 0.86 if e.data in (True, "true") else 1
+        self.boton_entrar.update()
+
+    def _al_escribir(self, e):
+        # Al volver a escribir se quita el error de antes (como en Perfil).
+        if self.zona_mensaje.visible:
+            self.zona_mensaje.visible = False
+            self.zona_mensaje.update()
 
     def _on_entrar_click(self, e):
         self.page_ref.run_task(self._iniciar_sesion)
@@ -159,22 +262,37 @@ class SesionView(ft.Container):
         except Exception as e:
             print(f"[licencia] sign_out tras el rechazo falló, se ignora: {e}")
 
+    def _poner_mensaje(self, mensaje, nombre_icono):
+        # caja_error trae el icono de alerta; el aviso de llegada lleva el de info.
+        self.texto_mensaje.value = mensaje
+        self.zona_mensaje.content.controls[0] = icono(nombre_icono, 16, D.suave)
+        self.zona_mensaje.visible = True
+
     def _mostrar_error(self, mensaje: str):
-        aviso(self.page_ref, mensaje, barra=0)
+        self._poner_mensaje(mensaje, "alerta")
+        self.zona_mensaje.update()
 
     def _set_cargando(self, cargando: bool):
-        # Apagado mientras entra: no hay rueda de carga, el apagado ya lo dice.
-        apagar_boton(self.boton_entrar, cargando)
+        # Apagado mientras entra, y dice "Entrando…": no hay rueda de carga.
+        if cargando and self.zona_mensaje.visible:
+            self.zona_mensaje.visible = False
+            self.zona_mensaje.update()
+        apagar(self.boton_entrar, cargando)
+        self.texto_boton.value = "Entrando…" if cargando else "Entrar al panel"
         self.boton_entrar.update()
 
 
 def etiqueta_marca():
     # La etiqueta de abajo de las manchas: translúcida, borde parejo, el logo en blanco y
     # "Fragmentless · Panel de escritorio" al 85 %. No se pulsa.
+    def tramo(valor, peso):
+        return ft.TextSpan(valor, style=ft.TextStyle(font_family=f"Jakarta{peso}", size=15,
+                                                     color=ft.Colors.WHITE))
+
     fila = ft.Row([
         ft.Image(src="assets/fragmentless-blanco.png", height=22, fit=ft.BoxFit.CONTAIN),
-        ft.Text("Fragmentless · Panel de escritorio", size=15, color=ft.Colors.WHITE, font_family="LetraTitulo"),
+        ft.Text(spans=[tramo("Fragmentless", 700), tramo(" · Panel de escritorio", 500)]),
     ], spacing=10, tight=True, opacity=0.85)
-    return ft.Container(height=48, border_radius=10, bgcolor="#0DFFFFFF", blur=ft.Blur(8, 8),
+    return ft.Container(height=48, border_radius=12, bgcolor="#0DFFFFFF", blur=ft.Blur(8, 8),
                         border=ft.Border.all(1, "#40FFFFFF"), alignment=ft.Alignment.CENTER_LEFT,
                         padding=ft.Padding(left=18, top=0, right=22, bottom=0), content=fila)

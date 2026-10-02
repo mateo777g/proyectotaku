@@ -16,7 +16,7 @@ from views.contenido_view import ContenidoView
 from views.home_view import HomeView
 from views.menu_view import MenuView
 from views.mesas_view import MesasView
-from views.piezas import aviso, sin_auto_update
+from views.piezas import sin_auto_update
 from views.sesion_view import SesionView
 
 
@@ -115,13 +115,11 @@ class MainController:
         self.page.update()
 
     def mostrar_login(self, motivo=None):
-        """La pantalla de entrar: ocupa toda la ventana, sin barra lateral. `motivo` es un aviso
-        al llegar ("Cerraste sesión."), si lo hay."""
+        """La pantalla de entrar: ocupa toda la ventana (la chica del login), sin barra lateral.
+        `motivo` es un aviso al llegar ("Cerraste sesión."), si lo hay: sale en la tarjeta."""
         self.vista_actual = None
-        self._poner_vista(SesionView(self))
+        self._poner_vista(SesionView(self, motivo))
         self.page.run_task(self._ventana_login)
-        if motivo:
-            aviso(self.page, motivo, barra=0)
 
     def mostrar_panel(self):
         """Entra a Inicio. Solo se llama con una sesión activa en `client.auth` (desde

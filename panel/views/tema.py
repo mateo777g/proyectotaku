@@ -101,6 +101,8 @@ TEMAS = {"oscuro": OSCURO, "claro": CLARO}
 D_CLARO = {
     "suelo": "#fafaf8",                  # el color del fondo de manchas (y de la ventana)
     "manchas": "assets/fondo-manchas-claro.webp",
+    # Las manchas con grano del login, del color del acento (herramientas/generar_login_grano_naranja.py).
+    "manchas_login": "assets/login-grano-naranja.webp",
     "logo_marca": "assets/fragmentless-naranja.svg",   # herramientas/vectorizar_logo.py
     "logo_simbolo": "assets/fragmentless-naranja-simbolo.svg",   # el del saludo del agente
     "logo_pensando": "assets/logo-pensando-naranja.webp",       # herramientas/generar_logo_pensando.py
@@ -122,6 +124,7 @@ D_CLARO = {
 D_OSCURO = {
     "suelo": "#161616",
     "manchas": "assets/fondo-manchas-oscuro.webp",
+    "manchas_login": "assets/login-grano.webp",
     "logo_marca": "assets/fragmentless-azul.svg",      # herramientas/vectorizar_logo.py
     "logo_simbolo": "assets/fragmentless-azul-simbolo.svg",
     "logo_pensando": "assets/logo-pensando-azul.webp",
